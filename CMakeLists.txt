@@ -31,11 +31,12 @@ set(CMAKE_MODULE_PATH $ENV{CANVAS_DIR}/Modules
 include(CetCMakeEnv)
 cet_cmake_env()
 
-cet_set_compiler_flags(DIAGS CAUTIOUS
+cet_set_compiler_flags(DIAGS VIGILANT
   WERROR
   NO_UNDEFINED
   ALLOW_DEPRECATIONS
   EXTRA_FLAGS -pedantic -Wno-unused-local-typedefs
+  EXTRA_CXX_FLAGS -Wnon-virtual-dtor -Wdelete-non-virtual-dtor
 )
 
 cet_report_compiler_flags()
