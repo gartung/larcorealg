@@ -21,7 +21,7 @@
 #include "larcorealg/Geometry/geo_vectors_utils_TVector.h" // geo::vect
 
 // Framework includes
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 // ROOT includes

@@ -20,7 +20,7 @@
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h" // geo::PlaneID, ...
 
 // Framework libraries
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 
 // C/C++ standard library
 #include <limits> // std::numeric_limits<>

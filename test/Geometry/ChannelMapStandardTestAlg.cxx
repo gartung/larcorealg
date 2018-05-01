@@ -14,7 +14,7 @@
 #include "larcorealg/Geometry/GeometryCore.h"
 
 // framework
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 
 // Boost libraries
 #include <cetlib/quiet_unit_test.hpp>

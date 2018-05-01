@@ -4,7 +4,7 @@
 #ifndef GEO_GEO_H
 #define GEO_GEO_H
 
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 
 #include "stdexcept"
 
