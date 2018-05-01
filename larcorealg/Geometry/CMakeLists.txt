@@ -1,7 +1,7 @@
 
 cet_make( LIBRARIES
   ${MF_MESSAGELOGGER}
-  ${MF_UTILITIES}
+  
   ${FHICLCPP}
   cetlib cetlib_except
   ${CLHEP}
