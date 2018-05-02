@@ -32,7 +32,9 @@ namespace geo{
       throw cet::exception("AuxDetSensitiveGeo") << "cannot find AuxDetSensitive volume\n";
     }
     
-    LOG_DEBUG("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
+    // workaround for #19851
+    //LOG_DEBUG("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
+    mf::LogDebug("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
     
     InitShapeSize();
 
@@ -45,7 +47,9 @@ namespace geo{
     , fTotalVolume(volume)
   {
     assert(fTotalVolume);
-    LOG_DEBUG("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
+    // workaround for #19851
+    //LOG_DEBUG("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
+    mf::LogDebug("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
     
     InitShapeSize();
 
@@ -58,7 +62,9 @@ namespace geo{
     , fTotalVolume(volume)
   {
     assert(fTotalVolume);
-    LOG_DEBUG("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
+    // workaround for #19851
+    //LOG_DEBUG("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
+    mf::LogDebug("Geometry") << "detector sensitive total  volume is " << fTotalVolume->GetName();
     
     InitShapeSize();
 

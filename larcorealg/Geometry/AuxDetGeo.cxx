@@ -38,7 +38,9 @@ namespace geo{
       
     }// end if found volume
     
-    LOG_DEBUG("Geometry") << "detector total  volume is " << fTotalVolume->GetName();
+    // workaround for #19851
+    //LOG_DEBUG("Geometry") << "detector total  volume is " << fTotalVolume->GetName();
+    mf::LogDebug("Geometry") << "detector total  volume is " << fTotalVolume->GetName();
     
     // look for sensitive volumes - if there are none then this aux det 
     // could be from an older gdml file than the introduction of AuxDetSensitiveGeo
