@@ -17,7 +17,6 @@
  * This is a pure template header. It will require the following libraries:
  * 
  * * `MF_MessageLogger`
- * * `MF_Utilities`
  * * `fhiclcpp`
  * * `cetlib`
  * 
