@@ -14,6 +14,7 @@
 
 // Framework includes
 #include "messagefacility/MessageLogger/MessageLogger.h"
+#include "cetlib/container_algorithms.h"
 #include "cetlib_except/exception.h"
 
 // ROOT includes
@@ -548,39 +549,16 @@ namespace geo{
     // we use the plane box center, which only needs the geometry description
     // to be available.
     // We use the first plane -- it does not make any difference.
-    decltype(auto) TPCcenter = GetCenter();
-    auto driftAxis
+    auto const TPCcenter = GetCenter();
+    auto const driftAxis
       = geo::vect::normalize(planes[0].GetBoxCenter() - TPCcenter);
     
-    //
-    // associate each plane with its distance from the center of TPC
-    //
-    decltype(auto) center = GetCenter();
-    // pair: <plane pointer,drift distance>
-    std::vector<std::pair<geo::PlaneGeo*, double>> planesWithDistance;
-    planesWithDistance.reserve(planes.size());
-    for (geo::PlaneGeo& plane: planes) {
-      double const driftDistance
-        = geo::vect::dot(plane.GetBoxCenter() - TPCcenter, driftAxis);
-      planesWithDistance.emplace_back(&plane, driftDistance);
-    } // for
-    
-    //
-    // sort by distance
-    //
-    std::sort(planesWithDistance.begin(), planesWithDistance.end(), 
-      [](auto const& a, auto const& b){ return a.second < b.second; }
-      );
-    
-    //
-    // extract the result
-    //
-    std::vector<geo::PlaneGeo> sortedPlanes;
-    sortedPlanes.reserve(planesWithDistance.size());
-    for (auto const& pair: planesWithDistance)
-      sortedPlanes.push_back(std::move(*(pair.first)));
-    
-    planes = std::move(sortedPlanes);
+    auto by_distance = [&TPCcenter, &driftAxis](auto const& a,
+                                                auto const& b) {
+      return geo::vect::dot(a.GetBoxCenter() - TPCcenter, driftAxis) <
+             geo::vect::dot(b.GetBoxCenter() - TPCcenter, driftAxis);
+    };
+    cet::sort_all(planes, by_distance);
     
   } // TPCGeo::SortPlanes()
   

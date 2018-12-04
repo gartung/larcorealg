@@ -1796,6 +1796,13 @@ namespace geo {
     /// Return the name of the world volume (needed by Geant4 simulation)
     const std::string GetWorldVolumeName() const;
     
+    /// Returns the absolute  coordinates of the detector enclosure volume [cm].
+    /// @param name name of the volume to be sought (default: `volDetEnclosure`)
+    /// @throw cet::exception if the specified volume is not found
+    geo::BoxBoundedGeo DetectorEnclosureBox
+      (std::string const& name = "volDetEnclosure") const;
+    
+    
     //@{
     /**
      * @brief Returns the name of the deepest volume containing specified point
@@ -5342,6 +5349,12 @@ namespace geo {
     
   private:
     
+    std::vector<TGeoNode const*> FindDetectorEnclosure
+      (std::string const& name = "volDetEnclosure") const;
+    
+    bool FindFirstVolume
+      (std::string const& name, std::vector<const TGeoNode*>& path) const;
+    
     void FindCryostat(std::vector<const TGeoNode*>& path, unsigned int depth);
     
     void MakeCryostat(std::vector<const TGeoNode*>& path, int depth);
@@ -5536,6 +5549,14 @@ void geo::GeometryCore::Print
   out << "Detector " << DetectorName() << " has "
     << Ncryostats() << " cryostats and "
     << NAuxDets() << " auxiliary detectors:";
+ 
+  auto const& detEnclosureBox = DetectorEnclosureBox();
+  out << "\n" << indent << "Detector enclosure: "
+    << detEnclosureBox.Min() << " -- " << detEnclosureBox.Max()
+    << " cm => ( " << detEnclosureBox.SizeX() << " x "
+    << detEnclosureBox.SizeY() << " x "
+    << detEnclosureBox.SizeZ() << " ) cm^3"
+    ;
   
   for (geo::CryostatGeo const& cryostat: IterateCryostats()) {
     out << "\n" << indent;

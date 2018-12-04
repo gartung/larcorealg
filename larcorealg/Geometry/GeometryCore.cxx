@@ -582,6 +582,40 @@ namespace geo {
     return std::string("volWorld");
   }
 
+
+  //......................................................................
+  geo::BoxBoundedGeo GeometryCore::DetectorEnclosureBox
+    (std::string const& name /* = "volDetEnclosure" */) const
+  {
+    auto const& path = FindDetectorEnclosure(name);
+    if (path.empty()) {
+      throw cet::exception("GeometryCore")
+        << "DetectorEnclosureBox(): can't find enclosure volume '" << name << "'\n";
+    }
+    
+    TGeoVolume const* pEncl = path.back()->GetVolume();
+    auto const* pBox = dynamic_cast<TGeoBBox const*>(pEncl->GetShape());
+    
+    // check that this is indeed a box
+    if (!pBox) {
+      // at initialisation time we don't know yet our real ID
+      throw cet::exception("GeometryCore") << "Detector enclosure '"
+        << name << "' is not a box! (it is a " << pEncl->GetShape()->IsA()->GetName()
+        << ")\n";
+    }
+
+    geo::LocalTransformation<TGeoHMatrix> trans(path, path.size() - 1);
+    // get the half width, height, etc of the cryostat
+    const double halfwidth  = pBox->GetDX();
+    const double halfheight = pBox->GetDY();
+    const double halflength = pBox->GetDZ();
+    
+    return {
+      trans.LocalToWorld(geo::Point_t{ -halfwidth, -halfheight, -halflength }),
+      trans.LocalToWorld(geo::Point_t{ +halfwidth, +halfheight, +halflength })
+      };
+  } // geo::GeometryCore::DetectorEnclosureBox()
+  
   //......................................................................
   struct NodeNameMatcherClass {
     std::set<std::string> const* vol_names;
@@ -626,8 +660,6 @@ namespace geo {
       protected:
     NodeNameMatcherClass matcher;
   }; // CollectPathsByName
-  
-  
   
   std::vector<TGeoNode const*> GeometryCore::FindAllVolumes
     (std::set<std::string> const& vol_names) const
@@ -918,7 +950,98 @@ namespace geo {
     }
     return pMaterial->GetName();
   }
+  
+ 
+  //......................................................................
+  std::vector<TGeoNode const*> GeometryCore::FindDetectorEnclosure
+    (std::string const& name /* = "volDetEnclosure" */) const
+  {
+     std::vector<TGeoNode const*> path { ROOTGeoManager()->GetTopNode() };
+     if (!FindFirstVolume(name, path)) path.clear();
+     return path;
+  } // FindDetectorEnclosure()
+  
+  //......................................................................
+  bool GeometryCore::FindFirstVolume
+    (std::string const& name, std::vector<const TGeoNode*>& path) const
+  {
+    assert(!path.empty());
 
+    auto const* pCurrent = path.back();
+
+    // first check the current layer
+    if (strncmp(name.c_str(), pCurrent->GetName(), name.length()) == 0)
+      return true;
+    
+    //explore the next layer down
+    auto const* pCurrentVolume = pCurrent->GetVolume();
+    unsigned int nd = pCurrentVolume->GetNdaughters();
+    for(unsigned int i = 0; i < nd; ++i) {
+      path.push_back(pCurrentVolume->GetNode(i));
+      if (FindFirstVolume(name, path)) return true;
+      path.pop_back();
+    } // for
+    return false;
+  } // FindFirstVolume()
+
+
+  //......................................................................
+  class ROOTGeoPathBuilder {
+      public:
+    using PathIndex_t = std::vector<std::size_t>;
+    using Path_t = std::vector<TGeoNode const*>;
+    
+    ROOTGeoPathBuilder(TGeoNode const* rootNode): pRoot(rootNode) {}
+    
+    Path_t toPath(PathIndex_t const& pathIndex) const
+      { return toPath(pRoot, pathIndex); }
+    
+    static PathIndex_t toPathIndex(Path_t const& path)
+      {
+        assert(!path.empty());
+        PathIndex_t indices;
+        auto itParent = path.begin();
+        auto itDaughter = itParent;
+        while (++itDaughter != path.end()) {
+          indices.push_back(findDaughterIndex(*itDaughter, *itParent));
+          itParent = itDaughter;
+        }
+        return indices;
+      } // toPathIndex()
+    
+    static Path_t toPath
+      (TGeoNode const* rootNode, PathIndex_t const& pathIndex)
+      {
+         Path_t path;
+         path.push_back(rootNode);
+         TGeoNode const* pCurrentNode = path.back();
+         for (std::size_t daughterIndex: pathIndex) {
+           pCurrentNode = pCurrentNode->GetVolume()->GetNode(daughterIndex);
+           path.push_back(pCurrentNode);
+         }
+         return path;
+      } // toPath()
+    
+    static PathIndex_t emptyPathIndex() { return {}; }
+    static Path_t emptyPath() { return {}; }
+    
+      private:
+    TGeoNode const* pRoot = nullptr;
+
+    static std::size_t findDaughterIndex
+      (TGeoNode const* pDaughter, TGeoNode const* pParent)
+      {
+         assert(pParent);
+         std::size_t n = pParent->GetNdaughters();
+         for (std::size_t i = 0U; i < n; ++i) {
+           if (pParent->GetDaughter(i) == pDaughter) return i;
+         }
+         throw std::runtime_error("Node is not daughter of specified parent!");
+      } // findDaughterIndex()
+    
+  }; // class ROOTGeoPathBuilder
+ 
+ 
   //......................................................................
   void GeometryCore::FindCryostat(std::vector<const TGeoNode*>& path,
                               unsigned int depth)
