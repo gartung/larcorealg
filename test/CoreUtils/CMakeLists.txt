@@ -3,7 +3,7 @@
 # Testing
 #
 # ======================================================================
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 cet_test( printBacktrace_test
   LIBRARIES
     larcorealg_CoreUtils
@@ -20,8 +20,8 @@ cet_test( NumericUtils_test USE_BOOST_UNIT )
 cet_test( DereferenceIterator_test USE_BOOST_UNIT )
 cet_test( DumpUtils_test
   LIBRARIES
-    ${ROOT_CORE}
-    ${ROOT_PHYSICS}
+    ROOT::Core
+    ROOT::Physics
   USE_BOOST_UNIT
   )
 cet_test( SortByPointers_test USE_BOOST_UNIT )

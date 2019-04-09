@@ -2,9 +2,9 @@ cet_enable_asserts()
 
 cet_test( geo_vectors_utils_test
   LIBRARIES
-    ${ROOT_CORE}
-    ${ROOT_PHYSICS}
-    ${ROOT_GENVECTOR}
+    ROOT::Core
+    ROOT::Physics
+    ROOT::GenVector
   USE_BOOST_UNIT
   )
 
@@ -120,7 +120,6 @@ cet_test(geometry_thirdplaneslope_test
   SOURCES geometry_thirdplaneslope_test.cxx
   LIBRARIES larcorealg_Geometry
             ${MF_MESSAGELOGGER}
-            
             ${FHICLCPP}
             cetlib cetlib_except
   USE_BOOST_UNIT
@@ -133,9 +132,9 @@ cet_test(geometry_thirdplaneslope_test
 cet_test(Decomposer_test
   SOURCES Decomposer_test.cxx
   LIBRARIES
-    ${ROOT_PHYSICS}
-    ${ROOT_GENVECTOR}
-    ${ROOT_CORE} # TVersionCheck
+    ROOT::Physics
+    ROOT::GenVector
+    ROOT::Core # TVersionCheck
   USE_BOOST_UNIT
   )
 
@@ -151,7 +150,6 @@ cet_test(driftvolumes_test
   TEST_ARGS ./test_geometry.fcl
   LIBRARIES larcorealg_Geometry
             ${MF_MESSAGELOGGER}
-            
             ${FHICLCPP}
             cetlib cetlib_except
   USE_BOOST_UNIT
@@ -176,7 +174,7 @@ if( NOT mrb_build_dir )
   #message(STATUS "MRB_BUILDDIR is undefined, set FHICL_FILE_PATH and FW_SEARCH_PATH")
   set_tests_properties( geometry_iterator_test geometry_test geometry_loader_test
                         geometry_iterator_loop_test geometry_standardchannelmapping_test
-                        geometry_geoid_test geometry_thirdplaneslope_test
+                        geometry_geoid_test geometry_thirdplaneslope_test driftvolumes_test
                         PROPERTIES ENVIRONMENT 
                         "FHICL_FILE_PATH=.:${CMAKE_BINARY_DIR}/job;FW_SEARCH_PATH=${CMAKE_BINARY_DIR}/gdml" )
 endif()
