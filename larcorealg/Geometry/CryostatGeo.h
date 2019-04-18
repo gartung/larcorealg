@@ -15,6 +15,7 @@
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/TransformationMatrix.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
+#include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h" // geo::Point_t
 
@@ -34,7 +35,8 @@ namespace geo {
   //......................................................................
   /// @brief Geometry information for a single cryostat.
   /// @ingroup Geometry
-  class CryostatGeo: public geo::BoxBoundedGeo {
+  class CryostatGeo: public geo::BoxBoundedGeo, private lar::UncopiableClass {
+    // For the explanation of `lar::UncopiableClass` see geo::TPCGeo definition.
 
       public:
 
@@ -444,6 +446,12 @@ namespace geo {
 
   };
 }
+
+// check that we got it right...
+static_assert(!std::is_copy_constructible_v<geo::CryostatGeo>);
+static_assert(!std::is_copy_assignable_v<geo::CryostatGeo>);
+static_assert( std::is_move_constructible_v<geo::CryostatGeo>);
+static_assert( std::is_move_assignable_v<geo::CryostatGeo>);
 
 
 //------------------------------------------------------------------------------

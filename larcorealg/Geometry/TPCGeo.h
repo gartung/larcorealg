@@ -16,6 +16,7 @@
 #include "larcorealg/Geometry/TransformationMatrix.h"
 #include "larcorealg/Geometry/LocalTransformationGeo.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
+#include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 
 // ROOT libraries
@@ -30,19 +31,56 @@
 
 class TGeoNode;
 
+
+
 namespace geo {
 
   //......................................................................
   /// @brief Geometry information for a single TPC.
   /// @ingroup Geometry
-  class TPCGeo: public BoxBoundedGeo {
-
+  class TPCGeo: public BoxBoundedGeo, private lar::UncopiableClass {
+    /*
+     * It should be obvious that this class can't be copied, given that this
+     * object contains a STL vector of `std::unique_ptr`;
+     * but it is not, as C++ believes `std::vector<std::unique_ptr<T>>` copiable
+     * except that then it can't actually instantiate the copy constructor.
+     * So I go explicit here.
+     * Still moveable though, and we need to tell explicitly or else C++ will
+     * use pre-C++11 compatibility rules ("no copy? no move neither!").
+     * We make the no-copy explicit by private inheritance.
+     * 
+     * Maintenance note: this comment is referred to in `geo::CryostatGeo`
+     * definition. If it's moved, that reference should be updated too.
+     */
+    
     using DefaultVector_t = TVector3; // ... not for long
     using DefaultPoint_t = TVector3; // ... not for long
 
   public:
-
-    using PlaneCollection_t = std::vector<geo::PlaneGeo*>;
+    /*
+     * What's unique about `geo::TPCGeo` and unique pointers?
+     * 
+     * The conversion of static ownership of TPC elements (the `geo::PlaneGeo`
+     * objects) into unique pointers would be troublesome because the storage
+     * detail was "exposed" to the interface of the sorting objects.
+     * The sorting objects (`geo::GeoObjectSorter`) have a virtual interface
+     * that directly refers to the collection stored here.
+     * Originally that was bare C pointers, so the sorter interface goes with
+     * that. Then we moved to direct storage to avoid the complication of
+     * ownership, but `geo::GeoObjectSorter` interface stayed behind.
+     * The current trick is to make a list of pointers, sort than one, and
+     * then move the objects in a new container with the new order.
+     * Now for the anode planes we move back to pointers (to accommodate
+     * polymorphism), but unique to avoid ownership ambiguities, and the
+     * `geo::GeoObjectSorter` interface becomes a problem again.
+     * In principle, at least. In practice, `geo::PlaneGeo` sorting moved away
+     * from custom sorters since once the drift direction is decided there is
+     * an obvious ordering that can be standardised, so whatever plane-ordering
+     * interface `geo::GeoObjectSorter` exposes and requires is just irrelevant.
+     * That's not the case for `geo::CryostatGeo`, `geo::TPCGeo` and
+     * `geo::WireGeo`.
+     */
+    using PlaneCollection_t = std::vector<std::unique_ptr<geo::PlaneGeo>>;
     using GeoNodePath_t = geo::WireGeo::GeoNodePath_t;
 
     /// Type returned by `IterateElements()`.
@@ -86,12 +124,6 @@ namespace geo {
       TGeoNode const& node, geo::TransformationMatrix&& trans,
       PlaneCollection_t&& planes
       );
-
-    TPCGeo(
-      TGeoNode const& node, geo::TransformationMatrix&& trans,
-      std::vector<geo::PlaneGeo>&& planes
-      );
-
 
     /// @{
     /// @name TPC properties
@@ -226,7 +258,7 @@ namespace geo {
      * @return a constant pointer to the plane, or nullptr if it does not exist
      */
     PlaneGeo const*     PlanePtr(unsigned int iplane)                const
-      { return HasPlane(iplane)? fPlanes[iplane]: nullptr; }
+      { return HasPlane(iplane)? fPlanes[iplane].get(): nullptr; }
 
     //@{
     /**
@@ -766,10 +798,14 @@ namespace geo {
     geo::Point_t GetFrontFaceCenterImpl() const;
     geo::Point_t GetCathodeCenterImpl() const;
 
-    std::vector<geo::PlaneGeo> fPlaneStorage;
-    
   };
 }
+
+// check that we got it right...
+static_assert(!std::is_copy_constructible_v<geo::TPCGeo>);
+static_assert(!std::is_copy_assignable_v<geo::TPCGeo>);
+static_assert( std::is_move_constructible_v<geo::TPCGeo>);
+static_assert( std::is_move_assignable_v<geo::TPCGeo>);
 
 
 //------------------------------------------------------------------------------

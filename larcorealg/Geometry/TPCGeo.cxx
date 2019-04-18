@@ -32,47 +32,11 @@
 #include <iterator> // std::inserter()
 #include <functional> // std::mem_fn()
 
-namespace {
-  
-  //----------------------------------------------------------------------------
-  template <template <typename, typename... Args> typename Container, typename T, typename... Args>
-  auto makePointerColl(Container<T, Args...>&& coll) {
-    
-    using std::begin;
-    using std::end;
-    
-    using Source_t = Container<T, Args...>;
-    using Dest_t = Container<typename Source_t::pointer>;
-    
-    Dest_t ptrColl;
-    std::transform(
-      begin(coll), end(coll), std::back_inserter(ptrColl),
-      [](auto& obj){ return &obj; }
-      );
-    return ptrColl;
-    
-  } // makePointerColl()
-  
-  
-  //----------------------------------------------------------------------------
-  
-} // local namespace
 
 
 namespace geo{
 
 
-  //......................................................................
-  TPCGeo::TPCGeo(
-    TGeoNode const& node,
-    geo::TransformationMatrix&& trans,
-    std::vector<geo::PlaneGeo>&& planes
-  )
-    : TPCGeo(node, std::move(trans), ::makePointerColl(std::move(planes)))
-  {
-    fPlaneStorage = std::move(planes);
-  }
-  
   //......................................................................
   TPCGeo::TPCGeo(
     TGeoNode const& node,
@@ -317,13 +281,13 @@ namespace geo{
     //
 
     auto iPlane = fPlanes.begin(), pend = fPlanes.end();
-    auto smallestPlane = *iPlane;
+    auto smallestPlane = iPlane->get();
     double smallestSurface = smallestPlane->Width() * smallestPlane->Depth();
     while (++iPlane != pend) {
       double const surface = (*iPlane)->Width() * (*iPlane)->Depth();
       if (surface > smallestSurface) continue;
       smallestSurface = surface;
-      smallestPlane = *iPlane;
+      smallestPlane = iPlane->get();
     } // while
     return *smallestPlane;
 
@@ -333,7 +297,7 @@ namespace geo{
   //......................................................................
   unsigned int TPCGeo::MaxWires() const {
     unsigned int maxWires = 0;
-    for (geo::PlaneGeo const* pPlane: fPlanes) {
+    for (auto const& pPlane: fPlanes) {
       unsigned int maxWiresInPlane = pPlane->Nwires();
       if (maxWiresInPlane > maxWires) maxWires = maxWiresInPlane;
     } // for
@@ -491,7 +455,7 @@ namespace geo{
     // 2. compute the distance of it from the last wire plane
     //
 
-    geo::PlaneGeo const* plane = fPlanes.back();
+    auto const& plane = fPlanes.back();
     return std::abs(plane->DistanceFromPlane(GetCathodeCenter()));
 
   } // TPCGeo::ComputeDriftDistance()
@@ -547,9 +511,9 @@ namespace geo{
      */
     fPlaneLocation.resize(fPlanes.size());
     fPlane0Pitch.resize(Nplanes(), 0.);
-    geo::Point_t refPlaneCenter = fPlanes[0].GetCenter<geo::Point_t>();
+    geo::Point_t refPlaneCenter = fPlanes[0]->GetCenter<geo::Point_t>();
     for(size_t p = 0; p < Nplanes(); ++p){
-      geo::Point_t const& center = fPlanes[p].GetCenter<geo::Point_t>();
+      geo::Point_t const& center = fPlanes[p]->GetCenter<geo::Point_t>();
       fPlane0Pitch[p] = (p == 0)
         ? 0.0
         : fPlane0Pitch[p-1] + std::abs(center.X()-refPlaneCenter.X())

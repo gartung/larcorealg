@@ -151,7 +151,7 @@ geo::GeometryBuilderStandard::TPCs_t geo::GeometryBuilderStandard::doExtractTPCs
 geo::TPCGeo geo::GeometryBuilderStandard::doMakeTPC(Path_t& path) {
   return geo::TPCGeo(
     path.current(), path.currentTransformation<geo::TransformationMatrix>(),
-     geo::GeometryBuilder::moveToColl(extractPlanes(path))
+     std::move(extractPlanes(path))
     );
 } // geo::GeometryBuilderStandard::doMakeTPC()
 
