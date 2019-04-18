@@ -42,7 +42,7 @@ namespace geo {
 
   public:
 
-    using PlaneCollection_t = std::vector<geo::PlaneGeo>;
+    using PlaneCollection_t = std::vector<geo::PlaneGeo*>;
     using GeoNodePath_t = geo::WireGeo::GeoNodePath_t;
 
     /// Type returned by `IterateElements()`.
@@ -85,6 +85,11 @@ namespace geo {
     TPCGeo(
       TGeoNode const& node, geo::TransformationMatrix&& trans,
       PlaneCollection_t&& planes
+      );
+
+    TPCGeo(
+      TGeoNode const& node, geo::TransformationMatrix&& trans,
+      std::vector<geo::PlaneGeo>&& planes
       );
 
 
@@ -221,7 +226,7 @@ namespace geo {
      * @return a constant pointer to the plane, or nullptr if it does not exist
      */
     PlaneGeo const*     PlanePtr(unsigned int iplane)                const
-      { return HasPlane(iplane)? &(fPlanes[iplane]): nullptr; }
+      { return HasPlane(iplane)? fPlanes[iplane]: nullptr; }
 
     //@{
     /**
@@ -242,10 +247,10 @@ namespace geo {
     geo::PlaneGeo const& SmallestPlane() const;
 
     /// Returns the first wire plane (the closest to TPC center).
-    geo::PlaneGeo const& FirstPlane() const { return fPlanes[0]; }
+    geo::PlaneGeo const& FirstPlane() const { return *(fPlanes[0]); }
 
     /// Returns the last wire plane (the farther from TPC center).
-    geo::PlaneGeo const& LastPlane() const { return fPlanes[Nplanes() - 1]; }
+    geo::PlaneGeo const& LastPlane() const { return *(fPlanes[Nplanes() - 1]); }
 
     /// @brief Returns the largest number of wires among the planes in this TPC
     unsigned int MaxWires() const;
@@ -756,11 +761,13 @@ namespace geo {
     void InitTPCBoundaries();
 
     /// Sorts (in place) the specified `PlaneGeo` objects by drift distance.
-    void SortPlanes(std::vector<geo::PlaneGeo>&) const;
+    void SortPlanes(PlaneCollection_t&) const;
 
     geo::Point_t GetFrontFaceCenterImpl() const;
     geo::Point_t GetCathodeCenterImpl() const;
 
+    std::vector<geo::PlaneGeo> fPlaneStorage;
+    
   };
 }
 

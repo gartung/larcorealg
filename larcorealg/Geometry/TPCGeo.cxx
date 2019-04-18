@@ -32,10 +32,47 @@
 #include <iterator> // std::inserter()
 #include <functional> // std::mem_fn()
 
+namespace {
+  
+  //----------------------------------------------------------------------------
+  template <template <typename, typename... Args> typename Container, typename T, typename... Args>
+  auto makePointerColl(Container<T, Args...>&& coll) {
+    
+    using std::begin;
+    using std::end;
+    
+    using Source_t = Container<T, Args...>;
+    using Dest_t = Container<typename Source_t::pointer>;
+    
+    Dest_t ptrColl;
+    std::transform(
+      begin(coll), end(coll), std::back_inserter(ptrColl),
+      [](auto& obj){ return &obj; }
+      );
+    return ptrColl;
+    
+  } // makePointerColl()
+  
+  
+  //----------------------------------------------------------------------------
+  
+} // local namespace
+
 
 namespace geo{
 
 
+  //......................................................................
+  TPCGeo::TPCGeo(
+    TGeoNode const& node,
+    geo::TransformationMatrix&& trans,
+    std::vector<geo::PlaneGeo>&& planes
+  )
+    : TPCGeo(node, std::move(trans), ::makePointerColl(std::move(planes)))
+  {
+    fPlaneStorage = std::move(planes);
+  }
+  
   //......................................................................
   TPCGeo::TPCGeo(
     TGeoNode const& node,
@@ -209,9 +246,9 @@ namespace geo{
     fViewToPlaneNumber.resize
       (1U + (size_t) geo::kUnknown, (geo::PlaneID::PlaneID_t) geo::PlaneID::InvalidID);
     for(size_t p = 0; p < this->Nplanes(); ++p)
-      fViewToPlaneNumber[(size_t) fPlanes[p].View()] = p;
+      fViewToPlaneNumber[(size_t) fPlanes[p]->View()] = p;
 
-    for(size_t p = 0; p < fPlanes.size(); ++p) fPlanes[p].SortWires(sorter);
+    for(size_t p = 0; p < fPlanes.size(); ++p) fPlanes[p]->SortWires(sorter);
 
   }
 
@@ -225,11 +262,11 @@ namespace geo{
     // ask the planes to update; also check
 
     for (unsigned int plane = 0; plane < Nplanes(); ++plane) {
-      fPlanes[plane].UpdateAfterSorting(geo::PlaneID(fID, plane), *this);
+      fPlanes[plane]->UpdateAfterSorting(geo::PlaneID(fID, plane), *this);
 
       // check that the plane normal is opposite to the TPC drift direction
       assert(lar::util::makeVector3DComparison(1e-5)
-        .equal(-(fPlanes[plane].GetNormalDirection()), DriftDir()));
+        .equal(-(fPlanes[plane]->GetNormalDirection()), DriftDir()));
 
     } // for
 
@@ -268,7 +305,7 @@ namespace geo{
         << "TPCGeo[" << ((void*) this) << "]::Plane(): no plane for view #"
         << (size_t) view << "\n";
     }
-    return fPlanes[p];
+    return *(fPlanes[p]);
   } // TPCGeo::Plane(geo::View_t)
 
 
@@ -280,13 +317,13 @@ namespace geo{
     //
 
     auto iPlane = fPlanes.begin(), pend = fPlanes.end();
-    auto smallestPlane = iPlane;
+    auto smallestPlane = *iPlane;
     double smallestSurface = smallestPlane->Width() * smallestPlane->Depth();
     while (++iPlane != pend) {
-      double const surface = iPlane->Width() * iPlane->Depth();
+      double const surface = (*iPlane)->Width() * (*iPlane)->Depth();
       if (surface > smallestSurface) continue;
       smallestSurface = surface;
-      smallestPlane = iPlane;
+      smallestPlane = *iPlane;
     } // while
     return *smallestPlane;
 
@@ -296,8 +333,8 @@ namespace geo{
   //......................................................................
   unsigned int TPCGeo::MaxWires() const {
     unsigned int maxWires = 0;
-    for (geo::PlaneGeo const& plane: fPlanes) {
-      unsigned int maxWiresInPlane = plane.Nwires();
+    for (geo::PlaneGeo const* pPlane: fPlanes) {
+      unsigned int maxWiresInPlane = pPlane->Nwires();
       if (maxWiresInPlane > maxWires) maxWires = maxWiresInPlane;
     } // for
     return maxWires;
@@ -454,8 +491,8 @@ namespace geo{
     // 2. compute the distance of it from the last wire plane
     //
 
-    geo::PlaneGeo const& plane = fPlanes.back();
-    return std::abs(plane.DistanceFromPlane(GetCathodeCenter()));
+    geo::PlaneGeo const* plane = fPlanes.back();
+    return std::abs(plane->DistanceFromPlane(GetCathodeCenter()));
 
   } // TPCGeo::ComputeDriftDistance()
 
@@ -496,7 +533,7 @@ namespace geo{
     fViewToPlaneNumber.resize
       (1U + (size_t) geo::kUnknown, (geo::PlaneID::PlaneID_t) geo::PlaneID::InvalidID);
     for(size_t p = 0; p < Nplanes(); ++p)
-      fViewToPlaneNumber[(size_t) fPlanes[p].View()] = p;
+      fViewToPlaneNumber[(size_t) fPlanes[p]->View()] = p;
 
   } // TPCGeo::UpdatePlaneViewCache()
 
@@ -526,7 +563,7 @@ namespace geo{
 
 
   //......................................................................
-  void TPCGeo::SortPlanes(std::vector<geo::PlaneGeo>& planes) const {
+  void TPCGeo::SortPlanes(PlaneCollection_t& planes) const {
     //
     // Sort planes by increasing drift distance.
     //
@@ -544,12 +581,12 @@ namespace geo{
     // We use the first plane -- it does not make any difference.
     auto const TPCcenter = GetCenter();
     auto const driftAxis
-      = geo::vect::normalize(planes[0].GetBoxCenter() - TPCcenter);
+      = geo::vect::normalize(planes[0]->GetBoxCenter() - TPCcenter);
 
     auto by_distance = [&TPCcenter, &driftAxis](auto const& a,
                                                 auto const& b) {
-      return geo::vect::dot(a.GetBoxCenter() - TPCcenter, driftAxis) <
-             geo::vect::dot(b.GetBoxCenter() - TPCcenter, driftAxis);
+      return geo::vect::dot(a->GetBoxCenter() - TPCcenter, driftAxis) <
+             geo::vect::dot(b->GetBoxCenter() - TPCcenter, driftAxis);
     };
     cet::sort_all(planes, by_distance);
 
