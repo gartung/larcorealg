@@ -2335,7 +2335,8 @@ namespace geo {
       { return NTPC(geo::CryostatID(cstat)); }
 
     /// Returns the largest number of TPCs a cryostat in the detector has
-    unsigned int MaxTPCs() const;
+    unsigned int MaxTPCs() const
+      { return fMaxGeoElements[geo::ElementLevel::TPC]; }
 
     /// Returns the total number of TPCs in the detector
     unsigned int TotalNTPC() const;
@@ -2867,7 +2868,8 @@ namespace geo {
       { return Nplanes(geo::TPCID(cstat, tpc)); }
 
     /// Returns the largest number of planes among all TPCs in this detector
-    unsigned int MaxPlanes() const;
+    unsigned int MaxPlanes() const
+      { return fMaxGeoElements[geo::ElementLevel::Plane]; }    
 
     /**
      * @brief Returns a container with one entry per wire plane.
@@ -3382,8 +3384,8 @@ namespace geo {
       { return Nwires(wireid); }
 
     /// Returns the largest number of wires among all planes in this detector
-    unsigned int MaxWires() const;
-
+    unsigned int MaxWires() const
+      { return fMaxGeoElements[geo::ElementLevel::Wire]; }
     //@}
 
 
@@ -4872,7 +4874,8 @@ namespace geo {
     //@}
 
     /// Returns the largest number of TPC sets any cryostat in the detector has
-    unsigned int MaxTPCsets() const;
+    unsigned int MaxTPCsets() const
+      { return fMaxGeoElements[readout::ElementLevel::TPCset]; }
 
 
     //
@@ -5075,7 +5078,8 @@ namespace geo {
     //@}
 
     /// Returns the largest number of ROPs a TPC set in the detector has
-    unsigned int MaxROPs() const;
+    unsigned int MaxROPs() const
+      { return fMaxGeoElements[readout::ElementLevel::ReadoutPlane]; }
 
 
     //
@@ -5441,6 +5445,7 @@ namespace geo {
 
 
   protected:
+    
     /// Sets the detector name
     void SetDetectorName(std::string new_name) { fDetectorName = new_name; }
 
@@ -5471,7 +5476,17 @@ namespace geo {
     double         fMinWireZDist;   ///< Minimum distance in Z from a point in which
                                     ///< to look for the closest wire
     double         fPositionWiggle; ///< accounting for rounding errors when testing positions
-
+    
+    /// List of maximum number of geometry elements of a type in any of the
+    /// direct super-elements (see `MaxTPCs()`, `MaxPlanes()` etc.).
+    std::array<unsigned int, geo::ElementLevel::NLevels> fMaxGeoElements;
+    
+    /// List of maximum number of readout elements of a type in any of the
+    /// direct super-elements (see `MaxTPCsets()`, `MaxROPs()).
+    std::array<unsigned int, readout::ElementLevel::Channel - readout::ElementLevel::Cryostat>
+      fMaxReadoutElements;
+    
+    
     /// Configuration for the geometry builder
     /// (needed since builder is created after construction).
     fhicl::ParameterSet fBuilderParameters;
@@ -5511,7 +5526,15 @@ namespace geo {
 
     /// Deletes the detector geometry structures
     void ClearGeometry();
-
+    
+    /// Computes the maximum number of elements of each geometry element type.
+    std::array<unsigned int, geo::ElementLevel::NLevels>
+      ComputeMaxGeoElements() const;
+    
+    /// Computes the maximum number of elements of each readout element type.
+    std::array<unsigned int, readout::ElementLevel::Channel - readout::ElementLevel::Cryostat>
+      ComputeMaxReadoutElements() const;
+    
     /// Throws an exception ("GeometryCore" category) unless pid1 and pid2
     /// are on different planes of the same TPC (ID validity is not checked)
     static void CheckIndependentPlanesOnSameTPC

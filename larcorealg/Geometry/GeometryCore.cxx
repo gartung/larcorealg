@@ -71,6 +71,8 @@ namespace geo {
   {
     std::transform(fDetectorName.begin(), fDetectorName.end(),
       fDetectorName.begin(), ::tolower);
+    fMaxGeoElements.fill(0U);
+    fMaxReadoutElements.fill(0U);
   } // GeometryCore::GeometryCore()
 
 
@@ -88,7 +90,9 @@ namespace geo {
     UpdateAfterSorting(); // after channel mapping has sorted objects, set their IDs
     pChannelMap->Initialize(fGeoData);
     fChannelMapAlg = pChannelMap;
-
+    
+    fMaxReadoutElements = ComputeMaxReadoutElements();
+    
   } // GeometryCore::ApplyChannelMap()
 
   //......................................................................
@@ -123,6 +127,8 @@ namespace geo {
 
     fGDMLfile = gdmlfile;
     fROOTfile = rootfile;
+    
+    fMaxGeoElements = ComputeMaxGeoElements();
 
     mf::LogInfo("GeometryCore") << "New detector geometry loaded from "
                                 << "\n\t" << fROOTfile
@@ -856,16 +862,6 @@ namespace geo {
   } // GeometryCore::WireAngleToVertical()
 
   //......................................................................
-  unsigned int GeometryCore::MaxTPCs() const {
-    unsigned int maxTPCs = 0;
-    for (geo::CryostatGeo const& cryo: Cryostats()) {
-      unsigned int maxTPCsInCryo = cryo.NTPC();
-      if (maxTPCsInCryo > maxTPCs) maxTPCs = maxTPCsInCryo;
-    } // for
-    return maxTPCs;
-  } // GeometryCore::MaxTPCs()
-
-  //......................................................................
   unsigned int GeometryCore::TotalNTPC() const {
     // it looks like C++11 lambdas have made STL algorithms easier to use,
     // but only so much:
@@ -874,26 +870,6 @@ namespace geo {
         { return sum + cryo.NTPC(); }
       );
   } // GeometryCore::TotalNTPC()
-
-  //......................................................................
-  unsigned int GeometryCore::MaxPlanes() const {
-    unsigned int maxPlanes = 0;
-    for (geo::CryostatGeo const& cryo: Cryostats()) {
-      unsigned int maxPlanesInCryo = cryo.MaxPlanes();
-      if (maxPlanesInCryo > maxPlanes) maxPlanes = maxPlanesInCryo;
-    } // for
-    return maxPlanes;
-  } // GeometryCore::MaxPlanes()
-
-  //......................................................................
-  unsigned int GeometryCore::MaxWires() const {
-    unsigned int maxWires = 0;
-    for (geo::CryostatGeo const& cryo: Cryostats()) {
-      unsigned int maxWiresInCryo = cryo.MaxWires();
-      if (maxWiresInCryo > maxWires) maxWires = maxWiresInCryo;
-    } // for
-    return maxWires;
-  } // GeometryCore::MaxWires()
 
   //......................................................................
   TGeoVolume const* GeometryCore::WorldVolume() const {
@@ -1719,12 +1695,6 @@ namespace geo {
 
 
   //--------------------------------------------------------------------
-  unsigned int GeometryCore::MaxTPCsets() const {
-    return fChannelMapAlg->MaxTPCsets();
-  } // GeometryCore::MaxTPCsets()
-
-
-  //--------------------------------------------------------------------
   bool GeometryCore::HasTPCset(readout::TPCsetID const& tpcsetid) const {
     return fChannelMapAlg->HasTPCset(tpcsetid);
   } // GeometryCore::HasTPCset()
@@ -1760,12 +1730,6 @@ namespace geo {
   unsigned int GeometryCore::NROPs(readout::TPCsetID const& tpcsetid) const {
     return fChannelMapAlg->NROPs(tpcsetid);
   } // GeometryCore::NROPs()
-
-
-  //--------------------------------------------------------------------
-  unsigned int GeometryCore::MaxROPs() const {
-    return fChannelMapAlg->MaxROPs();
-  } // GeometryCore::MaxROPs()
 
 
   //--------------------------------------------------------------------
@@ -1967,6 +1931,52 @@ namespace geo {
 
   } // GeometryCore::PointWithinSegments()
 
+  
+  //--------------------------------------------------------------------
+  std::array<unsigned int, geo::ElementLevel::NLevels>
+  GeometryCore::ComputeMaxGeoElements() const
+  {
+    auto setMax = [](auto& max, auto value){ if (value > max) max = value; };
+    
+    // let's have a simple implementation with a nested loop here...
+    std::array<unsigned int, geo::ElementLevel::NLevels> max;
+    max.fill(0U);
+    
+    max[geo::ElementLevel::Cryostat] = Ncryostats();
+    for (geo::CryostatGeo const& cryo: IterateCryostats()) {
+      
+      setMax(max[geo::ElementLevel::TPC], cryo.NTPC());
+      
+      for (geo::TPCGeo const& TPC: cryo.IterateTPCs()) {
+        
+        setMax(max[geo::ElementLevel::Plane], TPC.Nplanes());
+        
+        for (geo::PlaneGeo const& plane: TPC.IteratePlanes()) {
+          
+          setMax(max[geo::ElementLevel::Wire], plane.Nwires());
+          
+        } // for plane
+        
+      } // for TPC
+      
+    } // for cryostat
+    
+    return max;
+  } // GeometryCore::ComputeMaxGeoElements() const
+  
+  
+  //--------------------------------------------------------------------
+  std::array<unsigned int, readout::ElementLevel::Channel - readout::ElementLevel::Cryostat>
+  GeometryCore::ComputeMaxReadoutElements() const
+  {
+    // BUG the double brace syntax is required to work around clang bug 21629
+    // (https://bugs.llvm.org/show_bug.cgi?id=21629)
+    return
+    //  { Ncryostats(), fChannelMapAlg->MaxTPCsets(), fChannelMapAlg->MaxROPs() };
+      {{ Ncryostats(), fChannelMapAlg->MaxTPCsets(), fChannelMapAlg->MaxROPs() }};
+  } // GeometryCore::ComputeMaxReadoutElements() const
+  
+  
   //--------------------------------------------------------------------
   constexpr details::geometry_iterator_types::BeginPos_t
     details::geometry_iterator_types::begin_pos;
