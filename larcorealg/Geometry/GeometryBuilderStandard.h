@@ -28,6 +28,7 @@
 #include "TGeoNode.h"
 
 // C++ standard library
+#include <memory> // std::unique_ptr<>
 #include <string_view>
 #include <limits> // std::numeric_limits<>
 
@@ -295,7 +296,8 @@ namespace geo {
     /// @name Wire plane information
     /// @{
 
-    using Planes_t = GeoPtrColl_t<geo::PlaneGeo>;
+    using PlanePtr_t = std::unique_ptr<geo::PlaneGeo>;
+    using Planes_t = std::vector<PlanePtr_t>;
 
     /**
      * @brief Looks for all wire planes under the specified path.
@@ -308,7 +310,7 @@ namespace geo {
       { auto localPath = path; return doExtractPlanes(localPath); }
 
     /// Constructs a `geo::PlaneGeo` from the current node of the `path`.
-    geo::PlaneGeo makePlane(Path_t& path)
+    PlanePtr_t makePlane(Path_t& path)
       { return doMakePlane(path); }
 
 
@@ -318,7 +320,7 @@ namespace geo {
     virtual Planes_t doExtractPlanes(Path_t& path);
 
     /// Core implementation of `makePlanes()`.
-    virtual geo::PlaneGeo doMakePlane(Path_t& path);
+    virtual PlanePtr_t doMakePlane(Path_t& path);
 
     /// @}
     // --- END Plane information -----------------------------------------------
@@ -402,7 +404,10 @@ namespace geo {
 
     /**
      * @brief Boilerplate implementation of `doExtractXxxx()` methods.
-     * @tparam ObjGeo the geometry object being extracted (e.g. `geo::WireGeo`)
+     * @tparam ObjGeoIF the interface of the geometry object being extracted
+     *                  (e.g. `geo::PlaneGeo`)
+     * @tparam ObjGeo the tyep of object returned by the `MakeObj` function
+     *                (e.g. `std::unique_ptr<geo::PlaneGeo>`)
      * @tparam IsObj function to identify if a node is of the right type
      * @tparam MakeObj class method creating the target object from a path
      * @param path the path to the node describing the object
@@ -417,11 +422,21 @@ namespace geo {
      * @note Multithreading note: `path` is allowed to change during processing.
      */
     template <
+      typename ObjGeoIF,
       typename ObjGeo,
       bool (geo::GeometryBuilderStandard::*IsObj)(TGeoNode const&) const,
       ObjGeo (geo::GeometryBuilderStandard::*MakeObj)(Path_t&)
       >
-    GeoPtrColl_t<ObjGeo> doExtractGeometryObjects(Path_t& path);
+    GeoPtrColl_t<ObjGeoIF> doExtractGeometryObjects(Path_t& path);
+    
+    /// `doExtractGeometryObjects()` wth `ObjGeoIF` same as `ObjGeo`.
+    template <
+      typename ObjGeo,
+      bool (geo::GeometryBuilderStandard::*IsObj)(TGeoNode const&) const,
+      ObjGeo (geo::GeometryBuilderStandard::*MakeObj)(Path_t&)
+      >
+    GeoPtrColl_t<ObjGeo> doExtractGeometryObjects(Path_t& path)
+      { return doExtractGeometryObjects<ObjGeo, ObjGeo, IsObj, MakeObj>(path); }
 
 
   }; // class GeometryBuilderStandard

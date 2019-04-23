@@ -1,15 +1,17 @@
-////////////////////////////////////////////////////////////////////////
-/// \file  larcorealg/Geometry/PlaneGeo.h
-/// \brief Encapsulate the construction of a single detector plane
-/// \ingroup Geometry
-///
-/// \author  brebel@fnal.gov
-////////////////////////////////////////////////////////////////////////
+/**
+ * @file   larcorealg/Geometry/PlaneGeo.h
+ * @brief  Interface for classes describing the geometry of a TPC readout plane.
+ * @author Gianluca Petrillo (petrillo@fnal.gov)
+ * @date   April 17, 2019
+ * @ingroup Geometry
+ * 
+ */
+
 #ifndef LARCOREALG_GEOMETRY_PLANEGEO_H
 #define LARCOREALG_GEOMETRY_PLANEGEO_H
 
+
 // LArSoft libraries
-#include "larcorealg/CoreUtils/DereferenceIterator.h"
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/SimpleGeo.h"
 #include "larcorealg/Geometry/TransformationMatrix.h"
@@ -18,6 +20,7 @@
 #include "larcorealg/Geometry/Decomposer.h"
 #include "larcorealg/Geometry/WireGeo.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
+#include "larcorealg/CoreUtils/DereferenceIterator.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 
 // ROOT libraries
@@ -29,7 +32,6 @@
 #include "TGeoMatrix.h" // TGeoHMatrix
 
 // C/C++ standard libraries
-#include <cmath> // std::atan2()
 #include <vector>
 #include <string>
 
@@ -37,11 +39,9 @@
 class TGeoNode;
 class TVector3;
 
+
 namespace geo {
 
-  namespace details {
-    struct ActiveAreaCalculator;
-  } // namespace details
 
   //......................................................................
   class WireGeo;
@@ -50,49 +50,53 @@ namespace geo {
 
   /**
    * @brief Geometry information for a single wire plane.
+   * @see `geo::WirePlaneGeo`
    * @ingroup Geometry
    *
-   * The plane is represented in the geometry by a solid which contains wires.
+   * The plane is represented in the geometry by a solid which contains some
+   * readout elements.
    * Currently, only box solids are well supported.
    * The box which is representation of the plane has some thickness, and it
-   * should not be assumed that the wires are in the median section of it,
-   * that is, the center of the box may not lie on the plane defined by the
-   * wires.
+   * should not be assumed that the active elements are lying in the median
+   * section of it, that is, the center of the box may not lie on the plane
+   * defined by the active elements.
    *
    * The plane defines two local reference frames.
-   * The first, depending on wire directions and therefore called "wire base",
-   * is defined by the normal to the plane (pointing toward the center of the
-   * TPC), the direction of the wires, and the direction that the wires measure.
-   * This is a positive orthogonal base.
-   * Note that for this base to be correctly defined, the Geometry service has
-   * to provide external information (for example, where the center of the
-   * TPC is).
-   *
+   * Both define a normal direction to the plane, which is required to be the
+   * same for both. It is defined as a vector pointing toward the center of the
+   * TPC. Note that for the normal to be correctly defined, the Geometry service
+   * provider has to provide external information (for example, where the center
+   * of the TPC is).
+   * 
+   * The first of the two local reference frames is readout-element dependent,
+   * and its specific definition and features are left to the implementation
+   * classes. The legacy terminology assumes that the readout elements are
+   * actually wires.
+   * 
    * The second, depending only on the shape of the plane and called "frame
-   * base", is defined by the normal (the same as for the previous one), and two
-   * orthogonal axes, "width" and "depth", aligned with the sides of the plane.
+   * base", is defined by the normal (as defined above), and two orthogonal
+   * axes, "width" and "depth", aligned with the sides of the plane.
    * If the plane has not the shape of a box, this reference frame is not
    * available. This coordinate system is also positive defined.
    * These components are all measured in centimeters.
    *
    */
-  // Note: SignalType() and SetSignalType() have been removed.
-  //       Use `geo::GeometryCore::SignalType` instead.
-  //       (see LArSoft issue #14365 at https://cdcvs.fnal.gov/redmine/issues/14365 )
   class PlaneGeo {
-
-    using DefaultVector_t = TVector3; // ... not for long
-    using DefaultPoint_t = TVector3; // ... not for long
 
   public:
 
-    using WireCollection_t = std::vector<geo::WireGeo>;
+    using DefaultVector_t = TVector3; // ... not for long
+    using DefaultPoint_t = TVector3; // ... not for long
+    
+    using AnodeElement_t = geo::WireGeo; ///< Element contained in the plane.
+    
     using GeoNodePath_t = std::vector<TGeoNode const*>;
 
     /// Type returned by `IterateElements()`.
-    using ElementIteratorBox = WireCollection_t const&;
+    using ElementIteratorBox = std::vector<AnodeElement_t> const&;
     
 
+    // --- BEGIN -- Types for geometry-local reference vectors -----------------
     /// @{
     /**
      * @name Types for geometry-local reference vectors.
@@ -118,7 +122,9 @@ namespace geo {
     using LocalVector_t = geo::Vector3DBase_t<PlaneGeoCoordinatesTag>;
 
     /// @}
+    // --- END -- Types for geometry-local reference vectors -------------------
 
+    // --- BEGIN -- Types for vectors in the wire coordinate frame -------------
     /// @{
     /// @name Types for vectors in the wire coordinate frame.
 
@@ -137,8 +143,10 @@ namespace geo {
     using WireDecomposedVector_t = WireDecomposer_t::DecomposedVector_t;
 
     /// @}
+    // --- END -- Types for vectors in the wire coordinate frame ---------------
 
 
+    // --- BEGIN -- Types for vectors in the width/depth coordinate frame ------
     /// @{
     /// @name Types for vectors in the width/depth coordinate frame.
 
@@ -163,47 +171,48 @@ namespace geo {
     using WDDecomposedVector_t = WidthDepthDecomposer_t::DecomposedVector_t;
 
     /// @}
+    // --- END -- Types for vectors in the width/depth coordinate frame --------
 
 
     /// Type for description of rectangles.
     using Rect = lar::util::simple_geo::Rectangle<double>;
 
 
-    /// Construct a representation of a single plane of the detector
-    PlaneGeo(
-      TGeoNode const& node,
-      geo::TransformationMatrix&& trans,
-      WireCollection_t&& wires
-      );
+    /// Virtual destructor. Does nothing special.
+    virtual ~PlaneGeo() = default;
 
 
+    // --- BEGIN -- Plane properties -------------------------------------------
     /// @{
     /// @name Plane properties
 
-    /// Which coordinate does this plane measure
-    View_t View()                                             const { return fView;          }
+    /// Which coordinate does this plane measure.
+    View_t View() const { return fView; }
 
-    /// What is the orientation of the plane
-    Orient_t Orientation()                                    const { return fOrientation;   }
+    /// What is the orientation of the plane.
+    Orient_t Orientation() const { return fOrientation; }
 
-    /// Angle of the wires from positive z axis; @f$ \theta_{z} \in [ 0, \pi ]@f$.
-    double ThetaZ()                                           const;
+    /// Angle of the wires from positive _z_ axis;
+    /// @f$ \theta_{z} \in [ 0, \pi ]@f$.
+    double ThetaZ() const { return doThetaZ(); }
 
-    /// Angle from positive z axis of the wire coordinate axis, in radians
-    double PhiZ()                                             const
-      { return std::atan2(fSinPhiZ, fCosPhiZ); }
+    /// Angle from positive _z_ axis of the wire coordinate axis, in radians.
+    double PhiZ() const { return doPhiZ(); }
 
-    /// Sine of PhiZ()
-    double SinPhiZ()                                          const { return fSinPhiZ; }
+    /// Sine of `PhiZ()`.
+    double SinPhiZ() const { return doSinPhiZ(); }
 
-    /// Cosine of PhiZ()
-    double CosPhiZ()                                          const { return fCosPhiZ; }
+    /// Cosine of `PhiZ()`.
+    double CosPhiZ() const { return doCosPhiZ(); }
 
     /// Returns the identifier of this plane
     geo::PlaneID const& ID() const { return fID; }
 
     /// @}
+    // --- END -- Plane properties ---------------------------------------------
 
+
+    // --- BEGIN -- Plane size and coordinates ---------------------------------
     /// @{
     /// @name Plane size and coordinates
 
@@ -213,12 +222,13 @@ namespace geo {
      * @tparam Vector the type of vector to return (current default: `TVector3`)
      *
      * The precise definition of the sides is arbitrary, but they are defined
-     * to lie on the wire plane and so that WidthDir(), DepthDir() and
-     * GetNormalDirection() make a orthonormal base.
+     * to lie on the wire plane and so that `WidthDir()`, `DepthDir()` and
+     * `GetNormalDirection()` make a orthonormal base.
      * That base (width, depth, normal) is guaranteed to be positive defined.
      */
     template <typename Vector>
-    Vector WidthDir() const { return geo::vect::convertTo<Vector>(fDecompFrame.MainDir()); }
+    Vector WidthDir() const
+      { return geo::vect::convertTo<Vector>(fDecompFrame.MainDir()); }
     DefaultVector_t WidthDir() const { return WidthDir<DefaultVector_t>(); }
     //@}
 
@@ -228,12 +238,13 @@ namespace geo {
      * @tparam Vector the type of vector to return (current default: `TVector3`)
      *
      * The precise definition of the sides is arbitrary, but they are defined
-     * to lie on the wire plane and so that WidthDir(), DepthDir() and
-     * GetNormalDirection() make a orthonormal base.
+     * to lie on the wire plane and so that `WidthDir()`, `DepthDir()` and
+     * `GetNormalDirection()` make a orthonormal base.
      * That base (width, depth, normal) is guaranteed to be positive defined.
      */
     template <typename Vector>
-    Vector DepthDir() const { return geo::vect::convertTo<Vector>(fDecompFrame.SecondaryDir()); }
+    Vector DepthDir() const
+      { return geo::vect::convertTo<Vector>(fDecompFrame.SecondaryDir()); }
     DefaultVector_t DepthDir() const { return DepthDir<DefaultVector_t>(); }
     //@}
 
@@ -259,15 +270,17 @@ namespace geo {
     geo::BoxBoundedGeo BoundingBox() const;
 
     /// @}
+    // --- END -- Plane size and coordinates -----------------------------------
 
 
+    // --- BEGIN -- Anode element access ---------------------------------------
     /// @{
-    /// @name Wire access
+    /// @name Anode element access
 
     //@{
     /// Number of wires in this plane
-    unsigned int Nwires()                                     const { return fWire.size();   }
-    unsigned int NElements()                                  const { return Nwires();       }
+    unsigned int Nwires() const { return doNwires(); }
+    unsigned int NElements() const { return Nwires(); }
     //@}
 
     //@{
@@ -276,7 +289,7 @@ namespace geo {
      * @param iwire index of wire in this plane
      * @return whether the wire with index iwire is present in this plane
      */
-    bool HasWire(unsigned int iwire) const { return iwire < Nwires(); }
+    bool HasWire(unsigned int iwire) const { return doHasWire(iwire); }
     bool HasElement(unsigned int iwire) const { return HasWire(iwire); }
     //@}
 
@@ -298,7 +311,7 @@ namespace geo {
     /// Return the iwire'th wire in the plane.
     /// @throws cet::exception (category "WireOutOfRange") if no such wire
     /// @note In the past, no check was performed.
-    WireGeo const& Wire(unsigned int iwire) const;
+    WireGeo const& Wire(unsigned int iwire) const { return doWire(iwire); }
 
     //@{
     /**
@@ -322,7 +335,7 @@ namespace geo {
      * @return a constant pointer to the wire, or nullptr if it does not exist
      */
     geo::WirePtr WirePtr(unsigned int iwire) const
-      { return HasWire(iwire)? &(fWire[iwire]): nullptr; }
+      { return doWirePtr(iwire); }
 
     //@{
     /**
@@ -341,13 +354,13 @@ namespace geo {
 
 
     /// Return the first wire in the plane.
-    const WireGeo& FirstWire()                                const { return Wire(0);        }
+    const WireGeo& FirstWire() const { return doFirstWire(); }
 
     /// Return the middle wire in the plane.
-    const WireGeo& MiddleWire()                               const { return Wire(Nwires()/2); }
+    const WireGeo& MiddleWire() const { return doMiddleWire(); }
 
     /// Return the last wire in the plane.
-    const WireGeo& LastWire()                                 const { return Wire(Nwires()-1); }
+    const WireGeo& LastWire() const { return doLastWire(); }
     
     // @{
     /**
@@ -397,18 +410,20 @@ namespace geo {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      * 
      */
-    ElementIteratorBox IterateElements() const { return fWire; }
+    ElementIteratorBox IterateElements() const { return doIterateElements(); }
     ElementIteratorBox IterateWires() const { return IterateElements(); }
     // @}
 
     /// @}
+    // --- END -- Anode element access -----------------------------------------
 
 
+    // --- BEGIN -- Plane geometry properties ----------------------------------
     /// @{
     /// @name Plane geometry properties
 
     /// Return the wire pitch (in centimeters). It is assumed constant.
-    double WirePitch() const { return fWirePitch; }
+    double WirePitch() const { return doWirePitch(); }
 
     /**
      * @brief Returns whether the higher z wires have higher wire ID.
@@ -419,7 +434,7 @@ namespace geo {
      * (it might be expressed as "GetIncreasingWireDirection()[2] > 0"),
      * but it is implemented in a faster and independent way.
      */
-    bool WireIDincreasesWithZ() const;
+    bool WireIDincreasesWithZ() const { return doWireIDincreasesWithZ(); }
 
     //@{
     /**
@@ -439,7 +454,8 @@ namespace geo {
      *       description.
      */
     template <typename Vector>
-    Vector GetNormalDirection() const { return geo::vect::convertTo<Vector>(fNormal); }
+    Vector GetNormalDirection() const
+      { return geo::vect::convertTo<Vector>(fNormal); }
     DefaultVector_t GetNormalDirection() const
       { return GetNormalDirection<DefaultVector_t>(); }
     //@}
@@ -455,7 +471,7 @@ namespace geo {
      */
     template <typename Vector>
     Vector GetIncreasingWireDirection() const
-      { return geo::vect::convertTo<Vector>(fDecompWire.SecondaryDir()); }
+      { return geo::vect::convertTo<Vector>(doGetIncreasingWireDirection()); }
     DefaultVector_t GetIncreasingWireDirection() const
       { return GetIncreasingWireDirection<DefaultVector_t>(); }
     //@}
@@ -477,7 +493,7 @@ namespace geo {
      */
     template <typename Point>
     Point GetCenter() const
-      { return geo::vect::convertTo<Point>(fCenter); }
+      { return geo::vect::convertTo<Point>(doGetCenter()); }
     DefaultPoint_t GetCenter() const { return GetCenter<DefaultPoint_t>(); }
     //@}
 
@@ -510,7 +526,8 @@ namespace geo {
      * All wires in the plane are assumed parallel.
      */
     template <typename Vector>
-    Vector GetWireDirection() const { return geo::vect::convertTo<Vector>(fDecompWire.MainDir()); }
+    Vector GetWireDirection() const
+      { return geo::vect::convertTo<Vector>(doGetWireDirection()); }
     DefaultVector_t GetWireDirection() const
       { return GetWireDirection<DefaultVector_t>(); }
     //@}
@@ -541,7 +558,8 @@ namespace geo {
      *       return an invalid wire ID with the wire number set to the
      *       non-existing wire which _would_ be the nearest to `pos`.
      */
-    geo::WireID NearestWireID(geo::Point_t const& pos) const;
+    geo::WireID NearestWireID(geo::Point_t const& pos) const
+      { return doNearestWireID(pos); }
     geo::WireID NearestWireID(TVector3 const& pos) const
       { return NearestWireID(geo::vect::toPoint(pos)); }
     //@}
@@ -568,7 +586,8 @@ namespace geo {
      * long, and if the position projection is closer than half the wire pitch
      * from any of these extrapolated wires, the method will not report error.
      */
-    geo::WireGeo const& NearestWire(geo::Point_t const& pos) const;
+    geo::WireGeo const& NearestWire(geo::Point_t const& pos) const
+      { return doNearestWire(pos); }
 
 
     /**
@@ -586,7 +605,8 @@ namespace geo {
      * and if a floating point value is specified for it, it's subject to
      * truncation.
      */
-    geo::WireID ClosestWireID(geo::WireID::WireID_t wireNo) const;
+    geo::WireID ClosestWireID(geo::WireID::WireID_t wireNo) const
+      { return doClosestWireID(wireNo); }
 
 
     /**
@@ -619,7 +639,7 @@ namespace geo {
      * point to the plane.
      */
     double DistanceFromPlane(geo::Point_t const& point) const
-      { return fDecompWire.PointNormalComponent(point); }
+      { return fDecompFrame.PointNormalComponent(point); }
     double DistanceFromPlane(TVector3 const& point) const
       { return DistanceFromPlane(geo::vect::toPoint(point)); }
     //@}
@@ -674,10 +694,10 @@ namespace geo {
      * `details::ActiveAreaCalculator`.
      *
      */
-    Rect const& ActiveArea() const { return fActiveArea; }
+    Rect const& ActiveArea() const { return doActiveArea(); }
 
     /// Returns a volume including all the wires in the plane.
-    lar::util::simple_geo::Volume<> Coverage() const;
+    lar::util::simple_geo::Volume<> Coverage() const { return doCoverage(); }
 
     /**
      * @brief Prints information about this plane.
@@ -685,9 +705,43 @@ namespace geo {
      * @param out stream to send the information to
      * @param indent prepend each line with this string
      * @param verbosity amount of information printed
+     * @see `PlaneInfo()`
      *
-     * Information on single wires is not printed.
-     * Note that the first line out the output is _not_ indented.
+     * The information is provided by `PlaneInfo()`, and the arguments
+     * have the same meaning.
+     */
+    template <typename Stream>
+    void PrintPlaneInfo
+      (Stream&& out, std::string indent = "", unsigned int verbosity = 1) const
+      { out << PlaneInfo(indent, verbosity); }
+
+
+    /**
+     * @brief Returns a string with plane information.
+     * @param indent prepend each line with this string
+     * @param verbosity amount of information printed
+     * @see `PrintPlaneInfo()`
+     *
+     * Information on single readout elements is not printed.
+     * Note that the first line out the output is _not_ indented, and that the
+     * last line is not terminated by a carriage return.
+     * 
+     * This method uses, in the default implementation, `GenericPlaneInfo()`.
+     */
+    std::string PlaneInfo
+      (std::string indent = "", unsigned int verbosity = 1) const
+      { return doPlaneInfo(indent, verbosity); }
+    
+    
+    /**
+     * @brief Returns a string with plane information.
+     * @param indent prepend each line with this string
+     * @param verbosity amount of information printed
+     * @see `PrintPlaneInfo()`
+     *
+     * Information on single readout elements is not printed.
+     * Note that the first line out the output is _not_ indented, and that the
+     * last line is not terminated by a carriage return.
      *
      * Verbosity levels
      * -----------------
@@ -699,30 +753,19 @@ namespace geo {
      * * 4: also information about wire direction, width and depth
      * * 5: also coverage
      * * 6: also bounding box
-     *
      */
-    template <typename Stream>
-    void PrintPlaneInfo
-      (Stream&& out, std::string indent = "", unsigned int verbosity = 1) const;
-
-
-    /**
-     * @brief Returns a string with plane information.
-     * @see `PrintPlaneInfo()`
-     *
-     * The information is provided by `PrintPlaneInfo()`, and the arguments
-     * have the same meaning.
-     */
-    std::string PlaneInfo
+    std::string GenericPlaneInfo
       (std::string indent = "", unsigned int verbosity = 1) const;
-
-
+    
+    
     /// Maximum value for print verbosity.
     static constexpr unsigned int MaxVerbosity = 6;
 
     /// @}
+    // --- END -- Plane geometry properties ------------------------------------
 
 
+    // --- BEGIN -- Projections on wire length/wire coordinate direction base --
     /// @{
     /// @name Projections on wire length/wire coordinate direction base
     ///
@@ -751,10 +794,7 @@ namespace geo {
      */
     double PlaneCoordinateFrom
       (geo::Point_t const& point, geo::WireGeo const& refWire) const
-      {
-        return
-          fDecompWire.VectorSecondaryComponent(point - geo::vect::toPoint(refWire.GetCenter()));
-      }
+      { return doPlaneCoordinateFrom(point, refWire); }
     double PlaneCoordinateFrom
       (TVector3 const& point, geo::WireGeo const& refWire) const
       { return PlaneCoordinateFrom(geo::vect::toPoint(point), refWire); }
@@ -778,7 +818,7 @@ namespace geo {
      * point to the plane is considered.
      */
     double PlaneCoordinate(geo::Point_t const& point) const
-      { return fDecompWire.PointSecondaryComponent(point); }
+      { return doPlaneCoordinate(point); }
     double PlaneCoordinate(TVector3 const& point) const
       { return PlaneCoordinate(geo::vect::toPoint(point)); }
     //@}
@@ -799,7 +839,7 @@ namespace geo {
      */
     template <typename Point>
     double WireCoordinate(Point const& point) const
-      { return PlaneCoordinate(point) / WirePitch(); }
+      { return doWireCoordinate(geo::vect::toPoint(point)); }
 
 
     //@{
@@ -818,7 +858,7 @@ namespace geo {
      * as PointProjection().
      */
     WireDecomposedVector_t DecomposePoint(geo::Point_t const& point) const
-      { return fDecompWire.DecomposePoint(point); }
+      { return doDecomposePoint(point); }
     WireDecomposedVector_t DecomposePoint(TVector3 const& point) const
       { return DecomposePoint(geo::vect::toPoint(point)); }
 
@@ -834,7 +874,7 @@ namespace geo {
      */
     template <typename Point>
     Point ProjectionReferencePoint() const
-      { return geo::vect::convertTo<Point>(fDecompWire.ReferencePoint()); }
+      { return geo::vect::convertTo<Point>(doProjectionReferencePoint()); }
     DefaultPoint_t ProjectionReferencePoint() const
       { return ProjectionReferencePoint<DefaultPoint_t>(); }
     //@}
@@ -857,7 +897,7 @@ namespace geo {
      * The reference point is also returned by ProjectionReferencePoint().
      */
     WireCoordProjection_t Projection(geo::Point_t const& point) const
-      { return fDecompWire.ProjectPointOnPlane(point); }
+      { return doProjection(point); }
     WireCoordProjection_t PointProjection(geo::Point_t const& point) const
       { return Projection(point); }
     WireCoordProjection_t PointProjection(TVector3 const& point) const
@@ -878,7 +918,7 @@ namespace geo {
      * coordinate direction (see `GetIncreasingWireDirection()`).
      */
     WireCoordProjection_t Projection(geo::Vector_t const& v) const
-      { return fDecompWire.ProjectVectorOnPlane(v); }
+      { return doProjection(v); }
     WireCoordProjection_t VectorProjection(geo::Vector_t const& v) const
       { return Projection(v); }
     WireCoordProjection_t VectorProjection(TVector3 const& v) const
@@ -897,7 +937,7 @@ namespace geo {
      */
     template <typename Point>
     Point ComposePoint(WireDecomposedVector_t const& decomp) const
-      { return geo::vect::convertTo<Point>(fDecompWire.ComposePoint(decomp)); }
+      { return geo::vect::convertTo<Point>(doComposePoint(decomp)); }
     DefaultPoint_t ComposePoint(WireDecomposedVector_t const& decomp) const
       { return ComposePoint<DefaultPoint_t>(decomp); }
     //@}
@@ -930,15 +970,17 @@ namespace geo {
     template <typename Point>
     Point ComposePoint
       (double distance, WireCoordProjection_t const& proj) const
-      { return geo::vect::convertTo<Point>(fDecompWire.ComposePoint(distance, proj)); }
+      { return geo::vect::convertTo<Point>(doComposePoint(distance, proj)); }
     DefaultPoint_t ComposePoint
       (double distance, WireCoordProjection_t const& proj) const
       { return ComposePoint<DefaultPoint_t>(distance, proj); }
     //@}
 
     /// @}
+    // --- END -- Projections on wire length/wire coordinate direction base ----
 
 
+    // --- BEGIN -- Projection on width/depth plane ----------------------------
     /// @{
     /// @name Projection on width/depth plane
     ///
@@ -1139,7 +1181,6 @@ namespace geo {
     WidthDepthProjection_t MoveProjectionToPlane
       (WidthDepthProjection_t const& proj) const;
 
-    //@{
     /**
      * @brief Returns the point, moved so that its projection is over the plane.
      * @param point point to be checked and moved
@@ -1152,8 +1193,7 @@ namespace geo {
      * frame, as described in MoveProjectionToPlane().
      */
     geo::Point_t MovePointOverPlane(geo::Point_t const& point) const;
-    TVector3 MovePointOverPlane(TVector3 const& point) const;
-    //@}
+    
 
     //@{
     /**
@@ -1206,9 +1246,10 @@ namespace geo {
 
 
     /// @}
+    // --- BEGIN -- Projection on width/depth plane ----------------------------
 
-
-    /// @{
+    
+    // --- BEGIN -- Coordinate transformation ----------------------------------
     /**
      * @name Coordinate transformation
      *
@@ -1216,6 +1257,7 @@ namespace geo {
      * `geo::PlaneGeo::LocalPoint_t` and `geo::PlaneGeo::LocalVector_t`,
      * respectively.
      */
+    /// @{
 
     /// Transform point from local plane frame to world frame.
     void LocalToWorld(const double* plane, double* world) const
@@ -1266,79 +1308,127 @@ namespace geo {
       { return fTrans.toLocalCoords(world); }
 
     /// @}
+    // --- END -- Coordinate transformation ------------------------------------
 
 
-
+    // --- BEGIN -- Setters ----------------------------------------------------
     /// @{
     /// @name Setters
 
     /// Set the signal view (for TPCGeo).
-    void SetView(geo::View_t view)                                  { fView = view; }
+    void SetView(geo::View_t view) { fView = view; }
 
     /// @}
+    // --- END -- Setters ------------------------------------------------------
 
-    /// Apply sorting to WireGeo objects.
-    void SortWires(geo::GeoObjectSorter const& sorter);
+    /// Sorts the plane readout elements.
+    void SortWires(geo::GeoObjectSorter const& sorter)
+      { doSortElements(sorter); }
 
     /// Performs all needed updates after the TPC has sorted the planes.
     void UpdateAfterSorting
-      (geo::PlaneID planeid, geo::BoxBoundedGeo const& TPCbox);
+      (geo::PlaneID const& planeid, geo::BoxBoundedGeo const& TPCbox);
 
     /// Returns the name of the specified view.
     static std::string ViewName(geo::View_t view);
 
     /// Returns the name of the specified orientation.
     static std::string OrientationName(geo::Orient_t orientation);
-
-
-  private:
-
-    /// Sets the geometry directions.
-    void DetectGeometryDirections();
-
-    /// Returns a direction normal to the plane (pointing is not defined).
-    geo::Vector_t GetNormalAxis() const;
-
-    /// Updates the cached normal to plane versor; needs the TPC box coordinates.
-    void UpdatePlaneNormal(geo::BoxBoundedGeo const& TPCbox);
-
-    /// Updates the cached depth and width direction.
-    void UpdateWidthDepthDir();
-
-    /// Updates the cached direction to increasing wires.
-    void UpdateIncreasingWireDir();
-
-    /// Updates the cached direction to wire.
-    void UpdateWireDir();
-
-    /// Updates plane orientation.
-    void UpdateOrientation();
-
-    /// Updates the stored wire pitch.
-    void UpdateWirePitch();
-
-    /// Updates the stored wire plane center.
-    void UpdateWirePlaneCenter();
-
-    /// Updates the stored @f$ \phi_{z} @f$.
-    void UpdatePhiZ();
-
-    /// Updates the stored view
-    void UpdateView();
-
-    /// Updates the stored wire pitch with a slower, more robust algorithm.
-    void UpdateWirePitchSlow();
-
-    /// Updates the position of the wire coordinate decomposition.
-    void UpdateDecompWireOrigin();
-
-    /// Updates the internally used active area.
-    void UpdateActiveArea();
-
-    /// Whether the specified wire should have start and end swapped.
-    bool shouldFlipWire(geo::WireGeo const& wire) const;
-
-  private:
+    
+    
+  protected:
+    
+    /// Construct a representation of a single plane of the detector.
+    PlaneGeo(
+      TGeoNode const& node,
+      geo::TransformationMatrix&& trans
+      );
+    
+    // --- BEGIN -- Polymorphic implementation ---------------------------------
+    /**
+     * @name Polymorphic implementation.
+     * 
+     * From the name of the method it should be straightforward to identify
+     * which interface method each of the following ones is the implementation
+     * of.
+     */
+    /// @{
+    
+    //
+    // Some trivial default implementations are provided,
+    // which can be overridden.
+    //
+    virtual double doThetaZ() const { NotImplemented(); }
+    virtual double doPhiZ() const { NotImplemented(); }
+    virtual double doSinPhiZ() const { NotImplemented(); }
+    virtual double doCosPhiZ() const { NotImplemented(); }
+    virtual unsigned int doNwires() const { NotImplemented(); }
+    virtual bool doHasWire(unsigned int iWire) const 
+      { return iWire < doNwires(); }
+    virtual geo::WireGeo const& doWire(unsigned int iWire) const
+      { NotImplemented(); }
+    virtual geo::WireGeo const* doWirePtr(unsigned int iWire) const
+      { NotImplemented(); }
+    virtual const WireGeo& doFirstWire() const
+      { return Wire(0U); }
+    virtual const WireGeo& doMiddleWire() const
+      { return Wire(Nwires()/2); }
+    virtual const WireGeo& doLastWire() const
+      { return Wire(Nwires() - 1U); }
+    virtual ElementIteratorBox doIterateElements() const { NotImplemented(); }
+    virtual double doWirePitch() const { NotImplemented(); }
+    virtual bool doWireIDincreasesWithZ() const { NotImplemented(); }
+    virtual geo::Vector_t doGetIncreasingWireDirection() const { NotImplemented(); }
+    virtual geo::Point_t doGetCenter() const
+      { return fCenter; }
+    virtual geo::Vector_t doGetWireDirection() const { NotImplemented(); }
+    virtual geo::WireID doNearestWireID(geo::Point_t const& pos) const { NotImplemented(); }
+    virtual geo::WireGeo const& doNearestWire(geo::Point_t const& pos) const { NotImplemented(); }
+    virtual geo::WireID doClosestWireID(geo::WireID::WireID_t wireNo) const { NotImplemented(); }
+    virtual Rect const& doActiveArea() const
+      { return fActiveArea; }
+    virtual lar::util::simple_geo::Volume<> doCoverage() const { NotImplemented(); }
+    virtual double doPlaneCoordinateFrom(geo::Point_t const& point, geo::WireGeo const& refWire) const { NotImplemented(); }
+    virtual double doPlaneCoordinate(geo::Point_t const& point) const { NotImplemented(); }
+    virtual double doWireCoordinate(geo::Point_t const& point) const { NotImplemented(); }
+    virtual WireDecomposedVector_t doDecomposePoint(geo::Point_t const& point) const { NotImplemented(); }
+    virtual geo::Point_t doProjectionReferencePoint() const { NotImplemented(); }
+    virtual WireCoordProjection_t doProjection(geo::Point_t const& point) const { NotImplemented(); }
+    virtual WireCoordProjection_t doProjection(geo::Vector_t const& v) const { NotImplemented(); }
+    virtual geo::Point_t doComposePoint(WireDecomposedVector_t const& decomp) const { NotImplemented(); }
+    virtual geo::Point_t doComposePoint(double distance, WireCoordProjection_t const& proj) const { NotImplemented(); }
+    virtual std::string doPlaneInfo
+      (std::string indent = "", unsigned int verbosity = 1) const
+      { return GenericPlaneInfo(indent, verbosity); }
+    
+    /// Applies algorithms from the specified sorter to the active readout
+    /// elements on this plane.
+    virtual void doSortElements(geo::GeoObjectSorter const&) {}
+    
+    /**
+     * Called by `geo::PlaneGeo::UpdateAfterSorting()` after setting the new
+     * plane ID and geometry decomposition frame.
+     * Note that this method can refine either or both of them (for example,
+     * it might shift the geometry decomposition frame to match the plane where
+     * readout elements lie.
+     * 
+     * If not overridden, this method does nothing.
+     */
+    virtual void doUpdateAfterSorting(geo::BoxBoundedGeo const&) {}
+    
+    /// @}
+    // --- END -- Polymorphic implementation -----------------------------------
+    
+    /// Throws a `cet::exception` with a short call stack dump.
+    /// @throws cet::exception (`"NotImplemented"`) with a short call stack dump
+    [[noreturn]] void NotImplemented() const;
+    
+    
+    /// Updates all information related to the plane frame geometry.
+    void UpdateFrameGeometry
+      (geo::PlaneID const& planeid, geo::BoxBoundedGeo const& TPCbox);
+    
+  protected:
 
     using LocalTransformation_t
       = geo::LocalTransformationGeo<ROOT::Math::Transform3D, LocalPoint_t, LocalVector_t>;
@@ -1352,35 +1442,45 @@ namespace geo {
       double Width() const { return 2.0 * HalfWidth(); }
       double Depth() const { return 2.0 * HalfDepth(); }
     }; // RectSpecs
-
+    
+    
+    /// --- BEGIN -- Data members ----------------------------------------------
     LocalTransformation_t fTrans;       ///< Plane to world transform.
     TGeoVolume const*     fVolume;      ///< Plane volume description.
+    
     View_t                fView;        ///< Does this plane measure U, V, or W?
     Orient_t              fOrientation; ///< Is the plane vertical or horizontal?
-    WireCollection_t      fWire;        ///< List of wires in this plane.
-    double                fWirePitch;   ///< Pitch of wires in this plane.
-    double                fSinPhiZ;     ///< Sine of @f$ \phi_{z} @f$.
-    double                fCosPhiZ;     ///< Cosine of @f$ \phi_{z} @f$.
 
-    geo::Vector_t         fNormal;      ///< Normal to the plane, inward in TPC.
-    /// Decomposition on wire coordinates; the main direction is along the wire,
-    /// the secondary one is the one measured by the wire, the normal matches
-    /// the plane's normal.
-    WireDecomposer_t      fDecompWire;
+    geo::Vector_t fNormal; ///< Normal to the plane, inward in TPC.
+    geo::Point_t fCenter; ///< Center of the plane, lying on the wire plane.
+    
     /// Decomposition on frame coordinates; the main direction is a "width",
     /// the secondary one is just orthogonal to it ("depth").
     /// Normal can differ in sign from the plane one.
     WidthDepthDecomposer_t fDecompFrame;
-    RectSpecs             fFrameSize;   ///< Size of the frame of the plane.
-    /// Area covered by wires in frame base.
-    Rect                  fActiveArea;
-    /// Center of the plane, lying on the wire plane.
-    geo::Point_t          fCenter;
+    
+    RectSpecs fFrameSize; ///< Size of the frame of the plane.
+    
+    Rect fActiveArea; ///< Area covered by active elements in frame base.
+    
+    geo::PlaneID fID; ///< ID of this plane.
+    
+    /// --- END -- Data members ------------------------------------------------
+    
+    
+    /// Sets the geometry directions.
+    void DetectGeometryDirections();
 
-    geo::PlaneID          fID;          ///< ID of this plane.
+    /// Updates the cached normal to plane versor; needs the TPC box coordinates.
+    void UpdatePlaneNormal(geo::BoxBoundedGeo const& TPCbox);
 
-    friend struct details::ActiveAreaCalculator;
-
+    /// Updates the cached depth and width direction.
+    void UpdateWidthDepthDir();
+    
+    /// Updates the plane orientation (horizontal, vertical or non-Euclidean).
+    void UpdateOrientation();
+    
+    
     /// Returns `min` if `v` < `min`, `max` if `v` > `max`, `v` otherwise.
     template <typename T>
     static T boundedValue(T v, T min, T max)
@@ -1394,12 +1494,6 @@ namespace geo {
 //------------------------------------------------------------------------------
 //--- inline implementation
 //---
-inline geo::WireID geo::PlaneGeo::ClosestWireID
-  (geo::WireID::WireID_t wireNo) const
-{
-  return { ID(), boundedValue<geo::WireID::WireID_t>(wireNo, 0, Nwires()) };
-}
-
 inline geo::WireID geo::PlaneGeo::ClosestWireID(geo::WireID const& wireid) const
 {
   if (wireid.asPlaneID() != ID()) {
@@ -1410,88 +1504,8 @@ inline geo::WireID geo::PlaneGeo::ClosestWireID(geo::WireID const& wireid) const
   return ClosestWireID(wireid.Wire);
 } // geo::PlaneGeo::ClosestWireID()
 
+
 //------------------------------------------------------------------------------
-//--- template implementation
-//---
-template <typename Stream>
-void geo::PlaneGeo::PrintPlaneInfo(
-  Stream&& out,
-  std::string indent /* = "" */,
-  unsigned int verbosity /* = 1 */
-) const {
-
-  //----------------------------------------------------------------------------
-  out << "plane " << std::string(ID());
-
-  if (verbosity-- <= 0) return; // 0
-
-  //----------------------------------------------------------------------------
-  out
-    << " at " << GetCenter<geo::Vector_t>() << " cm"
-    << ", theta: " << ThetaZ() << " rad";
-
-  if (verbosity-- <= 0) return; // 1
-
-  //----------------------------------------------------------------------------
-  unsigned int const nWires = Nwires();
-
-  out << "\n" << indent
-    << "normal to wire: " << PhiZ() << " rad"
-      << ", with orientation " << OrientationName(Orientation())
-      << ", has " << nWires << " wires measuring " << ViewName(View())
-      << " with a wire pitch of " << WirePitch() << " cm"
-    ;
-
-  if (verbosity-- <= 0) return; // 2
-
-  //----------------------------------------------------------------------------
-  auto const& normal = GetNormalDirection<geo::Vector_t>();
-  auto const& incrZdir = GetIncreasingWireDirection<geo::Vector_t>();
-  auto const& wireNormalDir = fDecompWire.NormalDir();
-  out << "\n" << indent
-    << "normal to plane: " << normal
-    << ", direction of increasing wire number: " << incrZdir
-    << " [wire frame normal: " << wireNormalDir << "]"
-    << " (" << (WireIDincreasesWithZ()? "increases": "decreases") << " with z)";
-
-  if (verbosity-- <= 0) return; // 3
-
-  //----------------------------------------------------------------------------
-
-  auto const& wireDir = GetWireDirection<geo::Vector_t>();
-  auto const& widthDir = WidthDir<geo::Vector_t>();
-  auto const& depthDir = DepthDir<geo::Vector_t>();
-  auto const& frameNormalDir = fDecompFrame.NormalDir();
-
-  out << "\n" << indent
-    << "wire direction: " << wireDir
-    << "; width " << Width() << " cm in direction: " << widthDir
-    << ", depth " << Depth() << " cm in direction: " << depthDir
-    << " [normal: " << frameNormalDir << "]"
-    ;
-
-  if (verbosity-- <= 0) return; // 4
-
-  //----------------------------------------------------------------------------
-  // get the area spanned by the wires
-  out << "\n" << indent << "wires cover width "
-    << ActiveArea().width.lower << " to " << ActiveArea().width.upper
-    << ", depth "
-    << ActiveArea().depth.lower << " to " << ActiveArea().depth.upper
-    << " cm";
-  if (verbosity-- <= 0) return; // 5
-
-  //----------------------------------------------------------------------------
-  // print also the containing box
-  auto const box = BoundingBox();
-  out << "\n" << indent
-    << "bounding box: " << box.Min() << " -- " << box.Max();
-
-//  if (verbosity-- <= 0) return; // 6
-
-  //----------------------------------------------------------------------------
-} // geo::PlaneGeo::PrintPlaneInfo()
 
 
 #endif // LARCOREALG_GEOMETRY_PLANEGEO_H
-////////////////////////////////////////////////////////////////////////

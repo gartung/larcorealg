@@ -1856,7 +1856,7 @@ namespace geo{
               (expected_w, expected_d);
 
             auto const expected_point
-              = plane.ComposePoint(distance, expected_proj);
+              = plane.ComposePoint<geo::Point_t>(distance, expected_proj);
 
             //
             // 1. Containment test
@@ -1893,7 +1893,7 @@ namespace geo{
               ++nErrors;
               mf::LogProblem("GeometryTestAlg")
                 << "[testPlaneProjectionOnFrame] moveProjectionOnPlane():"
-                << "Projection of ooint " << expected_point
+                << "Projection of point " << expected_point
                 << " (width: " << expected_w << ", depth: " << expected_d
                 << ") (" << (onPlane? "on": "off")
                   << "-plane " << plane.ID() << ") was moved to "

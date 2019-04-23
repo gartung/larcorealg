@@ -8,6 +8,7 @@
 
 // LArSoft libraries
 #include "larcorealg/Geometry/GeometryBuilderStandard.h"
+#include "larcorealg/Geometry/WirePlaneGeo.h"
 
 // support libraries
 // #include "cetlib_except/exception.h"
@@ -17,6 +18,7 @@
 // C++ standard library
 #include <algorithm> // std::move()
 #include <string_view>
+#include <type_traits> // std::is_convertible_v
 
 
 namespace {
@@ -29,6 +31,18 @@ namespace {
   } // extend()
 
 
+  //------------------------------------------------------------------------------
+  template <typename Dest, typename Src>
+  std::unique_ptr<Dest> into_unique_ptr(Src&& src) {
+    using DestPtr_t = std::unique_ptr<Dest>;
+    
+    if constexpr (std::is_convertible_v<std::decay_t<decltype(src)>, DestPtr_t>)
+      return std::move(src);
+    else
+      return std::make_unique<Dest>(std::move(src));
+  } // into_unique_ptr()
+  
+  
   //------------------------------------------------------------------------------
 
 } // local namespace
@@ -161,7 +175,7 @@ geo::GeometryBuilderStandard::Planes_t
 geo::GeometryBuilderStandard::doExtractPlanes(Path_t& path)
 {
   return doExtractGeometryObjects<
-    geo::PlaneGeo,
+    geo::PlaneGeo, PlanePtr_t,
     &geo::GeometryBuilderStandard::isPlaneNode,
     &geo::GeometryBuilderStandard::makePlane
     >
@@ -171,8 +185,8 @@ geo::GeometryBuilderStandard::doExtractPlanes(Path_t& path)
 
 
 //------------------------------------------------------------------------------
-geo::PlaneGeo geo::GeometryBuilderStandard::doMakePlane(Path_t& path) {
-  return geo::PlaneGeo(
+auto geo::GeometryBuilderStandard::doMakePlane(Path_t& path) -> PlanePtr_t {
+  return std::make_unique<geo::WirePlaneGeo>(
     path.current(), path.currentTransformation<geo::TransformationMatrix>(),
      geo::GeometryBuilder::moveToColl(extractWires(path))
     );
@@ -255,22 +269,27 @@ bool geo::GeometryBuilderStandard::isWireNode(TGeoNode const& node) const {
 
 //------------------------------------------------------------------------------
 template <
-  typename ObjGeo,
+  typename ObjGeoIF, typename ObjGeo,
   bool (geo::GeometryBuilderStandard::*IsObj)(TGeoNode const&) const,
   ObjGeo (geo::GeometryBuilderStandard::*MakeObj)(geo::GeometryBuilder::Path_t&)
   >
-geo::GeometryBuilder::GeoPtrColl_t<ObjGeo>
+geo::GeometryBuilder::GeoPtrColl_t<ObjGeoIF>
 geo::GeometryBuilderStandard::doExtractGeometryObjects(
   Path_t& path
 ) {
 
-  geo::GeometryBuilder::GeoPtrColl_t<ObjGeo> objs;
+  using ObjColl_t = geo::GeometryBuilder::GeoPtrColl_t<ObjGeoIF>;
+  
+  ObjColl_t objs;
 
   //
   // if this is a wire, we are set
   //
   if ((this->*IsObj)(path.current())) {
-    objs.emplace_back(std::make_unique<ObjGeo>((this->*MakeObj)(path)));
+    // trying to be very very smart here:
+    //  * make a unique pointer of the made object,
+    //  * but only if it is not a unique pointer already
+    objs.emplace_back(::into_unique_ptr<ObjGeoIF>((this->*MakeObj)(path)));
     return objs;
   }
 
@@ -283,7 +302,8 @@ geo::GeometryBuilderStandard::doExtractGeometryObjects(
   int const n = volume.GetNdaughters();
   for (int i = 0; i < n; ++i) {
     path.append(*(volume.GetNode(i)));
-    extendCollection(objs, doExtractGeometryObjects<ObjGeo, IsObj, MakeObj>(path));
+    extendCollection
+      (objs, doExtractGeometryObjects<ObjGeoIF, ObjGeo, IsObj, MakeObj>(path));
     path.pop();
   } // for
 

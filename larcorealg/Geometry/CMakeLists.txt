@@ -1,15 +1,17 @@
 
 cet_make( LIBRARIES
+  larcorealg_CoreUtils
+  
   ${MF_MESSAGELOGGER}
   
   ${FHICLCPP}
-  cetlib cetlib_except
+  ${CETLIB}
+  ${CETLIB_EXCEPT}
   ${CLHEP}
   ${ROOT_BASIC_LIB_LIST}
   ${ROOT_GEOM}
   ${ROOT_XMLIO}
   ${ROOT_GDML}
-  ${ROOT_EG}
   ${ROOT_GENVECTOR}
   )
 
