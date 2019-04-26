@@ -23,6 +23,9 @@
 #include "TGeoBBox.h"
 #include "TClass.h" // TClass::IsA()
 
+// Boost libraries
+#include "boost/iterator/transform_iterator.hpp"
+
 // C/C++ standard library
 #include <sstream> // std::ostringstream
 #include <array>

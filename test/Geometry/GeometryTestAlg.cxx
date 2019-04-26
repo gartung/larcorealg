@@ -2960,7 +2960,7 @@ namespace geo{
       const unsigned int nWires = plane.Nwires();
       if (nWires < 2) continue;
 
-      geo::WireGeo const* pWire = &(plane.Wire(0));
+      geo::WirePtr pWire = plane.WirePtr(0);
 
       // which pitch to expect:
       // - if they did not tell us anything:
@@ -2982,8 +2982,8 @@ namespace geo{
 
       geo::WireID::WireID_t w = 0; // wire number
       while (++w < nWires) {
-        geo::WireGeo const* pPrevWire = pWire;
-        pWire = &(plane.Wire(w));
+        geo::WirePtr pPrevWire = pWire;
+        pWire = plane.WirePtr(w);
 
         const double thisPitch = std::abs(pWire->DistanceFrom(*pPrevWire));
         if (std::abs(thisPitch - expectedPitch) > 1e-5) {

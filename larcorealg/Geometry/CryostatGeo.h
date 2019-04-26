@@ -14,6 +14,7 @@
 #include "larcorealg/Geometry/BoxBoundedGeo.h"
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/TransformationMatrix.h"
+#include "larcorealg/Geometry/GeoElementTraits.h" // geo::element_traits
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
 #include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
@@ -48,6 +49,9 @@ namespace geo {
 
     /// Type returned by `IterateElements()`.
     using ElementIteratorBox = TPCList_t const&;
+
+    using ID_t = geo::CryostatID; ///< Type of identifier of this element.
+    
 
     /// @{
     /**
@@ -442,8 +446,17 @@ namespace geo {
     std::string            fOpDetGeoName;   ///< Name of opdet geometry elements in gdml
     geo::CryostatID        fID;             ///< ID of this cryostat
 
-  };
-}
+  }; // class CryostatGeo
+  
+  
+  // traits specialization
+  template <>
+  struct element_traits<geo::CryostatGeo::ID_t>
+    : geo::default_geo_element_traits<geo::CryostatGeo, geo::CryostatGeo::ID_t>
+    {};
+  
+  
+} // namespace geo
 
 // check that we got it right...
 static_assert(!std::is_copy_constructible_v<geo::CryostatGeo>);

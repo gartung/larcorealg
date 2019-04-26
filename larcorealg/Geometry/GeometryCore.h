@@ -60,6 +60,7 @@
 #include "larcorealg/Geometry/BoxBoundedGeo.h"
 #include "larcorealg/Geometry/GeometryBuilder.h"
 #include "larcorealg/Geometry/GeometryDataContainers.h" // geo::TPCDataContainer
+#include "larcorealg/Geometry/GeoElementTraits.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect namespace
 #include "larcorealg/CoreUtils/RealComparisons.h"
 #include "larcorealg/CoreUtils/span.h"
@@ -162,8 +163,8 @@ namespace geo {
     class cryostat_id_iterator_base:
       virtual public std::forward_iterator_tag, public geometry_iterator_base
     {
+      
         public:
-      using ElementPtr_t = geo::CryostatGeo const*;
       using GeoID_t = GEOID; ///< type of the actual ID stored in the iterator
 
       using iterator = cryostat_id_iterator_base<GeoID_t>; ///< this iterator
@@ -171,6 +172,11 @@ namespace geo {
       using LocalID_t = geo::CryostatID; ///< type of the ID we change
       static_assert(std::is_base_of<LocalID_t, GEOID>::value,
         "template type GEOID is not a LocalID_t");
+      
+      /// Traits of the geometry element we dereference to.
+      using local_element_traits_t = geo::element_traits<LocalID_t>;
+      
+      using ElementPtr_t = typename local_element_traits_t::geometry_pointer;
       
       
       /// @name Iterator traits
@@ -310,13 +316,17 @@ namespace geo {
       using upper_iterator = cryostat_id_iterator_base<GEOID>;
 
         public:
-      using ElementPtr_t = geo::TPCGeo const*;
       using GeoID_t = typename upper_iterator::GeoID_t;
 
       using LocalID_t = geo::TPCID; ///< type of the ID we change
       static_assert(std::is_base_of<LocalID_t, GEOID>::value,
         "template type GEOID is not a LocalID_t");
 
+      /// Traits of the geometry element we dereference to.
+      using local_element_traits_t = geo::element_traits<LocalID_t>;
+      
+      using ElementPtr_t = typename local_element_traits_t::geometry_pointer;
+      
       using iterator = TPC_id_iterator_base<GeoID_t>; ///< type of this iterator
 
       // import all the useful types from the base templated class
@@ -457,13 +467,17 @@ namespace geo {
       using upper_iterator = TPC_id_iterator_base<GEOID>;
 
         public:
-      using ElementPtr_t = geo::PlaneGeo const*;
       using GeoID_t = typename upper_iterator::GeoID_t;
 
       using LocalID_t = geo::PlaneID; ///< type of the ID we change
       static_assert(std::is_base_of<LocalID_t, GEOID>::value,
         "template type GEOID is not a LocalID_t");
 
+      /// Traits of the geometry element we dereference to.
+      using local_element_traits_t = geo::element_traits<LocalID_t>;
+      
+      using ElementPtr_t = typename local_element_traits_t::geometry_pointer;
+      
       /// type of this iterator
       using iterator = plane_id_iterator_base<GeoID_t>;
 
@@ -605,13 +619,17 @@ namespace geo {
       using upper_iterator = plane_id_iterator_base<GEOID>;
 
         public:
-      using ElementPtr_t = geo::WireGeo const*;
       using GeoID_t = typename upper_iterator::GeoID_t;
 
       using LocalID_t = geo::WireID; ///< type of the ID we change
       static_assert(std::is_base_of<LocalID_t, GEOID>::value,
         "template type GEOID is not a LocalID_t");
 
+      /// Traits of the geometry element we dereference to.
+      using local_element_traits_t = geo::element_traits<LocalID_t>;
+      
+      using ElementPtr_t = typename local_element_traits_t::geometry_pointer;
+      
       /// type of this iterator
       using iterator = wire_id_iterator_base<GeoID_t>;
 
@@ -782,6 +800,7 @@ namespace geo {
     {
         public:
       using id_iterator_t = GEOIDITER;
+      using element_traits_t = typename id_iterator_t::local_element_traits_t;
 
       static_assert(
         std::is_base_of<geometry_iterator_base, id_iterator_t>::value,
@@ -809,15 +828,15 @@ namespace geo {
       /// @}
 
       /// Geometry class pointed by the iterator
-      using Element_t = typename std::remove_pointer<ElementPtr_t>::type;
+      using Element_t = typename element_traits_t::geometry_type;
 
       
       /// @name Iterator traits
       /// @{
       using difference_type = std::ptrdiff_t;
       using value_type = Element_t;
-      using reference = value_type const&;
-      using pointer  = value_type const*;
+      using reference = typename element_traits_t::geometry_reference;
+      using pointer  = typename element_traits_t::geometry_pointer;
       using iterator_category = std::forward_iterator_tag;
       /// @}
       
@@ -888,7 +907,7 @@ namespace geo {
 
       /// Returns whether the iterator is pointing to a valid geometry element
       operator bool() const
-        { return bool(id_iterator()) && (id_iterator().get() != nullptr); }
+        { return bool(id_iterator()) && bool(id_iterator().get()); }
 
       /// Returns a pointer to the geometry element, or nullptr if invalid
       ElementPtr_t get() const { return id_iterator().get(); }
@@ -3415,12 +3434,12 @@ namespace geo {
      * The GetElementPtr() method is overloaded and its return depends on the
      * type of ID.
      */
-    WireGeo const* WirePtr(geo::WireID const& wireid) const
+    geo::WirePtr WirePtr(geo::WireID const& wireid) const
       {
         geo::PlaneGeo const* pPlane = PlanePtr(wireid);
-        return pPlane? pPlane->WirePtr(wireid): nullptr;
+        return pPlane? pPlane->WirePtr(wireid): geo::InvalidWirePtr;
       } // WirePtr()
-    WireGeo const* GetElementPtr(geo::WireID const& wireid) const
+    geo::WirePtr GetElementPtr(geo::WireID const& wireid) const
       { return WirePtr(wireid); }
     //@}
 
@@ -3434,11 +3453,11 @@ namespace geo {
      * The GetElement() method is overloaded and its return depends on the type
      * of ID.
      */
-    WireGeo const& Wire(geo::WireID const& wireid) const
+    WireGeo Wire(geo::WireID const& wireid) const
       { return Plane(wireid).Wire(wireid); }
-    WireGeo const& WireIDToWireGeo(geo::WireID const& wireid) const
+    WireGeo WireIDToWireGeo(geo::WireID const& wireid) const
       { return Wire(wireid); }
-    WireGeo const& GetElement(geo::WireID const& wireid) const
+    WireGeo GetElement(geo::WireID const& wireid) const
       { return Wire(wireid); }
     //@}
 

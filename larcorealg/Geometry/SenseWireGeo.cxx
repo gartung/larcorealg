@@ -1,17 +1,16 @@
 ////////////////////////////////////////////////////////////////////////
-/// \file  larcorealg/Geometry/TenseWireGeo.cxx
+/// \file  larcorealg/Geometry/SenseWireGeo.cxx
 /// \brief Encapsulate the geometry of a wire
-/// \see   larcorealg/Geometry/TenseWireGeo.h
 ///
 /// \author  brebel@fnal.gov
 ////////////////////////////////////////////////////////////////////////
 
 // class header
-#include "larcorealg/Geometry/TenseWireGeo.h"
+#include "larcorealg/Geometry/SenseWireGeo.h"
 
 // LArSoft libraries
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
-#include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h" // util::pi()
+#include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h" // util ns
 
 // framework
 #include "messagefacility/MessageLogger/MessageLogger.h"
@@ -21,15 +20,15 @@
 #include "TGeoNode.h"
 
 // C/C++ libraries
-#include <sstream>
-#include <utility> // std::move()
 #include <cmath> // std::cos(), ...
+#include <sstream>
 
 
 namespace geo{
 
   //-----------------------------------------
-  TenseWireGeo::TenseWireGeo(TGeoNode const& node, geo::TransformationMatrix&& trans)
+  SenseWireGeo::SenseWireGeo
+    (TGeoNode const& node, geo::TransformationMatrix&& trans)
     : fWireNode(&node)
     , fTrans(std::move(trans))
     , flipped(false)
@@ -64,11 +63,11 @@ namespace geo{
     //as if the wire runs at one angle it also runs at that angle +-Pi
     if(fThetaZ < 0) fThetaZ += util::pi();
 
-  } // geo::TenseWireGeo::WireGeo()
+  } // geo::SenseWireGeo::SenseWireGeo()
 
 
   //......................................................................
-  void TenseWireGeo::doGetCenter(double* xyz, double localz) const
+  void SenseWireGeo::GetCenter(double* xyz, double localz) const
   {
     if (localz == 0.) { // if no dislocation is requested, we already have it
       geo::vect::fillCoords(xyz, fCenter);
@@ -77,7 +76,7 @@ namespace geo{
 
     double locz = relLength(localz);
     if (std::abs(locz) > fHalfL) {
-      mf::LogWarning("WireGeo") << "asked for position along wire that"
+      mf::LogWarning("SenseWireGeo") << "asked for position along wire that"
         " extends beyond the wire, returning position at end point";
       locz = relLength((locz < 0)? -fHalfL: fHalfL);
     }
@@ -86,25 +85,29 @@ namespace geo{
   }
 
   //......................................................................
-  double geo::TenseWireGeo::doRMax() const
+  double geo::SenseWireGeo::RMax() const
     { return ((TGeoTube*)fWireNode->GetVolume()->GetShape())->GetRmax(); }
 
   //......................................................................
-  double geo::TenseWireGeo::doRMin() const
+  double geo::SenseWireGeo::RMin() const
     { return ((TGeoTube*)fWireNode->GetVolume()->GetShape())->GetRmin(); }
 
   //......................................................................
-  std::string TenseWireGeo::doWireInfo
+  double SenseWireGeo::ThetaZ(bool degrees) const
+    { return degrees? util::RadiansToDegrees(fThetaZ): fThetaZ; }
+
+  //......................................................................
+  std::string SenseWireGeo::WireInfo
     (std::string indent /* = "" */, unsigned int verbosity /* = 1 */) const
   {
     std::ostringstream sstr;
-    PrintTenseWireInfo(sstr, indent, verbosity);
+    PrintWireInfo(sstr, indent, verbosity);
     return sstr.str();
-  } // TenseWireGeo::doWireInfo()
+  } // SenseWireGeo::WireInfo()
 
 
   //......................................................................
-  double TenseWireGeo::doDistanceFrom(geo::WireGeo const& wire) const {
+  double SenseWireGeo::DistanceFrom(geo::SenseWireGeo const& wire) const {
     //
     // The algorithm assumes that picking any point on the wire will do,
     // that is, that the wires are parallel.
@@ -123,19 +126,42 @@ namespace geo{
     // coordinate than this one).
     return toWire.Cross(Direction()).Mag();
 
-  } // TenseWireGeo::doDistanceFrom()
+  } // SenseWireGeo::DistanceFrom(SenseWireGeo)
 
 
   //......................................................................
-  void TenseWireGeo::doUpdateAfterSorting(geo::WireID const&, bool flip) {
+  double SenseWireGeo::DistanceFrom(geo::WireGeo const& wire) const {
+    //
+    // The algorithm assumes that picking any point on the wire will do,
+    // that is, that the wires are parallel.
+    //
+
+    if (!isParallelTo(wire)) return 0;
+
+    // a vector connecting to the other wire
+    auto const toWire = wire.GetCenter() - GetCenter();
+
+    // the distance is that vector, times the sine of the angle with the wire
+    // direction; we get that in a generic way with a cross product.
+    // We don't even care about the sign here
+    // (if we did, we would do a dot-product with the normal to the plane,
+    // and we should get a positive distance if the other wire has larger wire
+    // coordinate than this one).
+    return toWire.Cross(Direction()).Mag();
+
+  } // SenseWireGeo::DistanceFrom(WireGeo)
+
+
+  //......................................................................
+  void SenseWireGeo::UpdateAfterSorting(geo::WireID const&, bool flip) {
 
     // flip, if asked
     if (flip) Flip();
 
-  } // TenseWireGeo::doUpdateAfterSorting()
+  } // SenseWireGeo::UpdateAfterSorting()
 
   //......................................................................
-  void TenseWireGeo::Flip() {
+  void SenseWireGeo::Flip() {
     // we don't need to do much to flip so far:
     // - ThetaZ() is defined in [0, pi], invariant to flipping
     // - we don't change the transformation matrices, that we want to be
@@ -147,7 +173,7 @@ namespace geo{
     // change the flipping bit
     flipped = !flipped;
 
-  } // TenseWireGeo::Flip()
+  } // SenseWireGeo::Flip()
 
   //......................................................................
 

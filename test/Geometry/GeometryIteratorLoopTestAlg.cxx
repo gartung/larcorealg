@@ -332,7 +332,10 @@ namespace geo {
           unsigned int nWiresInPlane = 0; // will become same as NWires
 
           for(unsigned int w = 0; w < NWires; ++w) {
-            const WireGeo& Wire(Plane.Wire(w));
+            WireGeo const& Wire(Plane.Wire(w));
+            WirePtr const& WirePtr(Plane.WirePtr(w));
+            assert(Wire.ID() == WirePtr->ID()); // out of this test's scope
+            
             geo::WireID const expWID(expPID, w);
 
             if (runningWID != expWID) {
@@ -372,19 +375,17 @@ namespace geo {
                 << " instead of " << w;
               ++nErrors;
             }
-            else if (iWireID.get() != &Wire) {
+            else if (iWireID.get() != WirePtr) {
               MF_LOG_ERROR("GeometryIteratorLoopTest")
-                << "wire ID iterator retrieves WireGeo["
-                << ((void*) iWireID.get())
-                << "] instead of [" << ((void*) &Wire) << "]";
+                << "wire ID iterator retrieves " << iWireID.get()->ID()
+                << " instead of " << Wire.ID();
               ++nErrors;
             }
 
-            if (&*iWire != &Wire) {
+            if (iWire->ID() != Wire.ID()) {
               MF_LOG_ERROR("GeometryIteratorLoopTest")
-                << "wire iterator retrieves WireGeo[" << ((void*) iWire.get())
-                << "] instead of [" << ((void*) &Wire) << "] (" << expWID
-                << ")";
+                << "wire iterator retrieves " << iWire->ID()
+                << "] instead of " << Wire.ID() << " (i.e. " << expWID << ")";
               ++nErrors;
             }
 

@@ -9,7 +9,7 @@
 // LArSoft libraries
 #include "larcorealg/Geometry/GeometryBuilderStandard.h"
 #include "larcorealg/Geometry/WirePlaneGeo.h"
-#include "larcorealg/Geometry/TenseWireGeo.h"
+#include "larcorealg/Geometry/SenseWireGeo.h"
 
 // support libraries
 // #include "cetlib_except/exception.h"
@@ -199,7 +199,7 @@ geo::GeometryBuilderStandard::Wires_t
 geo::GeometryBuilderStandard::doExtractWires(Path_t& path)
 {
   return doExtractGeometryObjects<
-    geo::WireGeo, WirePtr_t,
+    geo::SenseWireGeo,
     &geo::GeometryBuilderStandard::isWireNode,
     &geo::GeometryBuilderStandard::makeWire
     >
@@ -209,10 +209,10 @@ geo::GeometryBuilderStandard::doExtractWires(Path_t& path)
 
 
 //------------------------------------------------------------------------------
-auto geo::GeometryBuilderStandard::doMakeWire(Path_t& path) -> WirePtr_t {
+geo::SenseWireGeo geo::GeometryBuilderStandard::doMakeWire(Path_t& path) {
 
-  return std::make_unique<geo::TenseWireGeo>
-    (path.current(), path.currentTransformation<geo::TransformationMatrix>());
+  return
+    { path.current(), path.currentTransformation<geo::TransformationMatrix>() };
 
 } // geo::GeometryBuilderStandard::doMakeWire()
 

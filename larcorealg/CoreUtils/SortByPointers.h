@@ -39,6 +39,9 @@ namespace util {
    * @tparam Coll type of collection of data
    * @param coll data collection
    * @return a STL vector with pointers to `coll` data elements, with same order
+   * 
+   * The returned collection hosts pointers to elements with the same
+   * constantness as the original collection (usually, non-const).
    */
   template <typename Coll>
   auto makePointerVector(Coll& coll);
@@ -127,10 +130,12 @@ namespace util::details {
   struct PointerVectorMaker {
     
     static auto make(Coll& coll) {
-
+      
+      using std::begin, std::end;
+      
       using coll_t = Coll;
-      using value_type = typename coll_t::value_type;
-      using pointer_type = std::add_pointer_t<value_type>;
+      using iterator_t = decltype(begin(coll));
+      using pointer_type = typename iterator_t::pointer;
       using ptr_coll_t = std::vector<pointer_type>;
 
       auto const n = coll.size();
@@ -140,8 +145,8 @@ namespace util::details {
       //
       ptr_coll_t ptrs;
       ptrs.reserve(n);
-      std::transform(coll.begin(), coll.end(), std::back_inserter(ptrs),
-        [](auto& obj){ return &obj; });
+      std::transform(begin(coll), end(coll), std::back_inserter(ptrs),
+        [](auto& obj){ return std::addressof(obj); });
 
       return ptrs;
 

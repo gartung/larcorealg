@@ -11,6 +11,7 @@
 // LArSoft libraries
 #include "larcorealg/Geometry/PlaneGeo.h"
 #include "larcorealg/Geometry/WireGeo.h"
+#include "larcorealg/Geometry/SenseWireGeo.h"
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/Decomposer.h"
 
@@ -56,12 +57,9 @@ namespace geo {
    */
   class WirePlaneGeo: public geo::PlaneGeo {
 
-    using StoredWireCollection_t = std::vector<std::unique_ptr<geo::WireGeo>>;
-    
-    
   public:
     
-    using WireCollection_t = StoredWireCollection_t;
+    using WireCollection_t = std::vector<std::unique_ptr<geo::SenseWireGeo>>;
 
     /// Construct a representation of a single plane of the detector
     WirePlaneGeo(
@@ -101,9 +99,9 @@ namespace geo {
     
   protected:
     
-    // --- BEGIN -- Polymorphic implementation ---------------------------------
+    // --- BEGIN -- Polymorphic implementation: anode plane --------------------
     /**
-     * @name Polymorphic implementation.
+     * @name Polymorphic implementation: anode plane.
      */
     /// @{
     
@@ -115,10 +113,7 @@ namespace geo {
       { return fCosPhiZ; }
     virtual unsigned int doNwires() const override
       { return fWire.size(); }
-    virtual geo::WireGeo const& doWire(unsigned int iWire) const override;
-    virtual geo::WireGeo const* doWirePtr(unsigned int iWire) const override
-      { return doHasWire(iWire)? fWire[iWire].get(): nullptr; }
-    virtual ElementIteratorBox doIterateElements() const override;
+    virtual geo::WireGeo doWire(unsigned int iWire) const override;
     virtual double doWirePitch() const override
       { return fWirePitch; }
     virtual bool doWireIDincreasesWithZ() const override;
@@ -128,7 +123,7 @@ namespace geo {
       { return fDecompWire.MainDir(); }
     virtual geo::WireID doNearestWireID
       (geo::Point_t const& pos) const override;
-    virtual geo::WireGeo const& doNearestWire
+    virtual geo::WireGeo doNearestWire
       (geo::Point_t const& pos) const override;
     virtual geo::WireID doClosestWireID
       (geo::WireID::WireID_t wireNo) const override;
@@ -178,11 +173,96 @@ namespace geo {
     virtual void doUpdateAfterSorting(geo::BoxBoundedGeo const& box) override;
     
     /// @}
-    // --- END -- Polymorphic implementation -----------------------------------
+    // --- END -- Polymorphic implementation: anode plane ----------------------
     
-  
+    
+    // --- BEGIN -- Polymorphic implementation: wire abstraction ---------------
+    /**
+     * @name Polymorphic implementation: wire abstraction.
+     * 
+     * Since in this implementation we have actual wire objects stored in memory
+     * (not `geo::WireGeo` though!) we refer to them for the information.
+     */
+    /// @{
+    
+    virtual double doWireRMax(WireLocator const& wloc) const override
+      { return getWire(wloc).RMax(); }
+    virtual double doWireRMin(WireLocator const& wloc) const override
+      { return getWire(wloc).RMin(); }
+    virtual double doWireHalfL(WireLocator const& wloc) const override
+      { return getWire(wloc).HalfL(); }
+    virtual void doWireFillCenterXYZ
+      (WireLocator const& wloc, double* xyz, double localz = 0.0) const override
+      { getWire(wloc).GetCenter(xyz, localz); }
+    virtual void doWireFillStartXYZ
+      (WireLocator const& wloc, double* xyz) const override
+      { getWire(wloc).GetStart(xyz); }
+    virtual void doWireFillEndXYZ
+      (WireLocator const& wloc, double* xyz) const override
+      { getWire(wloc).GetEnd(xyz); }
+    virtual geo::Point_t doWireGetPositionFromCenter
+      (WireLocator const& wloc, double localz) const override
+      { return getWire(wloc).GetPositionFromCenter<geo::Point_t>(localz); }
+    virtual geo::Point_t doWireGetPositionFromCenterUnbounded
+      (WireLocator const& wloc, double localz) const override
+      {
+        return getWire(wloc)
+          .GetPositionFromCenterUnbounded<geo::Point_t>(localz);
+      }
+    virtual geo::Point_t doWireGetCenter(WireLocator const& wloc) const override
+      { return getWire(wloc).GetCenter<geo::Point_t>(); }
+    virtual geo::Point_t doWireGetStart(WireLocator const& wloc) const override
+      { return getWire(wloc).GetStart<geo::Point_t>(); }
+    virtual geo::Point_t doWireGetEnd(WireLocator const& wloc) const override
+      { return getWire(wloc).GetEnd<geo::Point_t>(); }
+    virtual double doWireLength(WireLocator const& wloc) const override
+      { return getWire(wloc).Length(); }
+    virtual double doWireThetaZ(WireLocator const& wloc) const override
+      { return getWire(wloc).ThetaZ(); }
+    virtual bool doWireIsParallelTo
+      (WireLocator const& wloc, geo::WireGeo const& wire) const override
+      { return getWire(wloc).isParallelTo(wire); }
+    virtual geo::Vector_t doWireDirection
+      (WireLocator const& wloc) const override
+      { return getWire(wloc).Direction<geo::Vector_t>(); }
+    virtual double doWireDistanceFrom
+      (WireLocator const& wloc, geo::WireGeo const& wire) const override
+      { return getWire(wloc).DistanceFrom(wire); }
+    virtual TGeoNode const* doWireNode(WireLocator const& wloc) const override
+      { return getWire(wloc).Node(); }
+    virtual double doWireComputeZatY0(WireLocator const& wloc) const override
+      { return getWire(wloc).ComputeZatY0(); }
+    
+    /// Returns the transformation from local to global coordinates.
+    /// @returns the transformation object, or `nullptr` if doesn't exist
+    virtual WireLocalTransformation_t const* doWireTrans
+      (WireLocator const& wloc) const override
+      { return &(getWire(wloc).GetTransformation()); }
+    
+    virtual std::string doWireInfo(
+      WireLocator const& wloc,
+      std::string indent = "", unsigned int verbosity = 1
+      ) const override
+      { return getWire(wloc).WireInfo(indent, verbosity); }
+    
+    virtual void doWireUpdateAfterSorting
+      (WireLocator const& wloc, geo::WireID const& wireid, bool flip) override
+      { getWire(wloc).UpdateAfterSorting(wireid, flip); }
+    
+    /// @}
+    // --- END -- Polymorphic implementation: wire abstraction -----------------
+    
+    
   private:
-
+    
+    // @{
+    /// Return the stored wire for the specified location. Unchecked!
+    geo::SenseWireGeo const& getWire(WireLocator const& wloc) const
+      { return *(fWire[wloc.wireNo]); }
+    geo::SenseWireGeo& getWire(WireLocator const& wloc)
+      { return *(fWire[wloc.wireNo]); }
+    // @}
+    
     /// Returns a direction normal to the plane (pointing is not defined).
     geo::Vector_t GetNormalAxis() const;
 
@@ -214,15 +294,15 @@ namespace geo {
     void UpdateActiveArea();
 
     /// Whether the specified wire should have start and end swapped.
-    bool shouldFlipWire(geo::WireGeo const& wire) const;
+    bool shouldFlipWire(geo::SenseWireGeo const& wire) const;
 
   private:
 
-    StoredWireCollection_t fWire;        ///< List of wires in this plane.
+    WireCollection_t fWire;        ///< List of wires in this plane.
 
-    double                 fWirePitch;   ///< Pitch of wires in this plane.
-    double                 fSinPhiZ;     ///< Sine of @f$ \phi_{z} @f$.
-    double                 fCosPhiZ;     ///< Cosine of @f$ \phi_{z} @f$.
+    double           fWirePitch;   ///< Pitch of wires in this plane.
+    double           fSinPhiZ;     ///< Sine of @f$ \phi_{z} @f$.
+    double           fCosPhiZ;     ///< Cosine of @f$ \phi_{z} @f$.
 
     /// Decomposition on wire coordinates; the main direction is along the wire,
     /// the secondary one is the one measured by the wire, the normal matches

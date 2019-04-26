@@ -20,6 +20,8 @@
 #include "larcorealg/Geometry/PlaneGeo.h"
 #include "larcorealg/Geometry/WireGeo.h"
 
+#include "larcorealg/Geometry/SenseWireGeo.h"
+
 // support libraries
 #include "fhiclcpp/types/Table.h"
 #include "fhiclcpp/types/Atom.h"
@@ -330,8 +332,7 @@ namespace geo {
     /// @name Wire information
     /// @{
 
-    using WirePtr_t = std::unique_ptr<geo::WireGeo>;
-    using Wires_t = std::vector<WirePtr_t>;
+    using Wires_t = GeoPtrColl_t<geo::SenseWireGeo>;
 
     /**
      * @brief Looks for all wires under the specified path.
@@ -343,7 +344,7 @@ namespace geo {
       { auto localPath = path; return doExtractWires(localPath); }
 
     /// Constructs a `geo::WireGeo` from the current node of the `path`.
-    WirePtr_t makeWire(Path_t& path)
+    geo::SenseWireGeo makeWire(Path_t& path)
       { return doMakeWire(path); }
 
 
@@ -353,7 +354,7 @@ namespace geo {
     virtual Wires_t doExtractWires(Path_t& path);
 
     /// Core implementation of `makeWire()`.
-    virtual WirePtr_t doMakeWire(Path_t& path);
+    virtual geo::SenseWireGeo doMakeWire(Path_t& path);
 
     /// @}
     // --- END Wire information ------------------------------------------------

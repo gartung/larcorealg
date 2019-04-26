@@ -12,7 +12,8 @@
 #include "larcorealg/Geometry/WireGeo.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect::convertTo()
 #include "larcorealg/CoreUtils/RealComparisons.h"
-#include "larcorealg/CoreUtils/SortByPointers.h"
+#include "larcorealg/CoreUtils/SortByPointers.h" // util::makePointerVector()
+#include "larcorealg/CoreUtils/counter.h"
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h" // util::pi()
 
 // Framework includes
@@ -33,6 +34,7 @@
 #include <array>
 #include <functional> // std::less<>, std::greater<>, std::transform()
 #include <iterator> // std::back_inserter()
+#include <utility> // std::move()
 #include <type_traits> // std::is_same<>, std::decay_t<>
 #include <cassert>
 
@@ -426,13 +428,14 @@ namespace geo{
   
   //......................................................................
 
-  geo::WireGeo const& WirePlaneGeo::doWire(unsigned int iwire) const {
-    geo::WireGeo const* pWire = doWirePtr(iwire);
-    if (!pWire) {
+  geo::WireGeo WirePlaneGeo::doWire(unsigned int iWire) const {
+    
+    if (!doHasWire(iWire)) {
       throw cet::exception("WireOutOfRange")
-        << "Request for non-existing wire " << iwire << "\n";
+        << "Request for non-existing wire " << iWire << " on plane " << ID()
+        << " (there are " << doNwires() << ")\n";
     }
-    return *pWire;
+    return { *this, iWire };
   } // WirePlaneGeo::doWire(int)
 
   //......................................................................
@@ -440,11 +443,53 @@ namespace geo{
   // sort the WireGeo objects
   void WirePlaneGeo::doSortElements(geo::GeoObjectSorter const& sorter )
   {
-    // the sorter interface requires a vector of pointers;
-    // sorting is faster, but some gymnastics is required:
-    util::SortUniquePointers
-      (fWire, [&sorter](auto& coll){ sorter.SortWires(coll); });
-  }
+    /*
+     * The design of geometry sorting is one of the things in the geometry
+     * system that has given me the most grief.
+     * Each time something is changed in the underlying representation, it has
+     * catastrophic consequences on that side.
+     * The following is a very expensive and very generic approach to the task.
+     * It is recommended that rather than coping with this an experiment derives
+     * their own plane doing the sorting in its best way.
+     * Maybe a bit overkill (it needs a custom builder too), but quite
+     * effective.
+     */
+    
+    /*
+     * (1) prepare a vector of `geo::WireGeo`
+     * (2) prepare a vector of _pointers_ to `geo::WireGeo`
+     * (3) sort that vector with the geometry sorter
+     * (4) move the `geo::SenseWireGeo` objects in a new container, using
+     *     the wire number from `geo::WireGeo` ID as new position
+     * (5) replace the official vector with the one just created
+     * 
+     * Three more vectors, for Bjarne sake!!
+     */
+    
+    // (1) prepare a vector of `geo::WireGeo`
+    std::vector<geo::WireGeo> storage;
+    storage.reserve(fWire.size());
+    for (std::size_t index: util::counter(fWire.size()))
+      storage.push_back(doWire(index));
+    
+    // (2) prepare a vector of _pointers_ to `geo::WireGeo`
+    //     (`SortWires()` interface requires non-const pointers)
+    std::vector<geo::WireGeo*> wirePtrs = util::makePointerVector(storage);
+    
+    // (3) sort that vector with the geometry sorter
+    sorter.SortWires(wirePtrs);
+    
+    // (4) move the `geo::SenseWireGeo` objects in a new container, using
+    //     the wire number from `geo::WireGeo` ID as new position
+    WireCollection_t wires;
+    wires.reserve(wirePtrs.size());
+    for (geo::WireGeo const* wirePtr: wirePtrs)
+      wires.push_back(std::move(fWire[wirePtr->ID().Wire]));
+    
+    // (5) replace the official vector with the one just created
+    fWire = std::move(wires);
+    
+  } // doSortElements()
 
 
   //......................................................................
@@ -499,7 +544,7 @@ namespace geo{
 
 
   //......................................................................
-  geo::WireGeo const& WirePlaneGeo::doNearestWire(geo::Point_t const& point) const {
+  geo::WireGeo WirePlaneGeo::doNearestWire(geo::Point_t const& point) const {
 
     //
     // Note that this code is ready for when NearestWireID() will be changed
@@ -535,15 +580,6 @@ namespace geo{
   //......................................................................
   double WirePlaneGeo::doPhiZ() const { return std::atan2(fSinPhiZ, fCosPhiZ); }
 
-  //......................................................................
-  auto WirePlaneGeo::doIterateElements() const -> ElementIteratorBox {
-    return util::make_adapted_const_span(
-      fWire,
-      boost::make_indirect_iterator<StoredWireCollection_t::const_iterator>
-      );
-  } // WirePlaneGeo::IterateElements()
-  
-  
   //......................................................................
   void WirePlaneGeo::doUpdateAfterSorting(geo::BoxBoundedGeo const& TPCbox) {
     
@@ -782,10 +818,10 @@ namespace geo{
     // wire ordering (which UpdateWirePitch() does).
     //
     auto firstWire = fWire.cbegin(), wire = firstWire, wend = fWire.cend();
-    fWirePitch = geo::WireGeo::WirePitch(**firstWire, **(++wire));
+    fWirePitch = geo::SenseWireGeo::WirePitch(**firstWire, **(++wire));
 
     while (++wire != wend) {
-      auto wirePitch = geo::WireGeo::WirePitch(**firstWire, **wire);
+      auto wirePitch = geo::SenseWireGeo::WirePitch(**firstWire, **wire);
       if (wirePitch < 1e-4) continue; // it's 0!
       if (wirePitch < fWirePitch) fWirePitch = wirePitch;
     } // while
@@ -849,7 +885,7 @@ namespace geo{
 
 
   //......................................................................
-  bool WirePlaneGeo::shouldFlipWire(geo::WireGeo const& wire) const {
+  bool WirePlaneGeo::shouldFlipWire(geo::SenseWireGeo const& wire) const {
     //
     // The correct orientation is so that:
     //

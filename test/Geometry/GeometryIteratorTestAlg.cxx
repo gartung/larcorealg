@@ -1423,8 +1423,8 @@ void geo::GeometryIteratorTestAlg::WireIDIteratorsTest() const {
     BOOST_CHECK_EQUAL(iWire->Wire, BeginID.Wire);
 
     // check access to geometry element
-    geo::WireGeo const* pWire = geom->WirePtr(BeginID);
-    BOOST_CHECK_EQUAL(iWire.get(), pWire);
+    geo::WirePtr pWire = geom->WirePtr(BeginID);
+    BOOST_CHECK_EQUAL(iWire.get()->ID(), pWire->ID());
 
     // test copy and postfix increment
     geo::GeometryCore::wire_id_iterator iWireI(iWire++);

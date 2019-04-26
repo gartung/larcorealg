@@ -15,6 +15,7 @@
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/TransformationMatrix.h"
 #include "larcorealg/Geometry/LocalTransformationGeo.h"
+#include "larcorealg/Geometry/GeoElementTraits.h" // geo::element_traits
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
 #include "larcorealg/CoreUtils/span.h"
 #include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
@@ -72,6 +73,10 @@ namespace geo {
       );
 
   public:
+    
+    using ID_t = geo::TPCID; ///< Type of identifier of this element.
+    
+    
     /*
      * What's unique about `geo::TPCGeo` and unique pointers?
      * 
@@ -805,8 +810,16 @@ namespace geo {
     geo::Point_t GetFrontFaceCenterImpl() const;
     geo::Point_t GetCathodeCenterImpl() const;
 
-  };
-}
+  }; // class TPCGeo
+  
+  
+  // traits specialization
+  template <>
+  struct element_traits<geo::TPCID>
+    : geo::default_geo_element_traits<geo::TPCGeo, geo::TPCID> {};
+  
+  
+} // namespace geo
 
 // check that we got it right...
 static_assert(!std::is_copy_constructible_v<geo::TPCGeo>);
