@@ -442,7 +442,7 @@ namespace geo{
   {
     // the sorter interface requires a vector of pointers;
     // sorting is faster, but some gymnastics is required:
-    util::SortByPointers
+    util::SortUniquePointers
       (fWire, [&sorter](auto& coll){ sorter.SortWires(coll); });
   }
 
@@ -536,6 +536,15 @@ namespace geo{
   double WirePlaneGeo::doPhiZ() const { return std::atan2(fSinPhiZ, fCosPhiZ); }
 
   //......................................................................
+  auto WirePlaneGeo::doIterateElements() const -> ElementIteratorBox {
+    return util::make_adapted_const_span(
+      fWire,
+      boost::make_indirect_iterator<StoredWireCollection_t::const_iterator>
+      );
+  } // WirePlaneGeo::IterateElements()
+  
+  
+  //......................................................................
   void WirePlaneGeo::doUpdateAfterSorting(geo::BoxBoundedGeo const& TPCbox) {
     
     // the order here matters
@@ -546,7 +555,7 @@ namespace geo{
     geo::WireID::WireID_t wireNo = 0;
     for (auto& wire: fWire) {
 
-      wire.UpdateAfterSorting(geo::WireID(fID, wireNo), shouldFlipWire(wire));
+      wire->UpdateAfterSorting(geo::WireID(fID, wireNo), shouldFlipWire(*wire));
 
       ++wireNo;
     } // for wires
@@ -747,12 +756,12 @@ namespace geo{
 
   } // WirePlaneGeo::UpdateIncreasingWireDir()
 
-
+  
   //......................................................................
   void WirePlaneGeo::UpdateWireDir() {
 
     fDecompWire.SetMainDir(geo::vect::rounded01(geo::vect::toVector(FirstWire().Direction()), 1e-4));
-
+    
     //
     // check that the resulting normal matches the plane one
     //
@@ -773,10 +782,10 @@ namespace geo{
     // wire ordering (which UpdateWirePitch() does).
     //
     auto firstWire = fWire.cbegin(), wire = firstWire, wend = fWire.cend();
-    fWirePitch = geo::WireGeo::WirePitch(*firstWire, *(++wire));
+    fWirePitch = geo::WireGeo::WirePitch(**firstWire, **(++wire));
 
     while (++wire != wend) {
-      auto wirePitch = geo::WireGeo::WirePitch(*firstWire, *wire);
+      auto wirePitch = geo::WireGeo::WirePitch(**firstWire, **wire);
       if (wirePitch < 1e-4) continue; // it's 0!
       if (wirePitch < fWirePitch) fWirePitch = wirePitch;
     } // while

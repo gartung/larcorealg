@@ -1,157 +1,79 @@
-////////////////////////////////////////////////////////////////////////
-/// \file  larcorealg/Geometry/WireGeo.cxx
-/// \brief Encapsulate the geometry of a wire
-///
-/// \author  brebel@fnal.gov
-////////////////////////////////////////////////////////////////////////
+/**
+ * @file    larcorealg/Geometry/WireGeo.cxx
+ * @brief   Interface for a active readout element on a TPC plane.
+ * @author  Gianluca Petrillo (petrillo@slac.stanford.edu)
+ * @date    April 24, 2019
+ * @see     larcorealg/Geometry/WireGeo.h
+ * @ingroup Geometry
+ */
 
 // class header
 #include "larcorealg/Geometry/WireGeo.h"
+#include "larcorealg/CoreUtils/DebugUtils.h" // lar::debug namespace
 
-// LArSoft libraries
-#include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
-#include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h" // util ns
-
-// framework
-#include "messagefacility/MessageLogger/MessageLogger.h"
-
-// ROOT
-#include "TGeoTube.h"
-#include "TGeoNode.h"
+// Framework includes
+#include "cetlib_except/exception.h"
 
 // C/C++ libraries
-#include <cmath> // std::cos(), ...
 #include <sstream>
 
 
-namespace geo{
+//------------------------------------------------------------------------------
+std::string geo::WireGeo::GenericWireInfo
+  (std::string indent /* = "" */, unsigned int verbosity /* = 1 */) const
+{
+  std::ostringstream out;
+  
+  //----------------------------------------------------------------------------
+  out << "active plane element from " << GetStart<geo::Point_t>()
+    << " to " << GetEnd<geo::Point_t>();
 
-  //-----------------------------------------
-  WireGeo::WireGeo(TGeoNode const& node, geo::TransformationMatrix&& trans)
-    : fWireNode(&node)
-    , fTrans(std::move(trans))
-    , flipped(false)
-  {
-    fHalfL    = ((TGeoTube*)fWireNode->GetVolume()->GetShape())->GetDZ();
+  if (verbosity-- <= 0) return out.str(); // 0
 
-    // uncomment the following to check the paths to the wires
-    //   std::string p(base);
-    //   for(int i = 0; i <= depth; ++i){
-    //     p += "/";
-    //     p += path[i]->GetName();
-    //   }
-    //   std::cout << p.c_str() << std::endl;
+  //----------------------------------------------------------------------------
+  out << " (" << Length() << " cm long)";
 
-    // determine the orientation of the wire
-    auto lp = geo::origin<LocalPoint_t>();
-    fCenter = toWorldCoords(lp);
+  if (verbosity-- <= 0) return out.str(); // 1
 
-    lp.SetZ(fHalfL);
-    auto end = toWorldCoords(lp);
+  //----------------------------------------------------------------------------
+  out << ", theta(z)=" << ThetaZ() << " rad";
 
-    fThetaZ = std::acos((end.Z() - fCenter.Z())/fHalfL);
+  if (verbosity-- <= 0) return out.str(); // 2
 
-    // check to see if it runs "forward" or "backwards" in z
-    // check is made looking at the y position of the end point
-    // relative to the center point because you want to know if
-    // the end point is above or below the center of the wire in
-    // the yz plane
-    if(end.Y() < fCenter.Y()) fThetaZ *= -1.;
+  //----------------------------------------------------------------------------
+  out << "\n" << indent
+    << "  center at " << GetCenter<geo::Point_t>() << " cm";
 
-    //This ensures we are looking at the angle between 0 and Pi
-    //as if the wire runs at one angle it also runs at that angle +-Pi
-    if(fThetaZ < 0) fThetaZ += util::pi();
+  if (verbosity-- <= 0) return out.str(); // 3
 
-  } // geo::WireGeo::WireGeo()
+  //----------------------------------------------------------------------------
+  out << ", direction: " << Direction<geo::Vector_t>();
 
+//  if (verbosity-- <= 0) return out.str(); // 4
 
-  //......................................................................
-  void WireGeo::GetCenter(double* xyz, double localz) const
-  {
-    if (localz == 0.) { // if no dislocation is requested, we already have it
-      geo::vect::fillCoords(xyz, fCenter);
-      return;
-    }
-
-    double locz = relLength(localz);
-    if (std::abs(locz) > fHalfL) {
-      mf::LogWarning("WireGeo") << "asked for position along wire that"
-        " extends beyond the wire, returning position at end point";
-      locz = relLength((locz < 0)? -fHalfL: fHalfL);
-    }
-    const double local[3] = { 0., 0., locz };
-    LocalToWorld(local, xyz);
-  }
-
-  //......................................................................
-  double geo::WireGeo::RMax() const
-    { return ((TGeoTube*)fWireNode->GetVolume()->GetShape())->GetRmax(); }
-
-  //......................................................................
-  double geo::WireGeo::RMin() const
-    { return ((TGeoTube*)fWireNode->GetVolume()->GetShape())->GetRmin(); }
-
-  //......................................................................
-  double WireGeo::ThetaZ(bool degrees) const
-    { return degrees? util::RadiansToDegrees(fThetaZ): fThetaZ; }
-
-  //......................................................................
-  std::string WireGeo::WireInfo
-    (std::string indent /* = "" */, unsigned int verbosity /* = 1 */) const
-  {
-    std::ostringstream sstr;
-    PrintWireInfo(sstr, indent, verbosity);
-    return sstr.str();
-  } // WireGeo::WireInfo()
+  //----------------------------------------------------------------------------
+  
+  return out.str();
+  
+} // geo::WireGeo::GenericWireInfo()
 
 
-  //......................................................................
-  double WireGeo::DistanceFrom(geo::WireGeo const& wire) const {
-    //
-    // The algorithm assumes that picking any point on the wire will do,
-    // that is, that the wires are parallel.
-    //
-
-    if (!isParallelTo(wire)) return 0;
-
-    // a vector connecting to the other wire
-    auto const toWire = wire.GetCenter() - GetCenter();
-
-    // the distance is that vector, times the sine of the angle with the wire
-    // direction; we get that in a generic way with a cross product.
-    // We don't even care about the sign here
-    // (if we did, we would do a dot-product with the normal to the plane,
-    // and we should get a positive distance if the other wire has larger wire
-    // coordinate than this one).
-    return toWire.Cross(Direction()).Mag();
-
-  } // WireGeo::DistanceFrom()
+//------------------------------------------------------------------------------
+[[noreturn]] void geo::WireGeo::NotImplemented() const {
+  
+  cet::exception e("NotImplemented");
+  e << lar::debug::demangle(this)
+    << " (from geo::WireGeo): call not implemented:\n";
+  
+  lar::debug::BacktracePrintOptions opts;
+  opts.maxLines = 5U; // we keep it short...ish
+  opts.skipLines = 2U; // skip `printBacktrace()` and `NotImplemented()` calls
+  opts.setUniformIndent("  ");
+  lar::debug::printBacktrace(e, opts);
+  
+  throw e;
+  
+} // geo::WireGeo::NotImplemented()
 
 
-  //......................................................................
-  void WireGeo::UpdateAfterSorting(geo::WireID const&, bool flip) {
-
-    // flip, if asked
-    if (flip) Flip();
-
-  } // WireGeo::UpdateAfterSorting()
-
-  //......................................................................
-  void WireGeo::Flip() {
-    // we don't need to do much to flip so far:
-    // - ThetaZ() is defined in [0, pi], invariant to flipping
-    // - we don't change the transformation matrices, that we want to be
-    //   untouched and coherent with the original geometry source
-    // - center is invariant for flipping
-    // - start and end are computed on the fly (taking flipping into account)
-    // - ... and we chose to leave half length unsigned and independent
-
-    // change the flipping bit
-    flipped = !flipped;
-
-  } // WireGeo::Flip()
-
-  //......................................................................
-
-}
-////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------

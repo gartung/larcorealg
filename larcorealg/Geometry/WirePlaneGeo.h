@@ -56,10 +56,12 @@ namespace geo {
    */
   class WirePlaneGeo: public geo::PlaneGeo {
 
+    using StoredWireCollection_t = std::vector<std::unique_ptr<geo::WireGeo>>;
+    
     
   public:
     
-    using WireCollection_t = std::vector<geo::WireGeo>;
+    using WireCollection_t = StoredWireCollection_t;
 
     /// Construct a representation of a single plane of the detector
     WirePlaneGeo(
@@ -115,9 +117,8 @@ namespace geo {
       { return fWire.size(); }
     virtual geo::WireGeo const& doWire(unsigned int iWire) const override;
     virtual geo::WireGeo const* doWirePtr(unsigned int iWire) const override
-      { return doHasWire(iWire)? &(fWire[iWire]): nullptr; }
-    virtual ElementIteratorBox doIterateElements() const override
-      { return fWire; }
+      { return doHasWire(iWire)? fWire[iWire].get(): nullptr; }
+    virtual ElementIteratorBox doIterateElements() const override;
     virtual double doWirePitch() const override
       { return fWirePitch; }
     virtual bool doWireIDincreasesWithZ() const override;
@@ -217,16 +218,16 @@ namespace geo {
 
   private:
 
-    WireCollection_t      fWire;        ///< List of wires in this plane.
+    StoredWireCollection_t fWire;        ///< List of wires in this plane.
 
-    double                fWirePitch;   ///< Pitch of wires in this plane.
-    double                fSinPhiZ;     ///< Sine of @f$ \phi_{z} @f$.
-    double                fCosPhiZ;     ///< Cosine of @f$ \phi_{z} @f$.
+    double                 fWirePitch;   ///< Pitch of wires in this plane.
+    double                 fSinPhiZ;     ///< Sine of @f$ \phi_{z} @f$.
+    double                 fCosPhiZ;     ///< Cosine of @f$ \phi_{z} @f$.
 
-        /// Decomposition on wire coordinates; the main direction is along the wire,
+    /// Decomposition on wire coordinates; the main direction is along the wire,
     /// the secondary one is the one measured by the wire, the normal matches
     /// the plane's normal.
-    WireDecomposer_t      fDecompWire;
+    WireDecomposer_t fDecompWire;
 
     friend struct details::ActiveAreaCalculator;
 

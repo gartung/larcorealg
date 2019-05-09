@@ -306,8 +306,12 @@ namespace geo{
 
 
   //......................................................................
-  auto TPCGeo::IterateElements() const -> ElementIteratorBox
-    { return fPlanes; }
+  auto TPCGeo::IterateElements() const -> ElementIteratorBox {
+    return util::make_adapted_const_span(
+      fPlanes,
+      boost::make_indirect_iterator<StoredPlaneCollection_t::const_iterator>
+      );
+  } // TPCGeo::IterateElements()
   
   
   //......................................................................

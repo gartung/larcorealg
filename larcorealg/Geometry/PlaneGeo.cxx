@@ -343,7 +343,7 @@ std::string geo::PlaneGeo::OrientationName(geo::Orient_t orientation) {
   
   throw e;
   
-} // PlaneGeo::NotImplemented()
+} // geo::PlaneGeo::NotImplemented()
 
 
 //------------------------------------------------------------------------------

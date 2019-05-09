@@ -46,8 +46,6 @@ namespace geo {
     /// Type used internally to store the optical detectors.
     using OpDetList_t = std::vector<geo::OpDetGeo>;
 
-    using GeoNodePath_t = geo::WireGeo::GeoNodePath_t;
-
     /// Type returned by `IterateElements()`.
     using ElementIteratorBox = TPCList_t const&;
 

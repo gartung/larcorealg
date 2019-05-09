@@ -330,7 +330,8 @@ namespace geo {
     /// @name Wire information
     /// @{
 
-    using Wires_t = GeoPtrColl_t<geo::WireGeo>;
+    using WirePtr_t = std::unique_ptr<geo::WireGeo>;
+    using Wires_t = std::vector<WirePtr_t>;
 
     /**
      * @brief Looks for all wires under the specified path.
@@ -342,7 +343,7 @@ namespace geo {
       { auto localPath = path; return doExtractWires(localPath); }
 
     /// Constructs a `geo::WireGeo` from the current node of the `path`.
-    geo::WireGeo makeWire(Path_t& path)
+    WirePtr_t makeWire(Path_t& path)
       { return doMakeWire(path); }
 
 
@@ -352,7 +353,7 @@ namespace geo {
     virtual Wires_t doExtractWires(Path_t& path);
 
     /// Core implementation of `makeWire()`.
-    virtual geo::WireGeo doMakeWire(Path_t& path);
+    virtual WirePtr_t doMakeWire(Path_t& path);
 
     /// @}
     // --- END Wire information ------------------------------------------------

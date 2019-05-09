@@ -21,15 +21,18 @@
 #include "larcorealg/Geometry/WireGeo.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
 #include "larcorealg/CoreUtils/DereferenceIterator.h"
+#include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
+#include "larcorealg/CoreUtils/span.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 
 // ROOT libraries
 #include "Math/GenVector/Cartesian2D.h"
 #include "Math/GenVector/PositionVector2D.h"
 #include "Math/GenVector/DisplacementVector2D.h"
-
-// ROOT libraries
 #include "TGeoMatrix.h" // TGeoHMatrix
+
+// Boost libraries
+#include "boost/iterator/indirect_iterator.hpp"
 
 // C/C++ standard libraries
 #include <vector>
@@ -81,19 +84,28 @@ namespace geo {
    * These components are all measured in centimeters.
    *
    */
-  class PlaneGeo {
-
+  class PlaneGeo: private lar::PolymorphicUncopiableClass {
+    
+    
   public:
 
     using DefaultVector_t = TVector3; // ... not for long
     using DefaultPoint_t = TVector3; // ... not for long
     
     using AnodeElement_t = geo::WireGeo; ///< Element contained in the plane.
+    using StandardWireCollection_t
+      = std::vector<std::unique_ptr<AnodeElement_t>>; ///< Proof of failure of this model.
     
     using GeoNodePath_t = std::vector<TGeoNode const*>;
 
     /// Type returned by `IterateElements()`.
-    using ElementIteratorBox = std::vector<AnodeElement_t> const&;
+    using ElementIteratorBox = decltype(
+      util::make_adapted_const_span(
+        std::declval<StandardWireCollection_t const&>(),
+        boost::make_indirect_iterator<StandardWireCollection_t::const_iterator>
+        )
+      );
+
     
 
     // --- BEGIN -- Types for geometry-local reference vectors -----------------
@@ -177,9 +189,6 @@ namespace geo {
     /// Type for description of rectangles.
     using Rect = lar::util::simple_geo::Rectangle<double>;
 
-
-    /// Virtual destructor. Does nothing special.
-    virtual ~PlaneGeo() = default;
 
 
     // --- BEGIN -- Plane properties -------------------------------------------
@@ -1338,11 +1347,20 @@ namespace geo {
     
   protected:
     
+    // --- BEGIN -- Constructors, destructor and friends -----------------------
+    /// @name Constructors, destructor and friends
+    /// @{
+    
     /// Construct a representation of a single plane of the detector.
     PlaneGeo(
       TGeoNode const& node,
       geo::TransformationMatrix&& trans
       );
+    
+    
+    /// @}
+    // --- END -- Constructors, destructor and friends -------------------------
+    
     
     // --- BEGIN -- Polymorphic implementation ---------------------------------
     /**

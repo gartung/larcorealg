@@ -16,6 +16,7 @@
 #include "larcorealg/Geometry/TransformationMatrix.h"
 #include "larcorealg/Geometry/LocalTransformationGeo.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
+#include "larcorealg/CoreUtils/span.h"
 #include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 
@@ -23,6 +24,9 @@
 #include "TGeoVolume.h"
 #include "TGeoMatrix.h"
 #include "TVector3.h"
+
+// Boost libraries
+#include "boost/iterator/indirect_iterator.hpp"
 
 // C/C++ standard library
 #include <set>
@@ -56,6 +60,17 @@ namespace geo {
     using DefaultVector_t = TVector3; // ... not for long
     using DefaultPoint_t = TVector3; // ... not for long
 
+    using StoredPlaneCollection_t = std::vector<std::unique_ptr<geo::PlaneGeo>>;
+
+    
+    /// Type returned by `IterateElements()`.
+    using ElementIteratorBox = decltype(
+      util::make_adapted_const_span(
+        std::declval<StoredPlaneCollection_t const&>(),
+        boost::make_indirect_iterator<StoredPlaneCollection_t::const_iterator>
+        )
+      );
+
   public:
     /*
      * What's unique about `geo::TPCGeo` and unique pointers?
@@ -80,11 +95,8 @@ namespace geo {
      * That's not the case for `geo::CryostatGeo`, `geo::TPCGeo` and
      * `geo::WireGeo`.
      */
-    using PlaneCollection_t = std::vector<std::unique_ptr<geo::PlaneGeo>>;
-    using GeoNodePath_t = geo::WireGeo::GeoNodePath_t;
+    using PlaneCollection_t = StoredPlaneCollection_t;
 
-    /// Type returned by `IterateElements()`.
-    using ElementIteratorBox = PlaneCollection_t const&;
 
     /// @{
     /**
@@ -738,18 +750,13 @@ namespace geo {
 
 
   private:
-
-    void FindPlane(GeoNodePath_t& path, size_t depth);
-    void MakePlane(GeoNodePath_t& path, size_t depth);
-
-  private:
     
     using LocalTransformation_t = geo::LocalTransformationGeo
       <ROOT::Math::Transform3D, LocalPoint_t, LocalVector_t>;
 
     LocalTransformation_t              fTrans;          ///< TPC-to-world transformation.
 
-    PlaneCollection_t                  fPlanes;         ///< List of planes in this plane.
+    StoredPlaneCollection_t            fPlanes;         ///< List of planes in this plane.
     TGeoVolume*                        fActiveVolume;   ///< Active volume of LAr, called volTPCActive in GDML file.
     TGeoVolume*                        fTotalVolume;    ///< Total volume of TPC, called volTPC in GDML file.
     DriftDirection_t                   fDriftDirection; ///< Direction of the electron drift in the TPC.
