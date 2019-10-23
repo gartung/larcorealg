@@ -11,7 +11,7 @@
 
 
 // LArSoft libraries
-#include "larcorealg/Geometry/BoxBoundedGeo.h"
+#include "larcorealg/Geometry/PlaneGeo.h"                  // for PlaneGeo::...
 #include "larcorealg/Geometry/TPCGeo.h"
 #include "larcorealg/Geometry/CryostatGeo.h"
 #include "larcorealg/Geometry/Decomposer.h"
@@ -21,9 +21,6 @@
 // utility libraries
 #include "cetlib_except/exception.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
-
-// common libraries
-// #include "range/v3/view/transform.hpp" // TODO library not available in larcorealg yet
 
 // C/C++ standard libraries
 #include <vector>

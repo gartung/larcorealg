@@ -1,4 +1,5 @@
 #include "larcorealg/GeoAlgo/GeoHalfLine.h"
+
 namespace geoalgo {
 
   HalfLine::HalfLine()

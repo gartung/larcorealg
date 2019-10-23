@@ -11,12 +11,21 @@
 #include <vector>
 
 #include "larcorealg/Geometry/GeoObjectSorter.h"
+#include "larcoreobj/SimpleTypesAndConstants/geo_types.h"  // for DriftDirec...
+
+namespace fhicl { class ParameterSet; }
 
 namespace geo{
 
+  class AuxDetGeo;
+  class AuxDetSensitiveGeo;
+  class CryostatGeo;
+  class PlaneGeo;
+  class TPCGeo;
+  class WireGeo;
+
   /// @ingroup Geometry
   class GeoObjectSorterStandard : public GeoObjectSorter {
-
   public:
 
     GeoObjectSorterStandard(fhicl::ParameterSet const& p);

@@ -1,4 +1,7 @@
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"
 #include "larcorealg/GeoAlgo/GeoSphere.h"
+
+#include <iostream>
 
 namespace geoalgo {
 

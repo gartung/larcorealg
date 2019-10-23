@@ -8,8 +8,16 @@
 #include "larcorealg/Geometry/BoxBoundedGeo.h"
 
 // LArSoft libraries
-#include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect namespace
+#include "larcorealg/Geometry/geo_vectors_utils.h"
 
+// ROOT libraries
+#include "Math/GenVector/Cartesian3D.h"
+#include "Math/GenVector/DisplacementVector3D.h"
+#include "Math/GenVector/PositionVector3D.h"
+
+#include <array>
+#include <type_traits>
+#include <vector>
 
 namespace geo
 {
@@ -142,4 +150,3 @@ namespace geo
 
 
 } // namespace geo
-

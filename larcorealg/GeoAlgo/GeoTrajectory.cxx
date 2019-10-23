@@ -1,5 +1,8 @@
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"
 #include "larcorealg/GeoAlgo/GeoTrajectory.h"
+
 #include <sstream>
+
 namespace geoalgo {
 
   Trajectory::Trajectory(size_t npoints, size_t ndimension)

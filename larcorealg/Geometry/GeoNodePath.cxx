@@ -7,13 +7,10 @@
  */
 
 // LArSoft libraries
-#include "larcorealg/Geometry/GeometryBuilder.h"
-#include "larcorealg/Geometry/WireGeo.h"
-#include "larcorealg/Geometry/PlaneGeo.h"
+#include "larcorealg/Geometry/GeoNodePath.h"
 
 // ROOT libraries
 #include "TGeoNode.h"
-
 
 //------------------------------------------------------------------------------
 geo::GeoNodePath::operator std::string() const {

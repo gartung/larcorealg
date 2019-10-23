@@ -13,8 +13,14 @@
 
 // LArSoft libraries
 #include "larcorealg/Geometry/Partitions.h"
-#include "larcorealg/Geometry/TPCGeo.h"
 #include "larcorealg/Geometry/Decomposer.h"
+#include "larcorealg/Geometry/SimpleGeo.h"
+#include "larcorealg/Geometry/TPCGeo.h"
+#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
+
+// ROOT libraries
+#include "Math/GenVector/Cartesian2D.h"
+#include "Math/GenVector/DisplacementVector2D.h"
 
 // C/C++ standard libraries
 #include <vector>
@@ -27,6 +33,8 @@
 
 
 namespace geo {
+
+  class CryostatGeo;
 
   namespace part {
 

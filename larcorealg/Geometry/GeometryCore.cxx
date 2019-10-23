@@ -23,6 +23,7 @@
 
 // Framework includes
 #include "cetlib_except/exception.h"
+#include "fhiclcpp/types/Table.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 // ROOT includes

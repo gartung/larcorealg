@@ -1,10 +1,9 @@
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"
 #include "larcorealg/GeoAlgo/GeoVector.h"
-#include <iostream>
-#include <iomanip>
+
 #include <vector>
 #include <sstream>
 #include <cmath>
-#include <limits>
 
 namespace geoalgo {
 

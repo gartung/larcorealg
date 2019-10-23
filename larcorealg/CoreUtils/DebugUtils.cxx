@@ -1,7 +1,7 @@
-
 #include "larcorealg/CoreUtils/DebugUtils.h"
 
 // C/C++ standard libraries
+#include <istream>
 #include <sstream>
 
 

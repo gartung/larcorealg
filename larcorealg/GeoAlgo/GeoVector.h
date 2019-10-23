@@ -15,18 +15,16 @@
 #define BASICTOOL_GEOVECTOR_H
 
 #include "larcorealg/GeoAlgo/GeoAlgoConstants.h"
-#include "larcorealg/GeoAlgo/GeoAlgoException.h"
-#include <TVector3.h>
-#include <TLorentzVector.h>
+
+#include "TVector3.h"
+#include "TLorentzVector.h"
+
+#include <stddef.h>
+#include <functional>
+#include <ostream>
+#include <vector>
 
 namespace geoalgo {
-
-  // Forward declaration (don't worry)
-  class Trajectory;
-  class LineSegment;
-  class HalfLine;
-  class Sphere;
-  class GeoAlgo;
 
   /**
      \class Vector
@@ -56,8 +54,6 @@ namespace geoalgo {
     Vector(const double x, const double y, const double z); ///< ctor w/ x, y & z
     Vector(const TVector3 &pt);                             ///< ctor w/ TVector3
     Vector(const TLorentzVector &pt);                       ///< ctor w/ TLorentzVector
-
-    virtual ~Vector(){} ///< Default dtor
 
     void   Normalize(); ///< Normalize itself
 

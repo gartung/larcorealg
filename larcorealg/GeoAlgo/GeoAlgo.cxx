@@ -1,4 +1,8 @@
 #include "larcorealg/GeoAlgo/GeoAlgo.h"
+#include "larcorealg/GeoAlgo/GeoAlgoConstants.h"  // for kINVALID_DOUBLE
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"  // for GeoAlgoException
+
+#include <stddef.h>
 
 namespace geoalgo {
 

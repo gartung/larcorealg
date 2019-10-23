@@ -5,15 +5,18 @@
 /// \author  brebel@fnal.gov
 ////////////////////////////////////////////////////////////////////////
 
+#include "larcorealg/Geometry/Exceptions.h"
 #include "larcorealg/Geometry/ChannelMapStandardAlg.h"
 #include "larcorealg/Geometry/GeometryCore.h"
-#include "larcorealg/Geometry/AuxDetGeo.h"
 #include "larcorealg/Geometry/CryostatGeo.h"
 #include "larcorealg/Geometry/TPCGeo.h"
 #include "larcorealg/Geometry/PlaneGeo.h"
 #include "larcorealg/Geometry/WireGeo.h"
 
+#include "cetlib_except/exception.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
+
+namespace fhicl { class ParameterSet; }
 
 namespace geo{
 

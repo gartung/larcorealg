@@ -14,7 +14,7 @@
 #ifndef BASICTOOL_GEOAABOX_H
 #define BASICTOOL_GEOAABOX_H
 
-#include "larcorealg/GeoAlgo/GeoHalfLine.h"
+#include "larcorealg/GeoAlgo/GeoVector.h"  // for Point_t, Vector_t
 
 namespace geoalgo {
   /**
@@ -78,4 +78,3 @@ namespace geoalgo {
 }
 #endif
 /** @} */ // end of doxygen group
-

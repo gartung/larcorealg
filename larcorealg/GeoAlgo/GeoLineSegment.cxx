@@ -1,3 +1,4 @@
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"
 #include "larcorealg/GeoAlgo/GeoLineSegment.h"
 
 namespace geoalgo {

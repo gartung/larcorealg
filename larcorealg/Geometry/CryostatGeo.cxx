@@ -9,20 +9,22 @@
 
 // LArSoft includes
 #include "larcorealg/CoreUtils/SortByPointers.h"
+#include "larcorealg/Geometry/GeoObjectSorter.h"          // for GeoObjectSo...
 
 // Framework includes
-#include "messagefacility/MessageLogger/MessageLogger.h"
 #include "cetlib_except/exception.h"
+#include "messagefacility/MessageLogger/MessageLogger.h"
 
 // ROOT includes
 #include "TGeoNode.h"
 #include "TGeoBBox.h"
+#include "TGeoShape.h"                                    // for TGeoShape
 #include "TClass.h"
 
 // C++ standard libraries
 #include <sstream> // std::ostringstream
 #include <limits> // std::numeric_limits<>
-#include <algorithm> // std::sort()
+#include <vector>
 #include <utility> // std::move()
 
 

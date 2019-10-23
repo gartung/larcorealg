@@ -15,8 +15,12 @@
 #define BASICTOOL_GEODIRECTEDLINE_H
 
 #include "larcorealg/GeoAlgo/GeoLine.h"
+#include "larcorealg/GeoAlgo/GeoVector.h"
 
 namespace geoalgo {
+
+  class HalfLine;
+
   /**
      \class DirectedLine
      @brief Representation of a 3D infinite line.
@@ -55,4 +59,3 @@ namespace geoalgo {
 }
 #endif
 /** @} */ // end of doxygen group
-

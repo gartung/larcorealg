@@ -10,11 +10,12 @@
 #define TEST_GEOMETRY_NAMESELECTOR_H 1
 
 // C/C++ standard library
+#include <initializer_list>
+#include <iosfwd>
 #include <string>
 #include <set>
 #include <map>
-#include <ostream>
-#include <initializer_list>
+#include <stddef.h>
 
 // ... and more in the template implementation section below
 

@@ -14,14 +14,15 @@
 #ifndef BASICTOOL_GEOALGO_H
 #define BASICTOOL_GEOALGO_H
 
-#include <algorithm> // used for std::find
 #include "larcorealg/GeoAlgo/GeoLine.h"
 #include "larcorealg/GeoAlgo/GeoHalfLine.h"
 #include "larcorealg/GeoAlgo/GeoLineSegment.h"
 #include "larcorealg/GeoAlgo/GeoTrajectory.h"
-#include "larcorealg/GeoAlgo/GeoCone.h"
 #include "larcorealg/GeoAlgo/GeoAABox.h"
 #include "larcorealg/GeoAlgo/GeoSphere.h"
+#include "larcorealg/GeoAlgo/GeoVector.h"
+
+#include <vector>
 
 namespace geoalgo {
 
@@ -42,12 +43,6 @@ namespace geoalgo {
   class GeoAlgo{
 
   public:
-
-    /// Default constructor
-    GeoAlgo(){}
-
-    /// Default destructor
-    virtual ~GeoAlgo(){}
 
     //
     // Intersections
@@ -476,4 +471,3 @@ namespace geoalgo {
 
 #endif
 /** @} */ // end of doxygen group
-

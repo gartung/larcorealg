@@ -18,10 +18,8 @@
 // C/C++ libraries
 #include <numeric> // std::iota()
 #include <vector>
-#include <array>
 #include <map>
 #include <utility> // std::as_const()
-#include <memory> // std::addressof()
 #include <cstddef> // std::size_t
 
 

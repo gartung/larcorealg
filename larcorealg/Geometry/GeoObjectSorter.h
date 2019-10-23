@@ -12,8 +12,6 @@
 
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 
-#include "fhiclcpp/ParameterSet.h"
-
 namespace geo{
 
   class AuxDetGeo;

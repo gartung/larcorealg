@@ -18,9 +18,7 @@
 
 // C/C++ standard library
 #include <algorithm>
-#include <array>
 #include <vector>
-
 
 namespace geo {
   /**
@@ -316,6 +314,30 @@ namespace geo {
       { return InFiducialZ(z, margin, margin); }
 
     /// @}
+    
+    
+    /// -- BEGIN -- Overlaps ---------------------------------------------------
+    /// @name Overlaps
+    /// @{
+    
+    /// Returns if the _x_ coordinates covered by this and `other` box overlap.
+    bool OverlapsX(geo::BoxBoundedGeo const& other) const
+      { return std::min(MaxX(), other.MaxX()) > std::max(MinX(), other.MinX()); }
+    
+    /// Returns if the _y_ coordinates covered by this and `other` box overlap.
+    bool OverlapsY(geo::BoxBoundedGeo const& other) const
+      { return std::min(MaxY(), other.MaxY()) > std::max(MinY(), other.MinY()); }
+    
+    /// Returns if the _z_ coordinates covered by this and `other` box overlap.
+    bool OverlapsZ(geo::BoxBoundedGeo const& other) const
+      { return std::min(MaxZ(), other.MaxZ()) > std::max(MinZ(), other.MinZ()); }
+    
+    /// Returns if this and `other` box overlap.
+    bool Overlaps(geo::BoxBoundedGeo const& other) const
+      { return OverlapsX(other) && OverlapsY(other) && OverlapsZ(other); }
+    
+    /// @}
+    /// -- END -- Overlaps -----------------------------------------------------
 
 
     /**

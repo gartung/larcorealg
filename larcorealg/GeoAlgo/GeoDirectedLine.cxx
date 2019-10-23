@@ -1,4 +1,5 @@
 #include "larcorealg/GeoAlgo/GeoDirectedLine.h"
+#include "larcorealg/GeoAlgo/GeoHalfLine.h"
 
 namespace geoalgo {
 

@@ -1,10 +1,4 @@
-cet_make(
-  LIBRARIES
-    canvas
-    cetlib cetlib_except
-  )
-
+cet_make(LIBRARIES canvas cetlib_except)
 
 install_headers()
 install_source()
-

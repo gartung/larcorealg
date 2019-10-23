@@ -18,27 +18,18 @@
 
 // C/C++ standard libraries
 #include <cstddef> // size_t
+#include <cstdint> // uint32_t
 #include <string>
 #include <vector>
 #include <memory> // std::shared_ptr<>
 
-#include "larcorealg/Geometry/AuxDetChannelMapAlg.h"
-
-// ROOT class prototypes
-class TGeoManager;
-class TGeoNode;
-class TGeoMaterial;
-
-
 /// Namespace collecting geometry-related classes utilities
 namespace geo {
 
-
   // Forward declarations within namespace.
+  class AuxDetChannelMapAlg;
   class AuxDetGeo;
   class AuxDetSensitiveGeo;
-  class AuxDetGeometryCore;
-
 
   /// Data in the geometry description
   /// \ingroup Geometry

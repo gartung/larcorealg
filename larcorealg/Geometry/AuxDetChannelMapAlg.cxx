@@ -5,8 +5,13 @@
 /// \author  brebel@fnal.gov
 ////////////////////////////////////////////////////////////////////////
 
+#include "cetlib_except/exception.h"
+
 #include "larcorealg/Geometry/AuxDetChannelMapAlg.h"
 #include "larcorealg/Geometry/AuxDetGeo.h"
+#include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
+
+#include <limits.h>
 
 namespace geo{
 

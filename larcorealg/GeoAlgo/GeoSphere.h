@@ -16,6 +16,8 @@
 
 #include "larcorealg/GeoAlgo/GeoVector.h"
 
+#include <vector>
+
 namespace geoalgo {
   /**
      \class Spehere
@@ -120,4 +122,3 @@ namespace geoalgo {
 }
 #endif
 /** @} */ // end of doxygen group
-

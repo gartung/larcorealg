@@ -1,5 +1,9 @@
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"  // for GeoAlgoException
 #include "larcorealg/GeoAlgo/GeoCone.h"
+
+#include <math.h>
 #include <sstream>
+
 namespace geoalgo {
 
   Cone::Cone() : HalfLine()

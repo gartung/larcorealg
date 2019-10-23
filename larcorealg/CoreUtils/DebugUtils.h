@@ -13,8 +13,8 @@
 #ifndef LARCOREALG_COREUTILS_DEBUGUTILS_H
 #define LARCOREALG_COREUTILS_DEBUGUTILS_H
 
-// LArSoft libraries
-#include "larcorealg/CoreUtils/MetaUtils.h" // util::always_true_v
+// LArSoft includes
+#include "larcorealg/CoreUtils/MetaUtils.h"
 
 // framework and support libraries
 #include "cetlib_except/demangle.h"
@@ -25,7 +25,6 @@
 #include <utility> // std::pair<>
 #include <vector>
 #include <string>
-#include <sstream>
 #include <bitset>
 #include <typeinfo>
 #include <ostream>
@@ -488,4 +487,3 @@ namespace lar::debug {
 
 
 #endif // LARCOREALG_COREUTILS_DEBUGUTILS_H
-

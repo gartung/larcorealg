@@ -13,7 +13,6 @@
 
 // LArSoft includes
 #include "larcorealg/TestUtils/NameSelector.h"
-#include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 
 // ROOT
 #include "TVector3.h"
@@ -23,7 +22,6 @@
 #include <set>
 #include <vector>
 #include <array>
-#include <memory> // std::unique_ptr<>
 
 // forward declarations
 namespace fhicl {
@@ -39,11 +37,8 @@ namespace geo {
   class PlaneGeo;
   class AuxDetGeo;
   class AuxDetSensitiveGeo;
-
-  namespace details {
-    class TestTrackerClassBase;
-  } // namespace details
-
+  struct CryostatID;
+  struct PlaneID;
 
   /** **************************************************************************
    * @brief Performs tests on the geometry as seen by Geometry service

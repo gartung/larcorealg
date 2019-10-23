@@ -17,15 +17,8 @@
 #include "larcorealg/Geometry/ChannelMapAlg.h"
 #include "larcorealg/Geometry/GeometryCore.h"
 
-// CET libraries
+// art-provided libraries
 #include "fhiclcpp/ParameterSet.h"
-#include "fhiclcpp/types/Name.h"
-#include "fhiclcpp/types/Comment.h"
-#include "fhiclcpp/types/Atom.h"
-#include "fhiclcpp/types/OptionalAtom.h"
-#include "fhiclcpp/types/OptionalDelegatedParameter.h"
-#include "fhiclcpp/types/Table.h"
-
 
 // C/C++ standard libraries
 #include <string>

@@ -16,6 +16,7 @@
 
 #include "larcorealg/GeoAlgo/GeoAlgo.h"
 #include "larcorealg/GeoAlgo/GeoLine.h"
+#include "larcorealg/GeoAlgo/GeoVector.h"
 
 namespace geoalgo {
   /**
@@ -66,4 +67,3 @@ namespace geoalgo {
 }
 #endif
 /** @} */ // end of doxygen group
-

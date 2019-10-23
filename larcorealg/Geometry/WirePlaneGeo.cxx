@@ -457,6 +457,7 @@ namespace geo{
     
     /*
      * (1) prepare a vector of `geo::WireGeo`
+     *     (the lightweight wire objects referring back to the plane)
      * (2) prepare a vector of _pointers_ to `geo::WireGeo`
      * (3) sort that vector with the geometry sorter
      * (4) move the `geo::SenseWireGeo` objects in a new container, using
@@ -645,7 +646,14 @@ namespace geo{
 
   //......................................................................
   void WirePlaneGeo::UpdateWirePitch() {
-    fWirePitch = geo::WireGeo::WirePitch(Wire(0), Wire(1));
+    // pick long wires around the center of the detector,
+    // so that their coordinates are defined with better precision
+    assert(Nwires() > 1);
+    
+    auto const iWire = Nwires() / 2;
+    
+    fWirePitch = geo::WireGeo::WirePitch(Wire(iWire - 1), Wire(iWire));
+    
   } // WirePlaneGeo::UpdateWirePitch()
 
   //......................................................................

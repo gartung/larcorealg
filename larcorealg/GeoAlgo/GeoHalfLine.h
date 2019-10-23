@@ -14,7 +14,11 @@
 #ifndef BASICTOOL_GEOHALFLINE_H
 #define BASICTOOL_GEOHALFLINE_H
 
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"
 #include "larcorealg/GeoAlgo/GeoVector.h"
+
+#include "TVector3.h"
+
 namespace geoalgo {
   /**
      \class HalfLine
@@ -89,4 +93,3 @@ namespace geoalgo {
 }
 #endif
 /** @} */ // end of doxygen group
-

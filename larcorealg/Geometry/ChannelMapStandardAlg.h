@@ -14,7 +14,8 @@
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcorealg/Geometry/ChannelMapAlg.h"
 #include "larcorealg/Geometry/GeoObjectSorterStandard.h"
-#include "fhiclcpp/ParameterSet.h"
+
+namespace fhicl { class ParameterSet; }
 
 namespace geo{
 
@@ -280,4 +281,3 @@ namespace geo{
 
 }
 #endif // LARCOREALG_GEOMETRY_CHANNELSTANDARDMAPALG_H
-

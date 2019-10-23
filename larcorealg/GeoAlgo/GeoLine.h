@@ -14,7 +14,7 @@
 #ifndef BASICTOOL_GEOLINE_H
 #define BASICTOOL_GEOLINE_H
 
-#include "larcorealg/GeoAlgo/GeoHalfLine.h"
+#include "larcorealg/GeoAlgo/GeoVector.h"
 
 namespace geoalgo {
   /**
@@ -92,4 +92,3 @@ namespace geoalgo {
 }
 #endif
 /** @} */ // end of doxygen group
-

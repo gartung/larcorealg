@@ -1,3 +1,1 @@
-
-install_gdml( SUBDIRS GDMLSchema )
-
+install_gdml(SUBDIRS GDMLSchema)

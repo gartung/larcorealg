@@ -1,14 +1,11 @@
-# define ROOTLIB
+cet_make(NO_DICTIONARY
+         LIBRARIES
+           ${ROOT_CORE}
+           ${ROOT_PHYSICS}
+         )
 
-set( ROOTLIB -L$ENV{ROOTSYS}/lib -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -pthread -lm -ldl)
-
-link_libraries( ${LIB_NAME} -L$ENV{BOOST_LIB} ${ROOTLIB} )
-
-cet_make( LIBRARIES NO_DICTIONARY )
-
-art_dictionary( DICTIONARY_LIBRARIES larcorealg_GeoAlgo )
+art_dictionary(DICTIONARY_LIBRARIES larcorealg_GeoAlgo)
 
 
 install_headers()
 install_source()
-

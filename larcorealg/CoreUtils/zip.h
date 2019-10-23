@@ -10,8 +10,6 @@
 #ifndef LARCOREALG_COREUTILS_ZIP_H
 #define LARCOREALG_COREUTILS_ZIP_H
 
-
-// LArSoft libraries
 #include "larcorealg/CoreUtils/span.h"
 
 // C/C++ libraries
@@ -20,8 +18,6 @@
 #include <tuple>
 #include <type_traits> // std::remove_cv_t<>, ...
 #include <cstddef> // std::size_t
-
-
 
 namespace util {
   

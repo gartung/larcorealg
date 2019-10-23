@@ -11,18 +11,22 @@
 // LArSoft libraries
 #include "larcorealg/Geometry/TPCGeo.h"
 #include "larcorealg/Geometry/OpDetGeo.h"
+#include "larcorealg/Geometry/WireGeo.h"                       // for WireGeo
 #include "larcorealg/Geometry/BoxBoundedGeo.h"
-#include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/TransformationMatrix.h"
 #include "larcorealg/Geometry/GeoElementTraits.h" // geo::element_traits
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect
+#include "larcorealg/Geometry/GeoVectorLocalTransformation.h"  // for LocalT...
+#include "larcorealg/Geometry/LocalTransformationGeo.h"        // for LocalT...
 #include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h" // geo::Point_t
 
 // ROOT libraries
+#include "Math/GenVector/DisplacementVector3D.h"
+#include "Math/GenVector/PositionVector3D.h"
+#include "Math/GenVector/Transform3D.h"
 #include "TGeoVolume.h"
-#include "TGeoMatrix.h" // TGeoHMatrix
 
 // C/C++ standard libraries
 #include <vector>
@@ -32,6 +36,8 @@
 class TGeoNode;
 
 namespace geo {
+
+  class GeoObjectSorter;
 
   //......................................................................
   /// @brief Geometry information for a single cryostat.

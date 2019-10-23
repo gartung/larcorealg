@@ -17,6 +17,7 @@
 #include "larcorealg/CoreUtils/enumerate.h"
 #include "larcorealg/CoreUtils/zip.h"
 #include "larcorealg/CoreUtils/counter.h"
+#include "larcorealg/CoreUtils/operations.h" // util::dereference()
 
 // C/C++ standard libraries
 #include <iostream> // std::cout
@@ -168,6 +169,45 @@ void test_transformed_span(Cont& v) {
   BOOST_CHECK_EQUAL(n, v.size());
 
 } // test_transformed_span()
+
+
+//------------------------------------------------------------------------------
+template <typename Iter, typename Cont>
+void test_transformed_span_with_unmoveable_values(Cont& v) {
+  
+  /*
+   * In this test we create a container of unique_ptr to `v` elements and
+   * iterate `v` values through it. The iteration is supposed to be transparent,
+   * with the iteration code not expressing that we are passing via pointers,
+   * because of our transformation dereferencing the pointers.
+   */
+  
+  using value_t   = typename std::iterator_traits<Iter>::value_type;
+  using pointer_t   = std::unique_ptr<value_t>;
+  
+  std::vector<pointer_t> ptrs;
+  std::transform(
+    v.begin(), v.end(), std::back_inserter(ptrs),
+    [](auto& v){ return std::make_unique<value_t>(v); }
+    );
+  
+  auto r = util::make_transformed_span(ptrs, util::dereference());
+
+  // check the type of the object
+  static_assert(std::is_same<typename decltype(r)::value_type, value_t>());
+
+  BOOST_CHECK_EQUAL(r.empty(), v.empty());
+  BOOST_CHECK_EQUAL(r.size(), v.size());
+  
+  unsigned int n = 0;
+  for (auto&& [ rangeValue, value ]: util::zip(r, v)) {
+    BOOST_CHECK_EQUAL(&rangeValue, &value);
+    BOOST_CHECK_EQUAL(rangeValue, value);
+    ++n;
+  } // for
+  BOOST_CHECK_EQUAL(n, v.size());
+
+} // test_transformed_span_with_unmoveable_values()
 
 
 //------------------------------------------------------------------------------
@@ -374,6 +414,7 @@ BOOST_AUTO_TEST_CASE(transformed_span_testcase) {
 
   TestVector_t ev;
   test_transformed_span<TestVector_t::iterator>(ev);
+  test_transformed_span_with_unmoveable_values<TestVector_t::iterator>(ev);
 
   TestVector_t v3 { 1, 2, 3 };
   test_transformed_span<TestVector_t::iterator>(v3);

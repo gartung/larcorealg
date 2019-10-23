@@ -14,19 +14,19 @@
 #include "larcorealg/Geometry/TransformationMatrix.h"
 #include "larcorealg/Geometry/LocalTransformationGeo.h"
 #include "larcorealg/CoreUtils/RealComparisons.h"
-#include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
+#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
 
 // ROOT libraries
-#include "TGeoVolume.h"
-#include "TGeoMatrix.h" // TGeoHMatrix
+#include "Math/GenVector/DisplacementVector3D.h"
+#include "Math/GenVector/PositionVector3D.h"
+#include "Math/GenVector/Transform3D.h"
 
 // C/C++ standard libraries
-#include <vector>
 #include <string>
 #include <type_traits>
 
-
 class TGeoNode;
+class TGeoVolume;
 
 namespace geo {
 

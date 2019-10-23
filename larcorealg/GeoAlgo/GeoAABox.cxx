@@ -1,4 +1,5 @@
 #include "larcorealg/GeoAlgo/GeoAABox.h"
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"
 
 namespace geoalgo {
 

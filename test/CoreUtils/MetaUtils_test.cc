@@ -59,6 +59,17 @@ static_assert(!util::is_any_of_v<const float, int, int, float>);
 
 
 //------------------------------------------------------------------------------
+// util::is_same_decay_v
+//------------------------------------------------------------------------------
+static_assert( util::is_same_decay_v<int, int>);
+static_assert( util::is_same_decay_v<int const, int>);
+static_assert( util::is_same_decay_v<int const, int&>);
+static_assert( util::is_same_decay_v<int const, int volatile&>);
+static_assert(!util::is_same_decay_v<int const, float&>);
+static_assert(!util::is_same_decay_v<unsigned int const, int volatile&>);
+
+
+//------------------------------------------------------------------------------
 // util::is_instance_of_v
 //------------------------------------------------------------------------------
 static_assert( util::is_instance_of_v<std::unique_ptr, std::unique_ptr<int>>);

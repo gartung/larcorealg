@@ -8,19 +8,15 @@
 #ifndef GEO_AUXDETCHANNELMAPALG_H
 #define GEO_AUXDETCHANNELMAPALG_H
 
-// LArSoft  libraries
-
-// Framework libraries
-#include "cetlib_except/exception.h"
-
 // ROOT libraries
 #include "TVector3.h"
-// ???? AuxDetGeometryData_t
-// C/C++ standard libraries
-#include <vector>
-#include <map>
-#include <set>
 
+// C/C++ standard libraries
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace geo{
 
@@ -77,4 +73,3 @@ namespace geo{
  };
 }
 #endif // GEO_AUXDETCHANNELMAPALG_H
-

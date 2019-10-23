@@ -23,7 +23,6 @@
 #include "larcorealg/Geometry/SenseWireGeo.h"
 
 // support libraries
-#include "fhiclcpp/types/Table.h"
 #include "fhiclcpp/types/Atom.h"
 
 // ROOT libraries

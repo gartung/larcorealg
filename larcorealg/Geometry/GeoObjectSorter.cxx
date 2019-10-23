@@ -8,6 +8,9 @@
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/OpDetGeo.h"
 
+#include <algorithm>
+#include <vector>
+
 namespace geo{
 
     static bool sortorderOpDets     (const OpDetGeo* t1, const OpDetGeo* t2)

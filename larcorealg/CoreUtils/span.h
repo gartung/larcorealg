@@ -289,7 +289,7 @@ namespace util {
   /// @{
   
   /// Creates a span from specified iterators via an adaptor.
-  /// @see `make_transformed_span(Cont&, Adaptor&&)`
+  /// @see `make_transformed_span(Cont&, Op&&)`
   template <typename BIter, typename EIter, typename Op>
   auto make_transformed_span(BIter begin, EIter end, Op&& op)
     {
@@ -304,8 +304,8 @@ namespace util {
    * @param cont collection to be iterated through
    * @param adapter iterator transformation to be applied on `cont`
    * @return a `util::span` object iterating via an adapter to `cont`
-   * @see `make_transformed_span(BIter, EIter, Adaptor&&)`,
-   *      `make_transformed_const_span(Cont, Adaptor&&)`,
+   * @see `make_transformed_span(BIter, EIter, Op&&)`,
+   *      `make_transformed_const_span(Cont, Op&&)`,
    *      `make_adapted_span()`,
    * 
    * This function transforms as directed by the unary operation `op` the result

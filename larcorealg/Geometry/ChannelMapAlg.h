@@ -10,31 +10,28 @@
 ////////////////////////////////////////////////////////////////////////
 
 // LArSoft  libraries
-#include "larcorealg/Geometry/Exceptions.h" // geo::InvalidWireIDError
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcoreobj/SimpleTypesAndConstants/readout_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/RawTypes.h" // raw::ChannelID_t
 
-// Framework libraries
-#include "cetlib_except/exception.h"
-
 // ROOT libraries
 #include "TVector3.h"
 
 // C/C++ standard libraries
+#include <stddef.h>
 #include <vector>
 #include <map>
 #include <set>
-#include <memory> // std::unique_ptr<>
-
+#include <string>
+#include <utility>
 
 namespace geo{
 
   // forward-declaration from geometry
   struct GeometryData_t;
   class AuxDetGeo;
-
+  class GeoObjectSorter;
 
   /**
    * @brief Interface for a class providing readout channel mapping to geometry
@@ -706,4 +703,3 @@ namespace geo{
  };
 }
 #endif // GEO_CHANNELMAPALG_H
-

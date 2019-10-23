@@ -12,6 +12,7 @@
 // framework libraries
 #include "canvas/Utilities/Exception.h"
 
+#include <ostream>
 
 namespace testing {
 

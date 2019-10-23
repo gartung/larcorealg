@@ -10,23 +10,28 @@
 #include "test/Geometry/GeometryTestAlg.h"
 
 // LArSoft includes
+#include "larcorealg/Geometry/Decomposer.h"
+#include "larcorealg/Geometry/Exceptions.h"
 #include "larcorealg/Geometry/SimpleGeo.h"
 #include "larcorealg/Geometry/GeometryCore.h"
 #include "larcorealg/Geometry/CryostatGeo.h"
 #include "larcorealg/Geometry/TPCGeo.h"
 #include "larcorealg/Geometry/PlaneGeo.h"
 #include "larcorealg/Geometry/WireGeo.h"
-#include "larcorealg/Geometry/OpDetGeo.h"
 #include "larcorealg/Geometry/AuxDetGeo.h"
 #include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
 #include "larcorealg/Geometry/geo.h"
+#include "larcorealg/Geometry/geo_vectors_utils.h"
 #include "larcorealg/CoreUtils/RealComparisons.h"
 #include "larcorealg/CoreUtils/DumpUtils.h" // lar::dump::vector3D(), ...
+#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
+#include "larcoreobj/SimpleTypesAndConstants/readout_types.h"      // for ROPID
 #include "larcoreobj/SimpleTypesAndConstants/RawTypes.h" // raw::ChannelID_t
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h" // util::pi<>
 
 // Framework includes
+#include "cetlib_except/exception.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
@@ -36,8 +41,20 @@
 #include "TGeoNode.h"
 #include "TGeoVolume.h"
 #include "TClass.h"
+#include "Math/GenVector/DisplacementVector2D.h"
+#include "Math/GenVector/DisplacementVector3D.h"
+#include "Math/GenVector/PositionVector3D.h"
+#include "RtypesCore.h"                                            // for kTRUE
+#include "TGeoMaterial.h"
+#include "TGeoMatrix.h"
+#include "TGeoShape.h"
+#include "TObjArray.h"
+#include "TVector2.h"
 
 // C/C++ standard libraries
+#include <stdint.h>
+#include <stdlib.h>                                                // for abort
+#include <memory>
 #include <cmath>
 #include <vector>
 #include <iterator> // std::inserter()
@@ -47,7 +64,6 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <cassert>
 #include <limits> // std::numeric_limits<>
 #include <initializer_list>
 

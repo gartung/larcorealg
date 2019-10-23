@@ -10,25 +10,29 @@
 #define LARCOREALG_GEOMETRY_AUXDETGEO_H
 
 // LArSoft libraries
+#include "larcorealg/CoreUtils/RealComparisons.h"
 #include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
+#include "larcorealg/Geometry/LocalTransformationGeo.h"
 #include "larcorealg/Geometry/TransformationMatrix.h"
 #include "larcorealg/Geometry/GeoVectorLocalTransformation.h"
-#include "larcorealg/Geometry/GeoObjectSorter.h"
-#include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
-#include "larcorealg/CoreUtils/RealComparisons.h"
+#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
 
 // ROOT libraries
 #include "TGeoVolume.h"
-#include "TGeoMatrix.h" // TGeoHMatrix
+#include "Math/GenVector/DisplacementVector3D.h"
+#include "Math/GenVector/PositionVector3D.h"
 
 // C/C++ libraries
+#include <stddef.h>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 class TGeoNode;
 
-
 namespace geo {
+
+  class GeoObjectSorter;
 
   /// \ingroup Geometry
   class AuxDetGeo {

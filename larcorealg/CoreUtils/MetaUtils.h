@@ -255,6 +255,13 @@ namespace util {
   
   
   //----------------------------------------------------------------------------
+  /// Whether `T` and `U` are the same type, after being applied `std::decay`.
+  template <typename T, typename U>
+  constexpr auto is_same_decay_v
+    = std::is_same_v<std::decay_t<T>, std::decay_t<U>>;
+
+
+  //----------------------------------------------------------------------------
   // @{
   /**
    * @brief Helper to determine the type of a variable at compilation time.

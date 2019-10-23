@@ -133,9 +133,7 @@ namespace util::details {
       
       using std::begin, std::end;
       
-      using coll_t = Coll;
-      using iterator_t = decltype(begin(coll));
-      using pointer_type = typename iterator_t::pointer;
+      using pointer_type = decltype(std::addressof(*begin(coll)));
       using ptr_coll_t = std::vector<pointer_type>;
 
       auto const n = coll.size();

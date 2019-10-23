@@ -10,11 +10,13 @@
 
 // LArSoft libraries
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect namespace
+#include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/CoreUtils/SortByPointers.h"
 
 // ROOT
 #include "TGeoTrd2.h"
 #include "TGeoBBox.h"
+#include "TGeoNode.h"
 
 // Framework includes
 #include "messagefacility/MessageLogger/MessageLogger.h"
@@ -22,7 +24,7 @@
 
 // C/C++ libraries
 #include <sstream> // std::ostringstream
-#include <utility> // std::move()
+#include <string>
 #include <limits>
 
 namespace geo{

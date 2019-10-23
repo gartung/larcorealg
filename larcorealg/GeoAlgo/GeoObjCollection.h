@@ -14,15 +14,19 @@
 #ifndef BASICTOOL_GEOOBJCOLLECTION_H
 #define BASICTOOL_GEOOBJCOLLECTION_H
 
-#include <iostream>
 #include "larcorealg/GeoAlgo/GeoTrajectory.h"
 #include "larcorealg/GeoAlgo/GeoAABox.h"
 #include "larcorealg/GeoAlgo/GeoLineSegment.h"
 #include "larcorealg/GeoAlgo/GeoHalfLine.h"
 #include "larcorealg/GeoAlgo/GeoCone.h"
 #include "larcorealg/GeoAlgo/GeoSphere.h"
-#include "larcorealg/GeoAlgo/GeoAlgoException.h"
+#include "larcorealg/GeoAlgo/GeoVector.h"
+
+#include <stddef.h>
 #include <map>
+#include <string>
+#include <vector>
+
 namespace geoalgo {
 
   /**
@@ -31,12 +35,6 @@ namespace geoalgo {
   class GeoObjCollection {
 
   public:
-
-    /// Default constructor
-    GeoObjCollection();
-
-    /// Default destructor
-    virtual ~GeoObjCollection(){}
 
     void Clear();
 
@@ -121,4 +119,3 @@ namespace geoalgo {
 }
 #endif
 /** @} */ // end of doxygen group
-

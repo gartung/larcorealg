@@ -33,6 +33,7 @@ cet_test( counter_test USE_BOOST_UNIT )
 cet_test( zip_test USE_BOOST_UNIT )
 cet_test( enumerate_test USE_BOOST_UNIT )
 cet_test( values_test USE_BOOST_UNIT )
+cet_test( operations_test USE_BOOST_UNIT )
 
 # test quiet_Math_Functor.h
 get_property(IncludeDirectories DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)

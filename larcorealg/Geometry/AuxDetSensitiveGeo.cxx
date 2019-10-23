@@ -14,10 +14,11 @@
 /// ROOT libraries
 #include "TGeoTrd2.h"
 #include "TGeoBBox.h"
+#include "TGeoNode.h"
+#include "TGeoVolume.h"
 
 // Framework includes
 #include "messagefacility/MessageLogger/MessageLogger.h"
-#include "cetlib_except/exception.h"
 
 // C++ standard libraries
 #include <sstream> // std::ostringstream

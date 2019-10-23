@@ -1,9 +1,11 @@
+#include "larcorealg/GeoAlgo/GeoAlgoException.h"
 #include "larcorealg/GeoAlgo/GeoObjCollection.h"
 
-namespace geoalgo {
+#include "TString.h" // for Form
 
-  GeoObjCollection::GeoObjCollection()
-  {}
+#include <utility>
+
+namespace geoalgo {
 
   void GeoObjCollection::Clear()
   {

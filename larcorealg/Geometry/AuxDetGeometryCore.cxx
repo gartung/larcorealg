@@ -10,30 +10,27 @@
 #include "larcorealg/Geometry/AuxDetGeometryCore.h"
 
 // lar includes
-#include "larcorealg/Geometry/GeometryBuilderStandard.h"
+#include "larcorealg/Geometry/AuxDetChannelMapAlg.h"
 #include "larcorealg/Geometry/AuxDetGeo.h"
-#include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
+#include "larcorealg/Geometry/GeoNodePath.h"
+#include "larcorealg/Geometry/GeometryBuilder.h"
+#include "larcorealg/Geometry/GeometryBuilderStandard.h"
 
 // Framework includes
 #include "cetlib_except/exception.h"
+#include "fhiclcpp/types/Table.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 // ROOT includes
 #include <TGeoManager.h>
-#include <TGeoNode.h>
-#include <TGeoVolume.h>
-#include <TGeoMatrix.h>
-#include <TGeoBBox.h>
-// #include <Rtypes.h>
 
 // C/C++ includes
 #include <cstddef> // size_t
 #include <cctype> // ::tolower()
-#include <cmath> // std::abs() ...
+#include <string>
 #include <vector>
 #include <algorithm> // std::for_each(), std::transform()
 #include <utility> // std::swap()
-#include <limits> // std::numeric_limits<>
 #include <memory> // std::default_deleter<>
 
 
