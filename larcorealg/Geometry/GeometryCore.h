@@ -63,6 +63,7 @@
 #include "larcorealg/Geometry/GeoElementTraits.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect namespace
 #include "larcorealg/CoreUtils/RealComparisons.h"
+#include "larcorealg/CoreUtils/enumerate.h"
 #include "larcorealg/CoreUtils/span.h"
 #include "larcoreobj/SimpleTypesAndConstants/readout_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
@@ -1554,11 +1555,9 @@ namespace geo {
     /// Type of list of auxiliary detectors
     using AuxDetList_t = GeometryData_t::AuxDetList_t;
 
-
-    /// Wires must be found in GDML description within this number of nested
-    /// volumes.
-    static constexpr std::size_t MaxWireDepthInGDML = 20U;
-
+    /// Maximum verbosity level for `Print()` and `Info()` methods.
+    static constexpr unsigned int MaxPrintVerbosity = 9U;
+    
     /// Value of tolerance for equality comparisons
     static lar::util::RealComparisons<geo::Length_t> coordIs;
 
@@ -1962,13 +1961,42 @@ namespace geo {
     //@}
 
 
-    /// Prints geometry information with maximum verbosity.
+    /**
+     * @brief Prints geometry information with maximum verbosity.
+     * @tparam Stream type of output stream
+     * @param out output stream where the information is printed
+     * @param indent (default: `"  "`) global indentation of the whole message
+     *               (the first line is never indented)
+     * @param verbosity (default: maximum) amount of information printed
+     * 
+     * The verbosity levels are incremental:
+     * * `0`: detector geometry name and cryostat and auxiliary detector element
+     *      counts
+     * * `1`: detector enclosure
+     * * `2`: terse cryostat and auxiliary detector information
+     * * `3`: full cryostat and auxiliary detector information
+     * * `4`: terse TPC and optical detector information
+     * * `5`: full TPC and optical detector information
+     * * `6`: terse sensitive plane and auxiliary subdetector information
+     * * `7`: full sensitive plane and auxiliary subdetector information
+     * * `8`: terse sensitive element information
+     * * `9`: full sensitive element information
+     * 
+     * The maximum useful verbosity level is stored as `MaxPrintVerbosity`.
+     */
     template <typename Stream>
-    void Print(Stream&& out, std::string indent = "  ") const;
+    void Print(
+      Stream&& out,
+      std::string const& indent = "  ",
+      unsigned int const verbosity = MaxPrintVerbosity
+      ) const;
 
     /// @brief Returns a string with complete geometry information.
     /// @see `Print()`
-    std::string Info(std::string indent = "  ") const;
+    std::string Info(
+      std::string const& indent = "  ",
+      unsigned int verbosity = MaxPrintVerbosity
+      ) const;
 
     /// @}
     // END Detector information
@@ -5675,14 +5703,19 @@ geo::GeometryCore::Segment<Point> geo::GeometryCore::WireEndPoints
 
 //------------------------------------------------------------------------------
 template <typename Stream>
-void geo::GeometryCore::Print
-  (Stream&& out, std::string indent /* = "  " */) const
-{
+void geo::GeometryCore::Print(
+  Stream&& out, std::string const& indent /* = "  " */,
+  unsigned int const verbosity /* = MaxPrintVerbosity */
+) const {
 
+  //----------------------------------------------------------------------------
   out << "Detector " << DetectorName() << " has "
     << Ncryostats() << " cryostats and "
     << NAuxDets() << " auxiliary detectors:";
 
+  if (verbosity <= 0) return;
+  
+  //----------------------------------------------------------------------------
   auto const& detEnclosureBox = DetectorEnclosureBox();
   out << "\n" << indent << "Detector enclosure: "
     << detEnclosureBox.Min() << " -- " << detEnclosureBox.Max()
@@ -5691,48 +5724,68 @@ void geo::GeometryCore::Print
     << detEnclosureBox.SizeZ() << " ) cm^3"
     ;
 
+  if (verbosity <= 1) return;
+  
+  //----------------------------------------------------------------------------
   for (geo::CryostatGeo const& cryostat: IterateCryostats()) {
     out << "\n" << indent;
-    cryostat.PrintCryostatInfo
-      (std::forward<Stream>(out), indent + "  ", cryostat.MaxVerbosity);
+    cryostat.PrintCryostatInfo(
+      std::forward<Stream>(out), indent + "  ",
+      (verbosity >= 3)? cryostat.MaxVerbosity: 1U
+      );
 
-    const unsigned int nTPCs = cryostat.NTPC();
-    for(unsigned int t = 0;  t < nTPCs; ++t) {
-      const geo::TPCGeo& tpc = cryostat.TPC(t);
+    if (verbosity <= 3) continue;
+    
+    // BEGIN verbosity >= 4 ----------------------------------------------------
+    for(const geo::TPCGeo& tpc: cryostat.IterateTPCs()) {
 
       out << "\n" << indent << "  ";
-      tpc.PrintTPCInfo
-        (std::forward<Stream>(out), indent + "    ", tpc.MaxVerbosity);
+      tpc.PrintTPCInfo(
+        std::forward<Stream>(out), indent + "    ",
+        (verbosity >= 5)? tpc.MaxVerbosity: 1U
+        );
 
-      const unsigned int nPlanes = tpc.Nplanes();
-      for(unsigned int p = 0; p < nPlanes; ++p) {
-        const geo::PlaneGeo& plane = tpc.Plane(p);
-        const unsigned int nWires = plane.Nwires();
+      if (verbosity <= 5) continue;
+      
+      // BEGIN verbosity >= 6 --------------------------------------------------
+      for(geo::PlaneGeo const& plane: tpc.IteratePlanes()) {
 
         out << "\n" << indent << "    ";
-        plane.PrintPlaneInfo
-          (std::forward<Stream>(out), indent + "      ", plane.MaxVerbosity);
+        plane.PrintPlaneInfo(
+          std::forward<Stream>(out), indent + "      ",
+          (verbosity >= 7)? plane.MaxVerbosity: 1U
+          );
 
-        for(unsigned int w = 0;  w < nWires; ++w) {
-          const geo::WireGeo& wire = plane.Wire(w);
-          geo::WireID wireID(plane.ID(), w);
+        if (verbosity <= 7) continue;
+        
+        // BEGIN verbosity >= 8 ------------------------------------------------
+        for(auto&& [ w, wire]: util::enumerate(plane.IterateWires())) {
+          geo::WireID const wireID(plane.ID(), w);
 
           // the wire should be aligned on z axis, half on each side of 0,
           // in its local frame
           out << "\n" << indent << "      " << wireID << " ";
-          wire.PrintWireInfo
-            (std::forward<Stream>(out), indent + "      ", wire.MaxVerbosity);
+          wire.PrintWireInfo(
+            std::forward<Stream>(out), indent + "      ",
+            (verbosity >= 9)? wire.MaxVerbosity: 1U
+            );
         } // for wire
+        // END verbosity >= 8 --------------------------------------------------
       } // for plane
+      // END verbosity >= 6 ----------------------------------------------------
     } // for TPC
 
     unsigned int nOpDets = cryostat.NOpDet();
     for (unsigned int iOpDet = 0; iOpDet < nOpDets; ++iOpDet) {
       geo::OpDetGeo const& opDet = cryostat.OpDet(iOpDet);
       out << "\n" << indent << "  [OpDet #" << iOpDet << "] ";
-      opDet.PrintOpDetInfo
-        (std::forward<Stream>(out), indent + "  ", opDet.MaxVerbosity);
+      opDet.PrintOpDetInfo(
+        std::forward<Stream>(out), indent + "  ",
+        (verbosity >= 5)? opDet.MaxVerbosity: 1U
+        );
     } // for
+    
+    // END verbosity >= 4 ------------------------------------------------------
   } // for cryostat
 
   unsigned int const nAuxDets = NAuxDets();
@@ -5740,17 +5793,24 @@ void geo::GeometryCore::Print
     geo::AuxDetGeo const& auxDet = AuxDet(iDet);
 
     out << "\n" << indent << "[#" << iDet << "] ";
-    auxDet.PrintAuxDetInfo
-      (std::forward<Stream>(out), indent + "  ", auxDet.MaxVerbosity);
+    auxDet.PrintAuxDetInfo(
+      std::forward<Stream>(out), indent + "  ",
+      (verbosity >= 3)? auxDet.MaxVerbosity: 1U
+      );
 
+    if (verbosity <= 4) continue;
+    
+    // BEGIN verbosity >= 4 ----------------------------------------------------
     unsigned int const nSensitive = auxDet.NSensitiveVolume();
     switch (nSensitive) {
       case 0: break;
       case 1: {
         geo::AuxDetSensitiveGeo const& auxDetS = auxDet.SensitiveVolume(0U);
         out << "\n" << indent << "  ";
-        auxDetS.PrintAuxDetInfo
-          (std::forward<Stream>(out), indent + "    ", auxDetS.MaxVerbosity);
+        auxDetS.PrintAuxDetInfo(
+          std::forward<Stream>(out), indent + "    ",
+          (verbosity >= 7)? auxDetS.MaxVerbosity: 1U
+          );
         break;
       }
       default:
@@ -5758,12 +5818,15 @@ void geo::GeometryCore::Print
           out << "\n" << indent << "[#" << iSens << "] ";
           geo::AuxDetSensitiveGeo const& auxDetS
             = auxDet.SensitiveVolume(iSens);
-          auxDetS.PrintAuxDetInfo
-            (std::forward<Stream>(out), indent + "    ", auxDetS.MaxVerbosity);
+          auxDetS.PrintAuxDetInfo(
+            std::forward<Stream>(out), indent + "    ",
+            (verbosity >= 7)? auxDetS.MaxVerbosity: 1U
+            );
         } // for
         break;
     } // if sensitive detectors
-
+    // END verbosity >= 4 ----------------------------------------------------
+    
   } // for auxiliary detector
 
   out << '\n';

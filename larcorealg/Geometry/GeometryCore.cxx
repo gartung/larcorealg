@@ -1109,9 +1109,12 @@ namespace geo {
   }
 
   //......................................................................
-  std::string GeometryCore::Info(std::string indent /* = "" */) const {
+  std::string GeometryCore::Info(
+    std::string const& indent /* = "" */,
+    unsigned int const verbosity /* = MaxPrintVerbosity */
+  ) const {
     std::ostringstream sstr;
-    Print(sstr, indent);
+    Print(sstr, indent, verbosity);
     return sstr.str();
   } // GeometryCore::Info()
 
