@@ -35,7 +35,7 @@ namespace geo {
    * The general interface only provides abstraction for the high level objects
    * (cryostats and auxiliary detectors).
    * The implementations can use a finer internal structure to address single
-   * subcomponents (e.g. wire planes).
+   * subcomponents (e.g. sensitive planes).
    *
    * Builder objects can be configured via FHiCL parameters.
    *

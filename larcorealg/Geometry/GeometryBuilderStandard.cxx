@@ -12,7 +12,7 @@
 #include "larcorealg/Geometry/SenseWireGeo.h"
 
 // support libraries
-// #include "cetlib_except/exception.h"
+#include "messagefacility/MessageLogger/MessageLogger.h"
 
 // ROOT libraries
 
@@ -54,7 +54,10 @@ namespace {
 geo::GeometryBuilderStandard::GeometryBuilderStandard(Config const& config)
   : fMaxDepth(config.maxDepth())
   , fOpDetGeoName(config.opDetGeoName())
-  {}
+{
+  MF_LOG_TRACE("GeometryBuilder")
+    << "Loading geometry builder: GeometryBuilderStandard";
+} // geo::GeometryBuilderStandard::GeometryBuilderStandard()
 
 
 //------------------------------------------------------------------------------

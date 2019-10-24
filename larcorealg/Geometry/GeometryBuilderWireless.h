@@ -5,6 +5,7 @@
  * @date   February 26, 2019
  * @see    `larcorealg/Geometry/GeometryBuilder.h`,
  *         `larcorealg/Geometry/GeometryBuilderStandard.cxx`
+ *         `larcorealg/Geometry/GeometryBuilderWireless.cxx`
  */
 
 #ifndef LARCOREALG_GEOMETRY_GEOMETRYBUILDERWIRELESS_H
@@ -29,8 +30,8 @@ namespace geo {
     
       public:
     
-    // import all constructors from base class
-    using geo::GeometryBuilderStandard::GeometryBuilderStandard;
+    /// Constructor: uses the specified configuration.
+    GeometryBuilderWireless(Config const& config);
     
     //
     // we don't expand the public interface here
@@ -43,8 +44,6 @@ namespace geo {
     /// @{
     
     /// Core implementation of `extractWires()`: no wires returned whatsoever.
-    /// 
-    /// The actual algorithm is specialization of `doExtractGeometryObjects()`.
     virtual Wires_t doExtractWires(Path_t&) { return {}; }
     
     /// @}
