@@ -12,6 +12,7 @@
 #include <boost/test/test_tools.hpp> // BOOST_CHECK(), BOOST_CHECK_EQUAL()
 
 // LArSoft libraries
+#include "larcorealg/CoreUtils/zip.h"
 #include "larcorealg/CoreUtils/MetaUtils.h"
 
 // C/C++ standard libraries
@@ -245,7 +246,32 @@ void referenced_address_test() {
   BOOST_CHECK_EQUAL(util::referenced_address(refw ), std::addressof(v));
   BOOST_CHECK_EQUAL(util::referenced_address(crefw), std::addressof(v));
 
-} // lvalue_reference_into_wrapper_test()
+} // referenced_address_test()
+
+
+//------------------------------------------------------------------------------
+void referenced_addresser_documentation_test() {
+  
+  /*
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * std::vector<int> data(4U, 0);
+   * std::vector<int const*> dataPtr;
+   * std::transform(data.cbegin(), data.cend(), std::back_inserter(dataPtr),
+   *   util::reference_addresser());
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   */
+  
+  std::vector<int> data(4U, 0);
+  std::vector<int const*> dataPtr;
+  std::transform(data.cbegin(), data.cend(), std::back_inserter(dataPtr),
+    util::reference_addresser());
+  
+  // test
+  for (auto&& [ data, dataPtr ]: util::zip(data, dataPtr)) {
+    BOOST_CHECK_EQUAL(dataPtr, &data);
+  } // for
+  
+} // referenced_addresser_documentation_testreferenced_addresser_documentation_test()
 
 
 //------------------------------------------------------------------------------
@@ -285,6 +311,7 @@ void lvalue_reference_into_wrapper_test() {
 BOOST_AUTO_TEST_CASE(ReferencesTestCase) {
 
   referenced_address_test();
+  referenced_addresser_documentation_test();
   lvalue_reference_into_wrapper_test();
 
 } // BOOST_AUTO_TEST_CASE(ReferencesTestCase)

@@ -50,6 +50,7 @@
 // LArSoft libraries
 #include "larcorealg/Geometry/GeoObjectSorter.h"
 #include "larcorealg/Geometry/ChannelMapAlg.h"
+#include "larcorealg/Geometry/GeometryData.h"
 #include "larcorealg/Geometry/CryostatGeo.h"
 #include "larcorealg/Geometry/TPCGeo.h"
 #include "larcorealg/Geometry/PlaneGeo.h"
@@ -1455,21 +1456,6 @@ namespace geo {
   //
   // GeometryCore
   //
-
-
-  /// Data in the geometry description
-  struct GeometryData_t {
-
-    /// Type of list of cryostats.
-    using CryostatList_t = std::vector<geo::CryostatGeo>;
-    /// Type of list of auxiliary detectors
-    using AuxDetList_t = std::vector<AuxDetGeo*>;
-
-    CryostatList_t cryostats; ///< The detector cryostats
-    AuxDetList_t   auxDets;   ///< The auxiliary detectors
-
-  }; // GeometryData_t
-
 
 
   /** **************************************************************************

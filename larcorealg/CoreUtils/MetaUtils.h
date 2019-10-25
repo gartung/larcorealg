@@ -550,8 +550,37 @@ namespace util {
    */
   template <typename Ref>
   auto referenced_address(Ref&& ref);
+  
 
-
+  //----------------------------------------------------------------------------
+  /**
+   * @brief Functor applying the proper `referenced_address()` function.
+   * @see `referenced_address()`
+   * 
+   * This class operates in the same way as `util::referenced_address()`, but it
+   * is easier to use in STL algorithms since it's not a template:
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+   * std::vector<int> data(4U, 0);
+   * std::vector<int const*> dataPtr;
+   * std::transform(data.cbegin(), data.cend(), std::back_inserter(dataPtr),
+   *   util::reference_addresser());
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * will fill `dataPtr` with the pointers to the elements in `data`.
+   * This is easier than taking the address of the correct template instance of
+   * `util::referenced_address()`, or than writing a lambda function for that.
+   */
+  struct reference_addresser {
+    template <typename Ref>
+    decltype(auto) operator() (Ref&& ref) const
+      { return addressof(std::forward<Ref>(ref)); }
+    
+    template <typename Ref>
+    static decltype(auto) addressof(Ref&& ref)
+      { return referenced_address(std::forward<Ref>(ref)); }
+    
+  }; // struct reference_addresser
+  
+  
   //----------------------------------------------------------------------------
   /**
    * @brief Trait with type `T` into `std::reference_wrapper` if reference.

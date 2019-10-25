@@ -122,6 +122,7 @@ namespace geo{
     , fDisableValidWireIDcheck( pset.get<bool>("DisableWireBoundaryCheck", false) )
     , fExpectedWirePitches( pset.get<std::vector<double>>("ExpectedWirePitches", {}) )
     , fExpectedPlanePitches( pset.get<std::vector<double>>("ExpectedPlanePitches", {}) )
+    , fComputeMass( pset.get("ComputeMass", true) )
   {
     // initialize the list of non-fatal exceptions
     std::vector<std::string> NonFatalErrors(pset.get<std::vector<std::string>>
@@ -381,11 +382,19 @@ namespace geo{
   void GeometryTestAlg::printDetectorIntro() const {
 
     geo::WireGeo const& testWire = geom->Wire(geo::WireID(0, 0, 1, 10));
-    mf::LogVerbatim("GeometryTest")
+    mf::LogVerbatim log("GeometryTest");
+    log
       <<   "Wire Rmax  "         << testWire.RMax()
       << "\nWire length "        << 2.*testWire.HalfL()
       << "\nWire Rmin  "         << testWire.RMin()
-      << "\nTotal mass "         << geom->TotalMass()
+      ;
+    
+    if (fComputeMass) {
+      log
+        << "\nTotal mass "         << geom->TotalMass();
+    }
+    
+    log
       << "\nNumber of views "    << geom->Nviews()
       << "\nNumber of channels " << geom->Nchannels()
       << "\nMaximum number of:"
@@ -663,19 +672,29 @@ namespace geo{
     mf::LogVerbatim("GeometryTest") << "There are " << geom->Ncryostats() << " cryostats in the detector";
 
     for(geo::CryostatGeo const& cryo: geom->IterateCryostats()) {
-
-      mf::LogVerbatim("GeometryTest")
-        << "\n\tCryostat " << cryo.ID()
-        <<   " " << cryo.Volume()->GetName()
-        <<   " Dimensions [cm]: " << cryo.Width()
-        <<                  " x " << cryo.Height()
-        <<                  " x " << cryo.Length()
-        << "\n\t\tmass [kg]: " << cryo.Mass()
-        << "\n\t\tCryostat boundaries:"
-        <<   "  -x:" << cryo.MinX() << " +x:" << cryo.MaxX()
-        <<   "  -y:" << cryo.MinY() << " +y:" << cryo.MaxY()
-        <<   "  -z:" << cryo.MinZ() << " +z:" << cryo.MaxZ();
-
+      
+      {
+        mf::LogVerbatim log("GeometryTest");
+        
+        log
+          << "\n\tCryostat " << cryo.ID()
+          <<   " " << cryo.Volume()->GetName()
+          <<   " Dimensions [cm]: " << cryo.Width()
+          <<                  " x " << cryo.Height()
+          <<                  " x " << cryo.Length()
+          ;
+        if (fComputeMass) {
+          log
+            << "\n\t\tmass [kg]: " << cryo.Mass();
+        }
+        log
+          << "\n\t\tCryostat boundaries:"
+          <<   "  -x:" << cryo.MinX() << " +x:" << cryo.MaxX()
+          <<   "  -y:" << cryo.MinY() << " +y:" << cryo.MaxY()
+          <<   "  -z:" << cryo.MinZ() << " +z:" << cryo.MaxZ()
+          ;
+      }
+      
       // pick a position in the middle of the cryostat in the world coordinates
       double const worldLoc[3]
         = { cryo.CenterX(), cryo.CenterY(), cryo.CenterZ() };

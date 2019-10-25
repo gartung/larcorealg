@@ -227,13 +227,47 @@ namespace geo {
     const TPCGeo&     GetElement(TPCID const& tpcid)            const
       { return TPC(tpcid); }
 
-    // @{
+
     /**
      * @brief Returns an object suitable for iterating through all TPCs.
+     * @see `IterateTPCs()`
+     *
+     * The returned value can be used in a range-for loop like:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * for (geo::TPCGeo const& tpc: cryo.IterateElements()) { ... }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * The resulting sequence exposes the TPCs within the cryostat in their
+     * ID order, from TPC `0` to `NTPC() - 1`.
+     * 
+     * This method is designed for templated code, where the object
+     * `obj.IterateElements()` may be a `geo::CryostatGeo` or some other one.
+     * For non-template code, prefer `IterateTPCs()` for clarity.
+     */
+    ElementIteratorBox IterateElements() const;
+    
+    /**
+     * @brief Returns an object suitable for iterating through all TPCs.
+     * @see `IterateElements()`
      *
      * The returned value can be used in a range-for loop like:
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
      * for (geo::TPCGeo const& tpc: cryo.IterateTPCs()) { ... }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * The resulting sequence exposes the TPCs within the cryostat in their
+     * ID order, from TPC `0` to `NTPC() - 1`.
+     * 
+     * A version of this functionality designed for template code is provided
+     * under the generic name `IterateElements()`.
+     */
+    ElementIteratorBox IterateTPCs() const { return IterateElements(); }
+    
+    /**
+     * @brief Returns an object suitable for iterating through all TPCs.
+     * @see `IterateTPCs()`, `IterateElements()`
+     *
+     * The returned value can be used in a range-for loop like:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * for (geo::TPCGeo const& tpc: cryo.TPCs()) { ... }
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      * The resulting sequence exposes the TPCs within the cryostat in their
      * ID order, from TPC `0` to `NTPC() - 1`.
@@ -243,10 +277,6 @@ namespace geo {
      *             do so. For iterations, `IterateTPCs()` is just as good.
      */
     auto const& TPCs() const { return fTPCs; }
-    ElementIteratorBox IterateElements() const;
-    ElementIteratorBox IterateTPCs() const { return IterateElements(); }
-    // @}
-    
     
     
     /**

@@ -100,6 +100,8 @@ namespace geo {
    *   `+CheckOverlaps` in `RunTests`
    * - **PrintWires**: (boolean, default: false): equivalent to enabling
    *   `+PrintWires` in `RunTests`
+   * - **ComputeMass**: (boolean, default: `true`): prints the mass of the
+   *     detector and cryostats, which may take a lot of time.
    */
   class GeometryTestAlg {
       public:
@@ -125,6 +127,8 @@ namespace geo {
     std::set<std::string> fNonFatalExceptions;
     std::vector<double> fExpectedWirePitches; ///< wire pitch on each plane
     std::vector<double> fExpectedPlanePitches; ///< plane pitch on each plane
+    
+    bool fComputeMass = true; ///< Whether to print the detector mass.
 
     // using as pointer just not to have to write the declaration in the header
     testing::NameSelector fRunTests; ///< test filter

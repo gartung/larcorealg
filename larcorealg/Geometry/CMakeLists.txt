@@ -1,4 +1,7 @@
-cet_make(LIBRARIES
+cet_make(
+  SUBDIRS
+    "details"
+  LIBRARIES
           larcorealg_CoreUtils
           ${MF_MESSAGELOGGER}
           ${FHICLCPP}

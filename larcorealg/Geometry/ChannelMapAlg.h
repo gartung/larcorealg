@@ -11,6 +11,7 @@
 
 // LArSoft  libraries
 #include "larcorealg/Geometry/GeoObjectSorter.h"
+#include "larcorealg/Geometry/GeometryData.h"
 #include "larcoreobj/SimpleTypesAndConstants/readout_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/RawTypes.h" // raw::ChannelID_t
@@ -19,7 +20,7 @@
 #include "TVector3.h"
 
 // C/C++ standard libraries
-#include <stddef.h>
+#include <cstddef>
 #include <vector>
 #include <map>
 #include <set>
@@ -27,11 +28,6 @@
 #include <utility>
 
 namespace geo{
-
-  // forward-declaration from geometry
-  struct GeometryData_t;
-  class AuxDetGeo;
-  class GeoObjectSorter;
 
   /**
    * @brief Interface for a class providing readout channel mapping to geometry
