@@ -24,7 +24,7 @@
 
 namespace {
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
   template <typename Dest, typename Src>
   Dest& extendCollection(Dest& dest, Src&& src) {
     std::move(src.begin(), src.end(), std::back_inserter(dest));
@@ -32,7 +32,7 @@ namespace {
   } // extend()
 
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
   template <typename Dest, typename Src>
   std::unique_ptr<Dest> into_unique_ptr(Src&& src) {
     using DestPtr_t = std::unique_ptr<Dest>;
@@ -44,7 +44,7 @@ namespace {
   } // into_unique_ptr()
   
   
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
 } // local namespace
 
@@ -55,7 +55,7 @@ geo::GeometryBuilderStandard::GeometryBuilderStandard(Config const& config)
   : fMaxDepth(config.maxDepth())
   , fOpDetGeoName(config.opDetGeoName())
 {
-  MF_LOG_TRACE("GeometryBuilder")
+  MF_LOG_DEBUG("GeometryBuilder")
     << "Loading geometry builder: GeometryBuilderStandard";
 } // geo::GeometryBuilderStandard::GeometryBuilderStandard()
 

@@ -29,7 +29,6 @@ namespace geo{
   public:
 
     GeoObjectSorterStandard(fhicl::ParameterSet const& p);
-    ~GeoObjectSorterStandard();
 
     void SortAuxDets        (std::vector<geo::AuxDetGeo*>          & adgeo)    const;
     void SortAuxDetSensitive(std::vector<geo::AuxDetSensitiveGeo*> & adsgeo)   const;

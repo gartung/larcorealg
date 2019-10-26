@@ -24,6 +24,8 @@ namespace geo{
   ChannelMapStandardAlg::ChannelMapStandardAlg(fhicl::ParameterSet const& p)
     : fSorter(geo::GeoObjectSorterStandard(p))
   {
+    MF_LOG_TRACE("ChannelMapAlg")
+      << "Loading channel mapping algorithm: ChannelMapStandardAlg";
   }
 
   //----------------------------------------------------------------------------

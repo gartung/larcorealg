@@ -82,14 +82,34 @@ namespace geo {
 
 
   //......................................................................
-  void GeometryCore::ApplyChannelMap
-    (std::shared_ptr<geo::ChannelMapAlg> pChannelMap)
-  {
-    SortGeometry(pChannelMap->Sorter());
+  void GeometryCore::ApplyChannelMap(
+    std::shared_ptr<geo::ChannelMapAlg> pChannelMap,
+    geo::GeoObjectSorter const* pSorter
+  ) {
+    
+    // make sure we don't inadvertently use the old channel mapping, if any
+    fChannelMapAlg.reset();
+    
+    if (pSorter) SortGeometry(*pSorter);
+    else {
+      // to avoid this message, provide a sorter
+      // (even just `geo::GeometryObjectSorterNull`)
+      mf::LogWarning("GeometryCore")
+        << "No geometry sorting algorithm provided: "
+        "geometry components are left with the order from the geometry builder."
+        ;
+    }
     UpdateAfterSorting(); // after channel mapping has sorted objects, set their IDs
     pChannelMap->Initialize(fGeoData);
     fChannelMapAlg = pChannelMap;
 
+  } // GeometryCore::ApplyChannelMap()
+
+  //......................................................................
+  void GeometryCore::ApplyChannelMap
+    (std::shared_ptr<geo::ChannelMapAlg> pChannelMap)
+  {
+    ApplyChannelMap(pChannelMap, &(pChannelMap->Sorter()));
   } // GeometryCore::ApplyChannelMap()
 
   //......................................................................

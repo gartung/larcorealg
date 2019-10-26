@@ -11,16 +11,18 @@
 
 // LArSoft  libraries
 #include "larcorealg/Geometry/GeoObjectSorter.h"
-#include "larcorealg/Geometry/GeometryData.h"
 #include "larcoreobj/SimpleTypesAndConstants/readout_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/RawTypes.h" // raw::ChannelID_t
+
+// support libraries
+#include "cetlib_except/exception.h"
 
 // ROOT libraries
 #include "TVector3.h"
 
 // C/C++ standard libraries
-#include <cstddef>
+#include <stddef.h>
 #include <vector>
 #include <map>
 #include <set>
@@ -28,6 +30,11 @@
 #include <utility>
 
 namespace geo{
+
+  // forward-declaration from geometry
+  struct GeometryData_t;
+  class AuxDetGeo;
+  class GeoObjectSorter;
 
   /**
    * @brief Interface for a class providing readout channel mapping to geometry
@@ -48,7 +55,13 @@ namespace geo{
   class ChannelMapAlg{
 
   public:
-
+    
+    /// Exception thrown by `Sorter()` implementations.
+    class NoSorter: public cet::exception {
+      using cet::exception::exception;
+    }; // class NoSorter
+    
+    
     /// Virtual destructor
     virtual ~ChannelMapAlg() = default;
 
@@ -573,7 +586,10 @@ namespace geo{
 
 
     //--------------------------------------------------------------------------
-    /// Returns the object to sort geometry with
+    /**
+     * @brief Returns the object to sort geometry with.
+     * @throw NoSorter if channel mapping does not manage sorting.
+     */
     virtual geo::GeoObjectSorter const& Sorter() const = 0;
 
     //--------------------------------------------------------------------------

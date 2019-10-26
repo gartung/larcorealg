@@ -5,6 +5,7 @@
 /// \author  brebel@fnal.gov
 ////////////////////////////////////////////////////////////////////////
 
+// LArSoft libraries
 #include "larcorealg/Geometry/GeoObjectSorterStandard.h"
 #include "larcorealg/Geometry/AuxDetGeo.h"
 #include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
@@ -12,6 +13,10 @@
 #include "larcorealg/Geometry/TPCGeo.h"
 #include "larcorealg/Geometry/PlaneGeo.h"
 #include "larcorealg/Geometry/WireGeo.h"
+
+// support libraries
+#include "messagefacility/MessageLogger/MessageLogger.h"
+
 
 namespace {
 
@@ -129,13 +134,9 @@ namespace geo{
   }
 
   //----------------------------------------------------------------------------
-  GeoObjectSorterStandard::GeoObjectSorterStandard(fhicl::ParameterSet const&)
-  {
-  }
-
-  //----------------------------------------------------------------------------
-  GeoObjectSorterStandard::~GeoObjectSorterStandard()
-  {
+  GeoObjectSorterStandard::GeoObjectSorterStandard(fhicl::ParameterSet const&) {
+    MF_LOG_DEBUG("GeoObjectSorter")
+      << "Loading geometry object sorter: GeoObjectSorterStandard";
   }
 
   //----------------------------------------------------------------------------

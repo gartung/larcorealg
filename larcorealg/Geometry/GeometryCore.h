@@ -5452,15 +5452,20 @@ namespace geo {
       (std::string gdmlfile, std::string rootfile, bool bForceReload = false);
 
     /**
-     * @brief Initializes the geometry to work with this channel map
+     * @brief Initializes the geometry to work with this channel map.
      * @param pChannelMap a pointer to the channel mapping algorithm to be used
+     * @param pSorter apply sorting algorithms from this object
      * @see LoadGeometryFile()
      *
      * The specified channel mapping is used with this geometry.
      * The algorithm object is asked and allowed to make the necessary
      * modifications to the geometry description.
      * These modifications typically involve some resorting of the objects.
-     *
+     * Sorting from `pSorter` is applied before channel mapping; `pSorter` may
+     * be null, in which case no sorting is applied but a warning is printed.
+     * To avoid that warning, the null sorter (`geo::GeoObjectSorterNull`) can
+     * be used instead.
+     * 
      * The ownership of the algorithm object is shared, usually with a calling
      * framework: we maintain it alive as long as we need it (and no other code
      * can delete it), and we delete it only if no other code is sharing the
@@ -5469,7 +5474,25 @@ namespace geo {
      * This method needs to be called after LoadGeometryFile() to complete the
      * geometry initialization.
      */
+    void ApplyChannelMap(
+      std::shared_ptr<geo::ChannelMapAlg> pChannelMap,
+      geo::GeoObjectSorter const* pSorter
+      );
+    
+    /**
+     * @brief Initializes the geometry to work with this channel map.
+     * @param pChannelMap a pointer to the channel mapping algorithm to be used
+     * @see `ApplyChannelMap(std::shared_ptr<geo::ChannelMapAlg>, geo::GeoObjectSorter const*)`
+     *
+     * The channel mapping is applied as described in
+     * `ApplyChannelMap(std::shared_ptr<geo::ChannelMapAlg>, geo::GeoObjectSorter const*)`.
+     * The sorting algorithm is taken from the channel mapping algorithm itself.
+     * 
+     * This is a legacy pattern. The sorting algorithm should be independent of
+     * the channel mapping algorithm.
+     */
     void ApplyChannelMap(std::shared_ptr<geo::ChannelMapAlg> pChannelMap);
+    
     /// @}
 
 
@@ -5508,8 +5531,9 @@ namespace geo {
     /// Configuration for the geometry builder
     /// (needed since builder is created after construction).
     fhicl::ParameterSet fBuilderParameters;
+    
+    /// Object containing the channel to wire mapping.
     std::shared_ptr<const geo::ChannelMapAlg> fChannelMapAlg;
-                                    ///< Object containing the channel to wire mapping
 
     // cached values
     std::set<geo::View_t> allViews; ///< All views in the detector.
