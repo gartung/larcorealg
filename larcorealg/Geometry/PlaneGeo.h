@@ -1300,16 +1300,6 @@ namespace geo {
     // --- END -- Coordinate transformation ------------------------------------
 
     
-    // --- BEGIN -- Setters ----------------------------------------------------
-    /// @{
-    /// @name Setters
-
-    /// Set the signal view.
-    void SetView(geo::View_t view) { fView = view; }
-
-    /// @}
-    // --- END -- Setters ------------------------------------------------------
-
     /// Sorts the plane readout elements.
     void SortWires(geo::GeoObjectSorter const& sorter)
       { doSortElements(sorter); }
@@ -1447,6 +1437,17 @@ namespace geo {
     
     /// @}
     // --- END -- Constructors, destructor and friends -------------------------
+    
+    
+    // --- BEGIN -- Setters ----------------------------------------------------
+    /// @{
+    /// @name Setters
+
+    /// Set the signal view.
+    void SetView(geo::View_t view) { fView = view; } // used to be public
+
+    /// @}
+    // --- END -- Setters ------------------------------------------------------
     
     
     // --- BEGIN -- Polymorphic implementation: anode plane --------------------
