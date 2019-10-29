@@ -439,6 +439,12 @@ void geo::PlaneGeo::DetectGeometryDirections() {
   size_t const iWidth = kept[iiWidth];
   size_t const iDepth = kept[1 - iiWidth]; // the other
 
+  // rather than trusting the box, which has been wildly rotated, we pick the
+  // width direction to go toward positive _z_ (if possible)
+  if (sides[iWidth].Z() < 0.0) sides[iWidth] = -sides[iWidth];
+  // this is rhetorical, since will be fixed to have the normal point inward:
+  if (sides[iDepth].Y() < 0.0) sides[iDepth] = -sides[iDepth];
+
   fDecompFrame.SetMainDir(geo::vect::rounded01(sides[iWidth].Unit(), 1e-4));
   fDecompFrame.SetSecondaryDir
     (geo::vect::rounded01(sides[iDepth].Unit(), 1e-4));
