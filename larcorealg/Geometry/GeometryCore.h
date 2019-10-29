@@ -5560,7 +5560,14 @@ namespace geo {
       double x, double y
       );
 
-    /// Runs the sorting of geometry with the sorter provided by channel mapping
+    /**
+     * @brief Runs the sorting of geometry with the specified `sorter`.
+     * 
+     * Note that geometry needs to be updated after sorting step
+     * (`UpdateAfterSorting()`) _even if the sorting step was skipped
+     * completely_, because the geometry element objects may delay some of their
+     * initialization until after the order of their subelements is finalized.
+     */
     void SortGeometry(geo::GeoObjectSorter const& sorter);
 
     /// Performs all the updates needed after sorting

@@ -13,6 +13,7 @@
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h" // util::pi<>
 #include "larcorealg/CoreUtils/DereferenceIterator.h" // lar::util::dereferenceIteratorLoop()
 #include "larcorealg/CoreUtils/SortByPointers.h"
+#include "larcorealg/CoreUtils/enumerate.h"
 #include "larcorealg/Geometry/OpDetGeo.h"
 #include "larcorealg/Geometry/AuxDetGeo.h"
 #include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
@@ -194,13 +195,9 @@ namespace geo {
     util::SortByPointers(Cryostats(),
       [&sorter](auto& coll){ sorter.SortCryostats(coll); });
 
-    geo::CryostatID::CryostatID_t c = 0;
+    // sort (reminder: `UpdateAfterSorting()` needs to be called after this)
     for (geo::CryostatGeo& cryo: Cryostats())
-    {
       cryo.SortSubVolumes(sorter);
-      cryo.UpdateAfterSorting(geo::CryostatID(c));
-      ++c;
-    } // for
 
   } // GeometryCore::SortGeometry()
 
@@ -208,8 +205,8 @@ namespace geo {
   //......................................................................
   void GeometryCore::UpdateAfterSorting() {
 
-    for (size_t c = 0; c < Ncryostats(); ++c)
-      Cryostats()[c].UpdateAfterSorting(geo::CryostatID(c));
+    for (auto&& [ c, cryo ]: util::enumerate(Cryostats()))
+      cryo.UpdateAfterSorting(geo::CryostatID(c));
 
     allViews.clear();
     for (geo::TPCGeo const& tpc: IterateTPCs()) {
