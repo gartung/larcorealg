@@ -1304,7 +1304,7 @@ namespace geo {
     /// @{
     /// @name Setters
 
-    /// Set the signal view (for TPCGeo).
+    /// Set the signal view.
     void SetView(geo::View_t view) { fView = view; }
 
     /// @}
@@ -1368,11 +1368,29 @@ namespace geo {
     /// --- END -- Data members ------------------------------------------------
     
     
+    /// --- BEGIN -- Initialization methods ------------------------------------
+    /// @name Initialization methods
+    /// @{
+    
     /// Updates all information related to the plane frame geometry.
     void UpdateFrameGeometry
       (geo::PlaneID const& planeid, geo::BoxBoundedGeo const& TPCbox);
     
-    /// Sets the geometry directions.
+    /**
+     * @brief Sets the geometry directions.
+     * 
+     * This method sets up the frame base, by determining which are the two
+     * plane directions and choosing which one to set as main.
+     * It also sets up the size of the plane.
+     * 
+     * The choices of the two plane directions is made by excluding the shortest
+     * of the three plane box dimensions.
+     * 
+     * The width direction is assigned as the one of the two directions best
+     * aligned with _z_ axis. The verse is not explicitly chosen, as it is
+     * expected to be reset after the facing of the plane is established
+     * (`UpdateAfterSorting()`).
+     */
     void DetectGeometryDirections();
 
     /// Updates the cached normal to plane versor; needs TPC box coordinates.
@@ -1383,6 +1401,9 @@ namespace geo {
     
     /// Updates the plane orientation (horizontal, vertical or non-Euclidean).
     void UpdateOrientation();
+    
+    /// @}
+    /// --- END -- Initialization methods --------------------------------------
     
     
     /// Returns a reference to the wire specified in the location.

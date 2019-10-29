@@ -84,8 +84,6 @@ geo::PlaneGeo::PlaneGeo(
       << "] has no volume!\n";
   }
 
-  // view is now set at TPC level with SetView
-
   DetectGeometryDirections();
 
 } // geo::PlaneGeo::PlaneGeo()
