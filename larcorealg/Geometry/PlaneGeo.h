@@ -678,9 +678,6 @@ namespace geo {
      * volume. Yet, the precise definition of the area is not specified,
      * therefore this area should not be uses for physics.
      *
-     * The current implementation is documented in
-     * `details::ActiveAreaCalculator`.
-     *
      */
     Rect const& ActiveArea() const { return doActiveArea(); }
 
@@ -1600,9 +1597,14 @@ namespace geo {
     // --- END -- Polymorphic implementation: wire abstraction -----------------
     
     
-    /// Throws a `cet::exception` with a short call stack dump.
-    /// @throws cet::exception (`"NotImplemented"`) with a short call stack dump
-    [[noreturn]] void NotImplemented() const;
+    /**
+     * @brief Throws a `cet::exception` with a short call stack dump.
+     * @param reason optional message going with the call stack
+     * @param stackDepth (default: `5`) depth of the call stack printout
+     * @throws cet::exception (`"NotImplemented"`) with a short call stack dump
+     */
+    [[noreturn]] void NotImplemented
+      (std::string const& reason = "", unsigned int stackDepth = 5U) const;
     
     
   }; // class PlaneGeo

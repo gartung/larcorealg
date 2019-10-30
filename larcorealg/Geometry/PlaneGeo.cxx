@@ -330,14 +330,18 @@ std::string geo::PlaneGeo::OrientationName(geo::Orient_t orientation) {
 
 
 //------------------------------------------------------------------------------
-[[noreturn]] void geo::PlaneGeo::NotImplemented() const {
+void geo::PlaneGeo::NotImplemented
+  (std::string const& reason /* = "" */, unsigned int stackDepth /* = 5U */)
+  const
+{
   
   cet::exception e("NotImplemented");
   e << lar::debug::demangle(this)
     << " (from geo::PlaneGeo): call not implemented:\n";
+  if (!reason.empty()) e << reason << "\n";
   
   lar::debug::BacktracePrintOptions opts;
-  opts.maxLines = 5U; // we keep it short...ish
+  opts.maxLines = stackDepth; // we keep it short...ish
   opts.skipLines = 2U; // skip `printBacktrace()` and `NotImplemented()` calls
   opts.setUniformIndent("  ");
   lar::debug::printBacktrace(e, opts);
