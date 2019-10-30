@@ -92,12 +92,12 @@ geo::Point_t geo::WireGeo::GetCenterImpl() const
   
 //------------------------------------------------------------------------------
 geo::Point_t geo::WireGeo::GetStartImpl() const
-  { return askThePlane(&geo::PlaneGeo::doWireGetEnd); }
+  { return askThePlane(&geo::PlaneGeo::doWireGetStart); }
 
   
 //------------------------------------------------------------------------------
 geo::Point_t geo::WireGeo::GetEndImpl() const
-  { return askThePlane(&geo::PlaneGeo::doWireGetStart); }
+  { return askThePlane(&geo::PlaneGeo::doWireGetEnd); }
 
   
 //------------------------------------------------------------------------------
