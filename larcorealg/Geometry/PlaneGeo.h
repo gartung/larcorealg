@@ -744,7 +744,7 @@ namespace geo {
     
     
     /// Maximum value for print verbosity.
-    static constexpr unsigned int MaxVerbosity = 6;
+    static constexpr unsigned int MaxVerbosity = 7;
 
     /// @}
     // --- END -- Plane geometry properties ------------------------------------
