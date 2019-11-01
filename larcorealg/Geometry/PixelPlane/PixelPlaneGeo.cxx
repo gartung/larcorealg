@@ -15,11 +15,13 @@
 #include "larcorealg/Geometry/SimpleGeo.h" // lar::util::simple_geo::Rectangle
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect::rounded01()
 #include "larcorealg/CoreUtils/RealComparisons.h" // makeVector3DComparison()
+#include "larcorealg/CoreUtils/enumerate.h"
 #include "larcorealg/CoreUtils/zip.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h" // geo::Zaxis()
 
 // Framework includes
 #include "messagefacility/MessageLogger/MessageLogger.h"
+#include "cetlib_except/exception.h"
 
 // C/C++ standard library
 #include <sstream> // std::ostringstream
@@ -34,13 +36,36 @@
 // -----------------------------------------------------------------------------
 namespace {
   
+  /*
   // ---------------------------------------------------------------------------
   template <typename T>
-  inline bool closeToUnity(T const value, T const tol = 1e-5) {
-    
+  bool closeToUnity(T const value, T const tol = 1e-5) {
     return std::abs(value - T{ 1 }) <= tol;
-    
   } // closeToUnity()
+  */
+  
+  // ---------------------------------------------------------------------------
+  /// Returns whether `a` and `b` are orthogonal.
+  template <typename VA, typename VB, typename T = double>
+  bool areOrthogonal(VA const& a, VB const& b, T const tol = 1e-5) {
+    return std::abs(a.Dot(b)) <= tol;
+  } // areOrthogonal()
+  
+  // ---------------------------------------------------------------------------
+  /// Returns whether `a` and `b` have the same direction (may be opposite).
+  template <typename VA, typename VB, typename T = double>
+  bool areParallel(VA const& a, VB const& b, T const tol = 1e-5) {
+    return a.Cross(b).Mag2() <= (tol * tol);
+  } // areParallel()
+  
+  
+  // ---------------------------------------------------------------------------
+  /// Returns whether `b` projection on `a` is negative
+  /// (@f$ \vec{a}\cdot\vec{b} < 0 @f$).
+  template <typename VA, typename VB, typename T = double>
+  bool areOpposite(VA const& a, VB const& b, T const tol = 1e-5) {
+    return a.Dot(b) < -tol;
+  } // areOpposite()
   
   
   // ---------------------------------------------------------------------------
@@ -69,8 +94,137 @@ geo::PixelPlaneGeo::PixelPlaneGeo(
   SetView(geo::k3D); // view is this simple
   
   // TODO some updates should be moved here
+  SquarePixelGeometry_t pixelGeometry = completePixelGeometry({});
+  
+  initializePixelGeometry(pixelGeometry);
   
 } // geo::PixelPlaneGeo::PixelPlaneGeo()
+
+
+// -----------------------------------------------------------------------------
+void geo::PixelPlaneGeo::initializePixelGeometry
+  (SquarePixelGeometry_t const& pixelGeometry)
+{
+  
+  /*
+   * Produces the origin, pitch, number and direction of the pixels and grid.
+   * This is a elaboration of the raw information from the geometry.
+   * 
+   * The origin and directions are only partially respected.
+   * The directions are used to associate the pitches to the right axis, but
+   * the axis are imposed to be the ones of the plane frame.
+   * The origin vector is supposed to be one of the four corners of the plane,
+   * the one from which the two input axes depart.
+   * But as these axes may be swapped, the origin also can be modified
+   * accordingly; it is anyway guaranteed to be at one of the four corners
+   * of the pixelated area.
+   * 
+   * Requires:
+   *  * local-world transformations be available
+   *  * frame geometry to be set (exact origin depth coordinate does not matter)
+   * 
+   */
+  
+  //
+  // 1. assign the correct axis information to each direction;
+  //    no nonsense here: axes must follow the frame one way or the other way
+  //    (just two ways are allowed)
+  //
+  struct ExtendedAxisInfo_t {
+    SquarePixelGeometry_t::AxisInfo_t basicInfo;
+    geo::Vector_t axisDir; ///< Direction and size in the world frame.
+  }; // struct ExtendedAxisInfo_t
+  
+  constexpr std::size_t ixWidth = 0U;
+  constexpr std::size_t ixDepth = 1U;
+  constexpr std::size_t NDirs = 2U;
+  
+  static_assert(pixelGeometry.sides.size() == NDirs);
+  
+  std::array<ExtendedAxisInfo_t, NDirs> axes;
+  for (auto&& [ side, axis ]: util::zip(pixelGeometry.sides, axes))
+    axis = { side, toWorldCoords(side.dir) };
+  
+  if (areParallel(axes[ixWidth].axisDir, WidthDir())) {
+    // all good already
+  }
+  else if (areParallel(axes[ixWidth].axisDir, DepthDir())) {
+    std::swap(axes[ixWidth], axes[ixDepth]);
+  }
+  else {
+    throw cet::exception("PixelPlaneGeo")
+      << "initializePixelGeometry(): pixel axis system { "
+      << axes[ixWidth].axisDir << " x " << axes[ixDepth].axisDir
+      << " } is misaligned with the plane frame system { "
+      << WidthDir<geo::Vector_t>() << " x " << DepthDir<geo::Vector_t>() << " }"
+      "\n";
+  }
+  
+  for (auto&& [ axisInfo, pitch, nPixels ]: util::zip(axes, fPitches, fNPixels )) {
+    pitch = axisInfo.basicInfo.side;
+    nPixels = axisInfo.axisDir.R() / pitch;
+  } // for
+  
+  fDecompPixel.SetMainDir(axes[ixDepth].axisDir);
+  fDecompPixel.SetSecondaryDir(axes[ixWidth].axisDir);
+  
+  //
+  // 2. now set the position of the pixel plane;
+  //    that is driven by the origin of the pixel decomposition frame,
+  //    which corresponds to the position of the first pixel:
+  //    that is what we are pursuing now.
+  //    We do not bother with the position along thickness direction,
+  //    which stays the same as from the geometry
+  //    (which is not that bad a choice)
+  // 
+  fDecompPixel.SetOrigin(fromCenterToFirstPixel(pixelGeometry.center));
+  
+} // geo::PixelPlaneGeo::initializePixelGeometry()
+
+
+// -----------------------------------------------------------------------------
+geo::Point_t geo::PixelPlaneGeo::fromCenterToFirstPixel
+  (geo::Point_t const& pixelPlaneCenter) const
+{
+  
+  /*
+   * Converts the center of the sensitive area of the plane (`pixelPlaneCenter`)
+   * into the center of the first pixel.
+   * Requires:
+   *  * number of pixels
+   *  * directions of the two axes of the pixel plane
+   *  * pitch of the pixels
+   * 
+   */
+  geo::Point_t center = pixelPlaneCenter;
+  
+  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir) {
+    center += getSensElemHalfStepDir(dir)
+      * (1.0 - static_cast<double>(getNsensElem(dir)));
+  
+  return geo::PixelPlaneGeo::fromCenterToFirstPixel;
+} // 
+
+
+// -----------------------------------------------------------------------------
+
+auto geo::PixelPlaneGeo::completePixelGeometry
+  (SquarePixelGeometry_t const& /* info */) const -> SquarePixelGeometry_t
+{
+  // TODO dummy stuff, and dumb too; assuming _x_ is the thin direction
+  
+  SquarePixelGeometry_t newInfo {
+    {
+      SquarePixelGeometry_t::AxisInfo_t
+        { geo::Yaxis<LocalVector_t>() * Width(), 3.0 }, // 3 cm pitch along local y axis
+      SquarePixelGeometry_t::AxisInfo_t
+        { geo::Zaxis<LocalVector_t>() * Depth(), 4.0 }  // 4 cm pitch along local z axis
+    },
+    geo::origin<LocalPoint_t>()
+  };
+  
+  return newInfo;
+} // geo::PixelPlaneGeo::completePixelGeometry()
 
 
 // -----------------------------------------------------------------------------
@@ -319,7 +473,7 @@ void geo::PixelPlaneGeo::doUpdateAfterSorting
   
   UpdatePlaneCenter();
   
-  UpdateDirections();
+  UpdateAngles();
   
   UpdateActiveArea();
   
@@ -435,8 +589,8 @@ double geo::PixelPlaneGeo::doWireThetaZ(WireLocator const&) const {
 bool geo::PixelPlaneGeo::doWireIsParallelTo
   (WireLocator const&, geo::WireGeo const& wire) const
 {
-  return closeToUnity
-    (getSensElemDir(geo::pixel::ixWireD).Dot(wire.Direction<geo::Vector_t>()));
+  return areParallel
+    (getSensElemDir(geo::pixel::ixWireD), wire.Direction<geo::Vector_t>());
 } // geo::PixelPlaneGeo::doWireIsParallelTo()
 
 
@@ -722,10 +876,10 @@ double geo::PixelPlaneGeo::getSensElemDirSize(DirIndex_t const dir) const {
   assert(isDirIndex(dir));
   switch (dir) {
     case geo::pixel::ixMain:
-      assert(closeToUnity(std::abs(DepthDir<geo::Vector_t>().Dot(getSensElemDir(dir)))));
+      assert(areParallel(DepthDir<geo::Vector_t>(), getSensElemDir(dir)));
       return fFrameSize.Depth();
     case geo::pixel::ixSec:
-      assert(closeToUnity(std::abs(WidthDir<geo::Vector_t>().Dot(getSensElemDir(dir)))));
+      assert(areParallel(WidthDir<geo::Vector_t>(), getSensElemDir(dir)));
       return fFrameSize.Width();
     default:
       return 0;
@@ -979,7 +1133,7 @@ void geo::PixelPlaneGeo::UpdatePlaneCenter() {
 
 
 // -----------------------------------------------------------------------------
-void geo::PixelPlaneGeo::UpdateDirections() {
+void geo::PixelPlaneGeo::UpdateAngles() {
   
   //
   // computes the angles out of the pixel frame directions
@@ -990,7 +1144,7 @@ void geo::PixelPlaneGeo::UpdateDirections() {
   fPhiZ
     = std::acos(GetIncreasingWireDirection<geo::Vector_t>().Dot(geo::Zaxis()));
   
-} // geo::PixelPlaneGeo::UpdateDirections()
+} // geo::PixelPlaneGeo::UpdateAngles()
 
 
 // -----------------------------------------------------------------------------

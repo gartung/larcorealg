@@ -501,7 +501,7 @@ namespace geo {
      */
     template <typename Point>
     Point GetBoxCenter() const
-      { return geo::vect::convertTo<Point>(toWorldCoords(LocalPoint_t{ 0.0, 0.0, 0.0 })); }
+      { return geo::vect::convertTo<Point>(toWorldCoords(geo::origin<LocalPoint_t>())); }
     DefaultPoint_t GetBoxCenter() const
       { return GetBoxCenter<DefaultPoint_t>(); }
     //@}

@@ -150,7 +150,6 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
   
   using DirIndex_t = std::size_t; ///< Type used for identifying a direction.
   
-  
     public:
   
   /// The name of the solid representing the sensitive surface.
@@ -257,6 +256,29 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
   
   
     protected:
+  
+  /// Pixel initialization helper data structure.
+  struct SquarePixelGeometry_t {
+    
+    using Vector2_t
+      = ROOT::Math::DisplacementVector2D<ROOT::Math::Cartesian2D<double>>;
+    
+    struct AxisInfo_t {
+      /// Direction of this side in local (GDML) plane coordinates;
+      /// modulus is the space covered by pixels [cm]
+      LocalVector_t dir;
+      double side; ///< Size of the side of each pixel (i.e. the pitch).
+    };
+    
+    static constexpr std::size_t NSides = 2U;
+    
+    /// Information about one side of the pixels.
+    std::array<AxisInfo_t, NSides> sides;
+    
+    LocalPoint_t center; ///< Center of the pixelized area.
+    
+  }; // struct SquarePixelGeometry_t
+  
   
   // --- BEGIN -- Polymorphic implementation: anode plane --------------------
   /**
@@ -979,6 +1001,13 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
   
   // --- BEGIN --- Initialization procedures -----------------------------------
   
+  /// Extracts in some way the pixel information from GDML.
+  virtual SquarePixelGeometry_t completePixelGeometry
+    (SquarePixelGeometry_t const& info) const;
+  
+  /// Utilizes the `pixelGeometry` information for "wire" frame initialization.
+  void initializePixelGeometry(SquarePixelGeometry_t const& pixelGeometry);
+  
   /// Updates the number of pixels and the pitches.
   void UpdateNpixelsAndPitches();
   
@@ -994,8 +1023,8 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
   /// Shifts the formal pixel plane center to the plane of sensitive elements.
   void UpdatePlaneCenter();
   
-  /// Updates the cached values related to the pixel grid orientation.
-  void UpdateDirections();
+  /// Updates the cached angles related to the pixel grid orientation.
+  void UpdateAngles();
   
   /// Updates the internally used active area.
   void UpdateActiveArea();
@@ -1006,6 +1035,9 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
   /// Returns world position of the center of the first sensitive element [cm]
   geo::Point_t firstPixelCenter() const;
   
+  /// Applies a transformation from the specified plane center to pixel #0.
+  geo::Point_t fromCenterToFirstPixel
+    (geo::Point_t const& pixelPlaneCenter) const;
   
   /// Extracts the information about the size of pixels.
   void discoverPitches();

@@ -381,7 +381,6 @@ void geo::PlaneGeo::DetectGeometryDirections() {
   // Requirements:
   //  - ROOT geometry information (shapes and transformations)
   //  - the shape must be a box (an error is PRINTED if not)
-  //  - center of the wire plane (not just the center of the plane box)
   //
 
   //
