@@ -77,6 +77,21 @@ geo::PlaneGeo::PlaneGeo(
   , fDecompFrame()
 {
 
+  /*
+   * NOTE this is part of the pixel plane initialization procedure documented
+   *      in `geo::PlaneGeo` class. If changing *what* is being initialized,
+   *      please also update that documentation at the top of `geo::PlaneGeo`
+   *      class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h`, section
+   *      "Initialization details").
+   */
+  
+  /*
+   * REMINDER: do not rely on virtual methods from derived classes here, as
+   *           they might not be available yet (the derived class constructor
+   *           hasn't been run yet at this point)
+   */
+  
   if (!fVolume) {
     throw cet::exception("PlaneGeo")
       << "Plane geometry node " << node.IsA()->GetName()
@@ -370,6 +385,22 @@ void geo::PlaneGeo::UpdateFrameGeometry
 //------------------------------------------------------------------------------
 void geo::PlaneGeo::DetectGeometryDirections() {
 
+  /*
+   * NOTE this is part of the pixel plane initialization procedure documented
+   *      in `geo::PlaneGeo` class. If changing *what* is being initialized,
+   *      please also update that documentation at the top of `geo::PlaneGeo`
+   *      class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h`, section
+   *      "Initialization details").
+   */
+  
+  /*
+   * REMINDER: do not rely on virtual methods from derived classes here, as
+   *           they might not be available yet (this method is called by
+   *           `geo::PlaneGeo` constructor, when the derived class constructor
+   *           hasn't been run yet)
+   */
+  
   //
   // We need to identify which are the "long" directions of the plane.
   // We assume it is a box, and the shortest side is excluded.
@@ -382,7 +413,9 @@ void geo::PlaneGeo::DetectGeometryDirections() {
   //  - ROOT geometry information (shapes and transformations)
   //  - the shape must be a box (an error is PRINTED if not)
   //
-
+  
+  assert(fVolume);
+  
   //
   // how do they look like in the world?
   //
@@ -449,6 +482,7 @@ void geo::PlaneGeo::DetectGeometryDirections() {
   fDecompFrame.SetMainDir(geo::vect::rounded01(sides[iWidth].Unit(), 1e-4));
   fDecompFrame.SetSecondaryDir
     (geo::vect::rounded01(sides[iDepth].Unit(), 1e-4));
+  fDecompFrame.SetReferencePoint(GetBoxCenter<geo::Point_t>());
   fFrameSize.halfWidth = sides[iWidth].R();
   fFrameSize.halfDepth = sides[iDepth].R();
 
@@ -457,7 +491,39 @@ void geo::PlaneGeo::DetectGeometryDirections() {
 
 //------------------------------------------------------------------------------
 void geo::PlaneGeo::UpdatePlaneNormal(geo::BoxBoundedGeo const& TPCbox) {
-
+  
+  /*
+   * NOTE this is part of the pixel plane initialization procedure documented
+   *      in `geo::PlaneGeo` class. If changing *what* is being initialized,
+   *      please also update that documentation at the top of `geo::PlaneGeo`
+   *      class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h`, section
+   *      "Initialization details").
+   */
+  
+  /*
+   * Updates the normal to the plane in `fNormal` (which is independent from
+   * the one of the decomposition frames and is the "official" one).
+   * 
+   * Requirements:
+   *  * frame base directions being set and not parallel (just enough to
+   *    define the geometric plane they lie on)
+   *  * the TPC box needs to be thick enough (see below).
+   * 
+   * The prescription demands the normal to the plane to face the volume where
+   * the drift field is and where the ionization electrons come from.
+   * The algorithm requires that the center of the TPC box be in that volume.
+   * This turns out to be a problem in "fake" TPCs that host wire planes with
+   * "wrapped" wires but no electric drift field. In this case, we require the
+   * geometry to have the fake TPC's containing the wrapper wire planes thick
+   * enough that the said prescription may be fulfilled.
+   * Failure to do so will result in the normal to the plane be defined with the
+   * wrong verse, and possibly not consistently between wire planes, with subtle
+   * errors later on.
+   */
+  assert(WidthDir<geo::Vector_t>().Mag2() > 0.0);
+  assert(DepthDir<geo::Vector_t>().Mag2() > 0.0);
+  
   //
   // direction normal to the plane, points toward the center of TPC
   //
@@ -480,9 +546,19 @@ void geo::PlaneGeo::UpdatePlaneNormal(geo::BoxBoundedGeo const& TPCbox) {
 //------------------------------------------------------------------------------
 void geo::PlaneGeo::UpdateWidthDepthDir() {
 
+  /*
+   * NOTE this is part of the pixel plane initialization procedure documented
+   *      in `geo::PlaneGeo` class. If changing *what* is being initialized,
+   *      please also update that documentation at the top of `geo::PlaneGeo`
+   *      class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h`, section
+   *      "Initialization details").
+   */
+  
   //
   // fix the positiveness of the width/depth/normal frame
   //
+  assert(GetNormalDirection<geo::Vector_t>().Mag2() > 0.0);
 
   // The basis is already set and orthonormal, with only the width
   // and depth verse arbitrary.
@@ -500,6 +576,15 @@ void geo::PlaneGeo::UpdateWidthDepthDir() {
 //------------------------------------------------------------------------------
 void geo::PlaneGeo::UpdateOrientation() {
 
+  /*
+   * NOTE this is part of the pixel plane initialization procedure documented
+   *      in `geo::PlaneGeo` class. If changing *what* is being initialized,
+   *      please also update that documentation at the top of `geo::PlaneGeo`
+   *      class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h`, section
+   *      "Initialization details").
+   */
+  
   //
   // this algorithm needs to know about the axis;
   // the normal is expected to be already updated.

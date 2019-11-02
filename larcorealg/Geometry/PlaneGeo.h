@@ -79,6 +79,45 @@ namespace geo {
    * available. This coordinate system is also positive defined.
    * These components are all measured in centimeters.
    *
+   * 
+   * Initialization details
+   * =======================
+   * 
+   * The initialization of a `geo::PlaneGeo`-derived class is quite a complicate
+   * business, which happens in four steps:
+   * 
+   * 1. object construction:
+   *     1. base class construction (`geo::PlaneGeo::PlaneGeo()`)
+   *     2. derived class(es) construction
+   * 2. finalization after planes have been sorted:
+   *     1. base class finalization (in `UpdateAfterSorting()`)
+   *     2. derived class(es) finalization (calling `doUpdateAfterSorting()`)
+   * 
+   * The class `geo::PlaneGeo` guarantees the following:
+   * * after construction (`geo::PlaneGeo::PlaneGeo()`), the GDML/ROOT volume
+   *     from the geometry and its local-world transformation are set and final,
+   *     and the view (`View()`) is set to `geo::kUnknown`;
+   *     the "frame base" is completely defined, although the verse of its axes
+   *     may be not final and will be updated later (`WidthDir()`, `DepthDir()`,
+   *     `Width()` and `Depth()`); also the drift coordinate of the origin of
+   *     this frame is not necessarily final: it is set to the exact center of
+   *     the plane box; see `DetectGeometryDirections()` for details;
+   * * after the sorting and the local adjustments (`UpdateFrameGeometry()`),
+   *     which do not include the adjustments from the derived classes, the
+   *     following quantities are also guaranteed:
+   *     * plane ID (`geo::PlaneGeo::ID()`);
+   *     * normal to the plane (`geo::PlaneGeo::GetNormalDirection()`, stored
+   *         independently of the decomposition bases), set to point toward the
+   *         TPC center;
+   *     * decomposition for the "frame base", complete although it is expected
+   *         that the drift coordinate of its origin may still be adjusted by
+   *         the derived classes as it is expected to match the exact position
+   *         of the sensitive elements;
+   *     * plane orientation (`geo::PlaneGeo::Orientation()`).
+   * 
+   * The second step (after the sorting) requires the frame base to be set in
+   * a proper way. Its set up from `geo::PlaneGeo` construction is sufficient,
+   * although the derived classes might still change that frame.
    */
     
   class PlaneGeo: private lar::PolymorphicUncopiableClass {
@@ -1331,7 +1370,7 @@ namespace geo {
     using WireLocator = geo::details::WireLocator; // from `WireGeo.h`
     
     
-    /// --- BEGIN -- Data members ----------------------------------------------
+    // --- BEGIN -- Data members -----------------------------------------------
     LocalTransformation_t fTrans;       ///< Plane to world transform.
     TGeoVolume const*     fVolume;      ///< Plane volume description.
     
@@ -1352,10 +1391,10 @@ namespace geo {
     
     geo::PlaneID fID; ///< ID of this plane.
     
-    /// --- END -- Data members ------------------------------------------------
+    // --- END -- Data members -------------------------------------------------
     
     
-    /// --- BEGIN -- Initialization methods ------------------------------------
+    // --- BEGIN -- Initialization methods -------------------------------------
     /// @name Initialization methods
     /// @{
     
@@ -1390,7 +1429,7 @@ namespace geo {
     void UpdateOrientation();
     
     /// @}
-    /// --- END -- Initialization methods --------------------------------------
+    // --- END -- Initialization methods ---------------------------------------
     
     
     /// Returns a reference to the wire specified in the location.

@@ -145,6 +145,66 @@ namespace geo {
  *         feasible!
  *       * hard coded; wait.. whaaatt???
  * 
+ * 
+ * 
+ * @internal
+ * 
+ * Initialization steps
+ * ---------------------
+ * 
+ * The following description covers in detail the internal initialization of
+ * a `geo::PixelPlaneGeo` object.
+ * 
+ * The steps are intertwined and, at least in one case, circular so that some
+ * quantities need a preliminary set up followed some steps later by a final
+ * setup. The balance of these steps is unstable enough that a lot of care needs
+ * to be taken when changing their order or effects.
+ * 
+ * These are the quantities being set up, in order:
+ * 
+ * 1. expected to be set up by the _base class constructor_
+ *     (`geo::PlaneGeo::PlaneGeo()`):
+ *     1. ROOT/GDML volume and geometry transformation between local and world
+ *         coordinates (`geo::PlaneGeo::fVolume` and `geo::PlaneGeo::fTrans`);
+ *     2. decomposition for the "frame base", defining width and depth
+ *         directions and sizes (`WidthDir()`, `DepthDir()`, `Width()` and
+ *         `Depth()`); it is expected that the _verses_ of these directions may
+ *         change after sorting, when the position of the plane with respect to
+ *         its TPC is communicated to the plane itself;
+ * 2. initialized in constructor (`geo::PixelPlaneGeo::PixelPlaneGeo()`):
+ *     1. plane view (`View()`), always `geo::k3D`;
+ *     2. pixel number and pitch in the two directions (`fPitches`, `fNPixels`);
+ *     3. directions for the decomposition for the "wire base"
+ *         (`fDecompPixel.MainDir()` and `fDecompPixel.SecondaryDir()`);
+ *         their axes are final, while their verses will be finished later;
+ *     4. the origin of the decomposition for the "wire base"; this will also be
+ *         finalized later (see `UpdateDecompPixelOrigin()`)
+ * 3. initialized after planes have been sorted, by base class
+ *    (`geo::PlaneGeo::UpdateAfterSorting()`), at which point the center of the
+ *    TPC is known:
+ *     1. plane ID (`geo::PlaneGeo::ID()`)
+ *     2. normal to the plane (stored independently of the decomposition bases,
+ *         `geo::PlaneGeo::fNormal` and `geo::PlaneGeo::GetNormalDirection()`)
+ *         set to point toward the TPC center;
+ *     3. decomposition for the "frame base" adjusted to have normal matching
+ *         `geo::PlaneGeo::GetNormalDirection()` just set, by properly setting
+ *         the verse of `DepthDir()`; the drift coordinate of its origin is the
+ *         only frame-base quantity not finalized yet;
+ *     4. plane orientation (horizontal or vertical)
+ *         (`geo::PlaneGeo::Orientation()`)
+ * 4. initialized after planes have been sorted
+ *    (`geo::PixelPlaneGeo::doUpdateAfterSorting()`, called by the base class):
+ *     1. decomposition for the "wire base" (or "pixel base") fully reset, 
+ *         but eventually resulting in only the verses of the axes being
+ *         possibly adjusted (mostly `MainDir()` verse)
+ *     2. origin of the "pixel base" decomposition reassigned;
+ *         _the pixel base is now final_;
+ *     3. cached pixel half-steps (`fPixelDirs`);
+ *     4. fix the drift coordinate of the origin of the frame base;
+ *        _the frame base is now final_.
+ * 
+ * @endinternal
+ * 
  */
 class geo::PixelPlaneGeo: public geo::PlaneGeo {
   
@@ -1008,17 +1068,11 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
   /// Utilizes the `pixelGeometry` information for "wire" frame initialization.
   void initializePixelGeometry(SquarePixelGeometry_t const& pixelGeometry);
   
-  /// Updates the number of pixels and the pitches.
-  void UpdateNpixelsAndPitches();
-  
   /// Updates the pixel ("wire") decomposition frame.
   void UpdateDecompPixel();
   
   /// Updates the cached pixel directions (half steps).
   void UpdatePixelDirs();
-  
-  /// Aligns the origin of the pixel decomposition frame with the inner face.
-  void UpdateDecompPixelOrigin();
   
   /// Shifts the formal pixel plane center to the plane of sensitive elements.
   void UpdatePlaneCenter();
@@ -1039,9 +1093,9 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
   geo::Point_t fromCenterToFirstPixel
     (geo::Point_t const& pixelPlaneCenter) const;
   
-  /// Extracts the information about the size of pixels.
-  void discoverPitches();
-
+  /// Applies a transformation from the pixel #0 center to plane center.
+  geo::Point_t fromFirstPixelToCenter(geo::Point_t const& pixelCenter) const;
+  
   /// Returns the plane box thickness (not width, not depth... the other one!).
   double extractPlaneThickness() const;
   
@@ -1122,7 +1176,7 @@ void geo::PixelPlaneGeo::PrintPixelPlaneInfo(
     out << "\n" << indent
       << "- " << getDirectionName(dir) << " direction: "
       << getSensElemDir(dir) << " with " << getNsensElem(dir) << " pixel "
-      << getSensElemPitch(dir) << " mm each"
+      << (getSensElemPitch(dir) * 10.0) << " mm each"
       ;
   } // for dir
   

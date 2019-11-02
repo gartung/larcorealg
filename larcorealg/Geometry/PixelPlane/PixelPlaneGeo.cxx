@@ -45,17 +45,24 @@ namespace {
   */
   
   // ---------------------------------------------------------------------------
+  /// Returns whether the vector `v` is not null.
+  template <typename V, typename T = double>
+  bool isNull(V const& v, T const tol = 1e-5) { return v.Mag2() <= (tol*tol); }
+  
+  
+  // ---------------------------------------------------------------------------
   /// Returns whether `a` and `b` are orthogonal.
   template <typename VA, typename VB, typename T = double>
   bool areOrthogonal(VA const& a, VB const& b, T const tol = 1e-5) {
     return std::abs(a.Dot(b)) <= tol;
   } // areOrthogonal()
   
+  
   // ---------------------------------------------------------------------------
   /// Returns whether `a` and `b` have the same direction (may be opposite).
   template <typename VA, typename VB, typename T = double>
   bool areParallel(VA const& a, VB const& b, T const tol = 1e-5) {
-    return a.Cross(b).Mag2() <= (tol * tol);
+    return isNull(a.Cross(b), tol);
   } // areParallel()
   
   
@@ -85,7 +92,29 @@ geo::PixelPlaneGeo::PixelPlaneGeo(
   geo::TransformationMatrix&& trans
   )
   : geo::PlaneGeo(node, std::move(trans))
+  , fDecompPixel()
+  , fThetaZ(0.0)
+  , fPhiZ(0.0)
 {
+
+  /*
+   * NOTE this is part of the pixel plane initialization procedure documented
+   *      in `geo::PixelPlaneGeo` class. If changing *what* is being initialized
+   *      or its *order*, please also update that documentation at the top
+   *      of `geo::PixelPlaneGeo` class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h`, section
+   *      "Initialization steps").
+   */
+  
+  /*
+   * REMINDER: do not rely on virtual methods from derived classes here, as
+   *           they might not be available yet (the derived class constructor
+   *           hasn't been run yet at this point)
+   */
+  
+  fNPixels.fill(0);
+  fPitches.fill(0.0);
+  fPixelDirs.fill({});
   
   MF_LOG_TRACE("PixelPlaneGeo")
     << "Plane extends " << Width() << " cm in " << WidthDir<geo::Vector_t>()
@@ -99,133 +128,6 @@ geo::PixelPlaneGeo::PixelPlaneGeo(
   initializePixelGeometry(pixelGeometry);
   
 } // geo::PixelPlaneGeo::PixelPlaneGeo()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeo::initializePixelGeometry
-  (SquarePixelGeometry_t const& pixelGeometry)
-{
-  
-  /*
-   * Produces the origin, pitch, number and direction of the pixels and grid.
-   * This is a elaboration of the raw information from the geometry.
-   * 
-   * The origin and directions are only partially respected.
-   * The directions are used to associate the pitches to the right axis, but
-   * the axis are imposed to be the ones of the plane frame.
-   * The origin vector is supposed to be one of the four corners of the plane,
-   * the one from which the two input axes depart.
-   * But as these axes may be swapped, the origin also can be modified
-   * accordingly; it is anyway guaranteed to be at one of the four corners
-   * of the pixelated area.
-   * 
-   * Requires:
-   *  * local-world transformations be available
-   *  * frame geometry to be set (exact origin depth coordinate does not matter)
-   * 
-   */
-  
-  //
-  // 1. assign the correct axis information to each direction;
-  //    no nonsense here: axes must follow the frame one way or the other way
-  //    (just two ways are allowed)
-  //
-  struct ExtendedAxisInfo_t {
-    SquarePixelGeometry_t::AxisInfo_t basicInfo;
-    geo::Vector_t axisDir; ///< Direction and size in the world frame.
-  }; // struct ExtendedAxisInfo_t
-  
-  constexpr std::size_t ixWidth = 0U;
-  constexpr std::size_t ixDepth = 1U;
-  constexpr std::size_t NDirs = 2U;
-  
-  static_assert(pixelGeometry.sides.size() == NDirs);
-  
-  std::array<ExtendedAxisInfo_t, NDirs> axes;
-  for (auto&& [ side, axis ]: util::zip(pixelGeometry.sides, axes))
-    axis = { side, toWorldCoords(side.dir) };
-  
-  if (areParallel(axes[ixWidth].axisDir, WidthDir())) {
-    // all good already
-  }
-  else if (areParallel(axes[ixWidth].axisDir, DepthDir())) {
-    std::swap(axes[ixWidth], axes[ixDepth]);
-  }
-  else {
-    throw cet::exception("PixelPlaneGeo")
-      << "initializePixelGeometry(): pixel axis system { "
-      << axes[ixWidth].axisDir << " x " << axes[ixDepth].axisDir
-      << " } is misaligned with the plane frame system { "
-      << WidthDir<geo::Vector_t>() << " x " << DepthDir<geo::Vector_t>() << " }"
-      "\n";
-  }
-  
-  for (auto&& [ axisInfo, pitch, nPixels ]: util::zip(axes, fPitches, fNPixels )) {
-    pitch = axisInfo.basicInfo.side;
-    nPixels = axisInfo.axisDir.R() / pitch;
-  } // for
-  
-  fDecompPixel.SetMainDir(axes[ixDepth].axisDir);
-  fDecompPixel.SetSecondaryDir(axes[ixWidth].axisDir);
-  
-  //
-  // 2. now set the position of the pixel plane;
-  //    that is driven by the origin of the pixel decomposition frame,
-  //    which corresponds to the position of the first pixel:
-  //    that is what we are pursuing now.
-  //    We do not bother with the position along thickness direction,
-  //    which stays the same as from the geometry
-  //    (which is not that bad a choice)
-  // 
-  fDecompPixel.SetReferencePoint
-    (fromCenterToFirstPixel(toWorldCoords(pixelGeometry.center)));
-  
-} // geo::PixelPlaneGeo::initializePixelGeometry()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeo::fromCenterToFirstPixel
-  (geo::Point_t const& pixelPlaneCenter) const
-{
-  
-  /*
-   * Converts the center of the sensitive area of the plane (`pixelPlaneCenter`)
-   * into the center of the first pixel.
-   * Requires:
-   *  * number of pixels
-   *  * directions of the two axes of the pixel plane
-   *  * pitch of the pixels
-   * 
-   */
-  geo::Point_t center = pixelPlaneCenter;
-  
-  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir) {
-    center += getSensElemHalfStepDir(dir)
-      * (1.0 - static_cast<double>(getNsensElem(dir)));
-  
-  return geo::PixelPlaneGeo::fromCenterToFirstPixel;
-} // 
-
-
-// -----------------------------------------------------------------------------
-
-auto geo::PixelPlaneGeo::completePixelGeometry
-  (SquarePixelGeometry_t const& /* info */) const -> SquarePixelGeometry_t
-{
-  // TODO dummy stuff, and dumb too; assuming _x_ is the thin direction
-  
-  SquarePixelGeometry_t newInfo {
-    {
-      SquarePixelGeometry_t::AxisInfo_t
-        { geo::Yaxis<LocalVector_t>() * Width(), 3.0 }, // 3 cm pitch along local y axis
-      SquarePixelGeometry_t::AxisInfo_t
-        { geo::Zaxis<LocalVector_t>() * Depth(), 4.0 }  // 4 cm pitch along local z axis
-    },
-    geo::origin<LocalPoint_t>()
-  };
-  
-  return newInfo;
-} // geo::PixelPlaneGeo::completePixelGeometry()
 
 
 // -----------------------------------------------------------------------------
@@ -466,11 +368,7 @@ void geo::PixelPlaneGeo::doUpdateAfterSorting
   
   UpdateDecompPixel();
   
-  UpdateNpixelsAndPitches();
-  
   UpdatePixelDirs();
-  
-  UpdateDecompPixelOrigin();
   
   UpdatePlaneCenter();
   
@@ -1000,19 +898,157 @@ double geo::PixelPlaneGeo::getPixelHalfL(WireLocator const&) const {
 // -----------------------------------------------------------------------------
 // --- implementation details (private methods)
 // -----------------------------------------------------------------------------
-void geo::PixelPlaneGeo::UpdateNpixelsAndPitches() {
+auto geo::PixelPlaneGeo::completePixelGeometry
+  (SquarePixelGeometry_t const& /* info */) const -> SquarePixelGeometry_t
+{
+  // TODO dummy stuff, and dumb too; assuming _x_ is the thin direction
+  
+  SquarePixelGeometry_t newInfo {
+    {
+      SquarePixelGeometry_t::AxisInfo_t
+        { geo::Yaxis<LocalVector_t>() * Depth(), 3.0 }, // 3 cm pitch along local y axis
+      SquarePixelGeometry_t::AxisInfo_t
+        { geo::Zaxis<LocalVector_t>() * Width(), 4.0 }  // 4 cm pitch along local z axis
+    },
+    geo::origin<LocalPoint_t>()
+  };
+  
+  return newInfo;
+} // geo::PixelPlaneGeo::completePixelGeometry()
+
+
+// -----------------------------------------------------------------------------
+void geo::PixelPlaneGeo::initializePixelGeometry
+  (SquarePixelGeometry_t const& pixelGeometry)
+{
+  
+  /*
+   * Produces the origin, pitch, number and direction of the pixels and grid.
+   * This is a elaboration of the raw information from the geometry.
+   * 
+   * The origin and directions are only partially respected.
+   * The directions are used to associate the pitches to the right axis, but
+   * the axis are imposed to be the ones of the plane frame.
+   * The origin vector is supposed to be one of the four corners of the plane,
+   * the one from which the two input axes depart.
+   * But as these axes may be swapped, the origin also can be modified
+   * accordingly; it is anyway guaranteed to be at one of the four corners
+   * of the pixelated area.
+   * 
+   * Requires:
+   *  * local-world transformations be available
+   *  * frame geometry to be set (exact origin depth coordinate does not matter)
+   * 
+   */
+  
+  /*
+   * NOTE this is part of the pixel plane initialization procedure documented
+   *      in `geo::PixelPlaneGeo` class. If changing *what* is being initialized
+   *      or its *order*, please also update that documentation at the top
+   *      of `geo::PixelPlaneGeo` class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h`, section
+   *      "Initialization steps").
+   */
+  
+  /*
+   * REMINDER: do not rely on virtual methods from derived classes here, as
+   *           they might not be available yet (this method is called in class
+   *           constructor, when thee derived class constructor hasn't been run
+   *           yet)
+   */
+  
+  assert(!isNull(fDecompFrame.MainDir()));
+  assert(!isNull(fDecompFrame.SecondaryDir()));
+  
+  using namespace geo::pixel;
+  
+  MF_LOG_TRACE("PixelPlaneGeo") << "Information received from plane geometry:"
+    << "\n * center of the pixelized area: " << pixelGeometry.center
+    << "\n * sides:"
+    << "\n    - direction " << pixelGeometry.sides[0U].dir.Unit()
+      << ": " << pixelGeometry.sides[0U].side << " cm pixels for "
+      << pixelGeometry.sides[0U].dir.R() << " cm of side"
+    << "\n    - direction " << pixelGeometry.sides[1U].dir.Unit()
+      << ": " << pixelGeometry.sides[1U].side << " cm pixels for "
+      << pixelGeometry.sides[1U].dir.R() << " cm of side"
+    ;
   
   //
-  // requirements:
-  //   * `Width()` and `Depth()` correct
+  // 1. assign the correct axis information to each direction;
+  //    no nonsense here: axes must follow the frame one way or the other way
+  //    (just two ways are allowed: either axis aligned with `WidthDir()`)
   //
+  struct ExtendedAxisInfo_t {
+    SquarePixelGeometry_t::AxisInfo_t basicInfo;
+    geo::Vector_t axisDir; ///< Direction and size in the world frame.
+  }; // struct ExtendedAxisInfo_t
   
-  discoverPitches();
+  static_assert(pixelGeometry.sides.size() == NCoords);
   
-  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir)
-    fNPixels[dir] = getSensElemDirSize(dir) / fPitches[dir];
+  std::array<ExtendedAxisInfo_t, NCoords> axes;
+  for (auto&& [ side, axis ]: util::zip(pixelGeometry.sides, axes))
+    axis = { side, toWorldCoords(side.dir) };
   
-} // geo::PixelPlaneGeo::UpdateNpixelsAndPitches()
+  //
+  // make sure that the data on ixSec is aligned with WidthDir()`:
+  //
+  if (areParallel(axes[ixSec].axisDir, WidthDir())) {
+    // all good already
+  }
+  else if (areParallel(axes[ixSec].axisDir, DepthDir())) {
+    std::swap(axes[ixSec], axes[ixMain]);
+  }
+  else {
+    throw cet::exception("PixelPlaneGeo")
+      << "initializePixelGeometry(): pixel axis system { "
+      << axes[ixSec].axisDir << " x " << axes[ixMain].axisDir
+      << " } is misaligned with the plane frame system { "
+      << WidthDir<geo::Vector_t>() << " x " << DepthDir<geo::Vector_t>() << " }"
+      "\n";
+  }
+  
+  //
+  // copy the information into `fPitches` and `fNPixels`, and set the directions
+  // (indices follow `ixMain` and `ixSec`)
+  //
+  for (auto&& [ axisInfo, pitch, nPixels ]: util::zip(axes, fPitches, fNPixels )) {
+    pitch = axisInfo.basicInfo.side;
+    nPixels = static_cast<unsigned int>(axisInfo.axisDir.R() / pitch);
+  } // for
+  
+  fDecompPixel.SetMainDir
+    (geo::vect::rounded01(axes[ixMain].axisDir.Unit(), 1e-5));
+  fDecompPixel.SetSecondaryDir
+    (geo::vect::rounded01(axes[ixSec].axisDir.Unit(), 1e-5));
+  
+  //
+  // 2. now set the position of the pixel plane;
+  //    that is driven by the origin of the pixel decomposition frame,
+  //    which corresponds to the position of the first pixel:
+  //    that is what we are pursuing now.
+  //    We do not bother with the position along thickness direction,
+  //    which stays the same as from the geometry
+  //    (which is not that bad a choice);
+  //    note that `fromCenterToFirstPixel()` requires some of the quantities
+  //    just set (pretty much all of them, in fact)
+  // 
+  fDecompPixel.SetReferencePoint
+    (fromCenterToFirstPixel(toWorldCoords(pixelGeometry.center)));
+  
+  MF_LOG_TRACE("PixelPlaneGeo") << "Directions set to:"
+    << "\n * main: " << fDecompPixel.MainDir() << " after geometry dir "
+      << axes[ixMain].axisDir << " with " << fNPixels[ixMain]
+      << " pixels with " << fPitches[ixMain] << " cm pitch"
+    << "\n * secondary: " << fDecompPixel.SecondaryDir() << " after geometry dir "
+      << axes[ixSec].axisDir << " with " << fNPixels[ixSec]
+      << " pixels with " << fPitches[ixSec] << " cm pitch"
+    << "\n * origin: " << fDecompPixel.ReferencePoint()
+      << " (center of pixelized area: " << toWorldCoords(pixelGeometry.center)
+      << ")"
+    ;
+  
+  
+} // geo::PixelPlaneGeo::initializePixelGeometry()
 
 
 // -----------------------------------------------------------------------------
@@ -1021,14 +1057,30 @@ void geo::PixelPlaneGeo::UpdateDecompPixel() {
   //
   // requires:
   //  * width and depth directions (including their verse)
+  //  * old pixel #0 origin, and old pixel frame directions and pitches
   //
+  assert(!isNull(WidthDir<geo::Vector_t>()));
+  assert(!isNull(DepthDir<geo::Vector_t>()));
+  assert(!isNull(fDecompPixel.MainDir()));
+  assert(!isNull(fDecompPixel.SecondaryDir()));
+  
+  // we recover the center of the plane, which is going to be the same
+  // after the redefinition of the axes; this is undoing a previous step
+  // from the center of the plane, which we don't have available here,
+  // to the first pixel which is the origin of the 
+  geo::Point_t const pixelPlaneCenter
+    = fromFirstPixelToCenter(fDecompPixel.ReferencePoint());
   
   //
   // direction measured by the secondary coordinate; it is the width direction
   //
   fDecompPixel.SetSecondaryDir
     (geo::vect::rounded01(WidthDir<geo::Vector_t>(), 1e-4));
-
+  
+  MF_LOG_TRACE("PixelPlaneGeo")
+    << "Pixel frame secondary dir set to: " << fDecompPixel.SecondaryDir()
+    << " (width: " << WidthDir<geo::Vector_t>() << ")";
+  
   //
   // get the axis perpendicular to it on the wire plane
   // (verse is already set to have the base as positive as the frame base is)
@@ -1036,11 +1088,27 @@ void geo::PixelPlaneGeo::UpdateDecompPixel() {
   fDecompPixel.SetMainDir
     (geo::vect::rounded01(-DepthDir<geo::Vector_t>(), 1e-4));
   
+  MF_LOG_TRACE("PixelPlaneGeo")
+    << "Pixel frame main dir set to: " << fDecompPixel.MainDir()
+    << " (depth: " << DepthDir<geo::Vector_t>() << ")";
   //
   // check that the resulting normal matches the plane one
   //
   assert(lar::util::makeVector3DComparison(1e-5)
     .equal(fDecompPixel.NormalDir(), GetNormalDirection<geo::Vector_t>()));
+  
+  //
+  // set the new center; it will may lie on a different corner of the plane
+  //
+  MF_LOG_TRACE("PixelPlaneGeo")
+    << "Pixel area center moved: " << fDecompPixel.ReferencePoint()
+    << " => " << pixelPlaneCenter << "...";
+  
+  fDecompPixel.SetReferencePoint(fromCenterToFirstPixel(pixelPlaneCenter));
+  
+  MF_LOG_TRACE("PixelPlaneGeo")
+    << "Pixel area center moved: ... " << pixelPlaneCenter
+    << " => " << fDecompPixel.ReferencePoint();
   
 } // geo::PixelPlaneGeo::UpdateDecompPixel()
 
@@ -1053,52 +1121,19 @@ void geo::PixelPlaneGeo::UpdatePixelDirs() {
   // * pitch sizes
   //
   using namespace geo::pixel;
+  
+  assert(!isNull(getSensElemDir(ixMain)));
+  
   fPixelDirs = {
     getSensElemDir(ixMain) * (getSensElemPitch(ixMain) / 2.0),
     getSensElemDir(ixSec) * (getSensElemPitch(ixSec) / 2.0)
     };
-} // geo::PixelPlaneGeo::UpdatePixelDirs()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeo::UpdateDecompPixelOrigin() {
-
-  //
-  // update the origin of the reference frame (the middle of the first pixel)
-  // requires:
-  // * width and depth size
-  // * plane center in width and depth direction (thickness is irrelevant)
-  // * pixel plane width and depth directions (center is what we find here)
-  // * pixel pitches
-  //
   
-  //
-  // for this time only, we need to find the location of the first pixel
-  // from scratch: let's pick it from the most negative corner in pixel
-  // coordinates (half width and depth before the plane [box] center).
-  // Let's pick it also half a thickness length toward the center of the TPC
-  // (assuming the normal to the plane is pointing there, as it should already).
-  // 
-  
-  // translate the center of the box half the pixels back
-  // (gets to the outer border of the first pixel)
-  // and then add back half pixel (gets to the center of that pixel)
-  geo::Point_t center = GetBoxCenter<geo::Point_t>();
-  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir) {
-    center += getSensElemHalfStepDir(dir)
-      * (1.0 - static_cast<double>(getNsensElem(dir)));
-  }
-  
-  // thickness now... this is expensive:
-  double const thickness = extractPlaneThickness();
   MF_LOG_TRACE("PixelPlaneGeo")
-    << "Pixel plane box is " << thickness << " cm thick";
-  center += (thickness / 2.0) * fDecompPixel.NormalDir();
+    << "Pixel steps set to: " << fPixelDirs[ixMain] << " (main), "
+    << fPixelDirs[ixSec] << " (secondary)";
   
-  // save it now
-  fDecompPixel.SetReferencePoint(center);
-
-} // geo::PixelPlaneGeo::UpdateDecompPixelOrigin()
+} // geo::PixelPlaneGeo::UpdatePixelDirs()
 
 
 // -----------------------------------------------------------------------------
@@ -1128,6 +1163,11 @@ void geo::PixelPlaneGeo::UpdatePlaneCenter() {
   
   geo::vect::round0(fCenter, 1e-7); // round dimensions less than 1 nm to 0
   
+  MF_LOG_TRACE("PixelPlaneGeo")
+    << "Pixel frame origin: " << fDecompPixel.ReferencePoint()
+    << " => " << fCenter
+    << " (box: " << GetBoxCenter<geo::Point_t>() << ")";
+  
   fDecompFrame.SetReferencePoint(fCenter); // equivalent to GetCenter() now
 
 } // geo::PixelPlaneGeo::UpdatePlaneCenter()
@@ -1144,6 +1184,9 @@ void geo::PixelPlaneGeo::UpdateAngles() {
   fThetaZ = std::acos(GetWireDirection<geo::Vector_t>().Dot(geo::Zaxis()));
   fPhiZ
     = std::acos(GetIncreasingWireDirection<geo::Vector_t>().Dot(geo::Zaxis()));
+  
+  MF_LOG_TRACE("PixelPlaneGeo")
+    << "Angles set to: thetaZ=" << fThetaZ << " rad, phiZ=" << fPhiZ << " rad";
   
 } // geo::PixelPlaneGeo::UpdateAngles()
 
@@ -1166,6 +1209,12 @@ void geo::PixelPlaneGeo::UpdateActiveArea() {
     * (static_cast<double>(getNsensElem(ixSec)) / 2.0);
   fActiveArea = { { -halfWidth, halfWidth  }, { -halfDepth, halfDepth } };
 
+  MF_LOG_TRACE("PixelPlaneGeo")
+    << "Active area set to:"
+    << "\n - width: " << fActiveArea.width.lower << " -- " << fActiveArea.width.upper
+    << "\n - depth: " << fActiveArea.depth.lower << " -- " << fActiveArea.depth.upper
+    ;
+  
 } // geo::PixelPlaneGeo::UpdateActiveArea()
 
 
@@ -1176,10 +1225,75 @@ geo::Point_t geo::PixelPlaneGeo::firstPixelCenter() const {
 
 
 // -----------------------------------------------------------------------------
-void geo::PixelPlaneGeo::discoverPitches() {
-  // TODO believe it or not, this is not how we expect to discover pixel size
-  fPitches = { 3.0, 4.0 }; // mm
-} // geo::PixelPlaneGeo::discoverPitches()
+geo::Point_t geo::PixelPlaneGeo::fromCenterToFirstPixel
+  (geo::Point_t const& pixelPlaneCenter) const
+{
+  
+  /*
+   * Converts the center of the sensitive area of the plane (`pixelPlaneCenter`)
+   * into the center of the first pixel.
+   * Requires:
+   *  * number of pixels
+   *  * directions of the two axes of the pixel plane
+   *  * pitch of the pixels
+   * 
+   */
+  using namespace geo::pixel;
+  
+  assert(getNsensElem(ixMain) > 0);
+  assert(getNsensElem(ixSec) > 0);
+  assert(getSensElemPitch(ixMain) > 0.0);
+  assert(getSensElemPitch(ixSec) > 0.0);
+  assert(!isNull(getSensElemDir(ixMain)));
+  assert(!isNull(getSensElemDir(ixSec)));
+  
+  geo::Point_t center = pixelPlaneCenter;
+  
+  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir) {
+    center += getSensElemDir(dir) * (
+      (1.0 - static_cast<double>(getNsensElem(dir)))
+      * getSensElemPitch(dir) / 2.0
+      );
+  } // for
+  
+  return center;
+} // geo::PixelPlaneGeo::fromCenterToFirstPixel()
+
+
+// -----------------------------------------------------------------------------
+geo::Point_t geo::PixelPlaneGeo::fromFirstPixelToCenter
+  (geo::Point_t const& pixelCenter) const
+{
+  
+  /*
+   * Converts the center of the sensitive area of the plane (`pixelPlaneCenter`)
+   * into the center of the first pixel.
+   * Requires:
+   *  * number of pixels
+   *  * directions of the two axes of the pixel plane
+   *  * pitch of the pixels
+   * 
+   */
+  using namespace geo::pixel;
+  
+  assert(getNsensElem(ixMain) > 0);
+  assert(getNsensElem(ixSec) > 0);
+  assert(getSensElemPitch(ixMain) > 0.0);
+  assert(getSensElemPitch(ixSec) > 0.0);
+  assert(!isNull(getSensElemDir(ixMain)));
+  assert(!isNull(getSensElemDir(ixSec)));
+  
+  geo::Point_t center = pixelCenter;
+  
+  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir) {
+    center -= getSensElemDir(dir) * (
+      (1.0 - static_cast<double>(getNsensElem(dir)))
+      * getSensElemPitch(dir) / 2.0
+      );
+  } // for
+  
+  return center;
+} // geo::PixelPlaneGeo::fromFirstPixelToCenter()
 
 
 // -----------------------------------------------------------------------------
