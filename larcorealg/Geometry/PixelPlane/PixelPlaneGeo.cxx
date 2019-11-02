@@ -177,7 +177,8 @@ void geo::PixelPlaneGeo::initializePixelGeometry
   //    which stays the same as from the geometry
   //    (which is not that bad a choice)
   // 
-  fDecompPixel.SetOrigin(fromCenterToFirstPixel(pixelGeometry.center));
+  fDecompPixel.SetReferencePoint
+    (fromCenterToFirstPixel(toWorldCoords(pixelGeometry.center)));
   
 } // geo::PixelPlaneGeo::initializePixelGeometry()
 
@@ -1095,7 +1096,7 @@ void geo::PixelPlaneGeo::UpdateDecompPixelOrigin() {
   center += (thickness / 2.0) * fDecompPixel.NormalDir();
   
   // save it now
-  fDecompPixel.SetOrigin(center);
+  fDecompPixel.SetReferencePoint(center);
 
 } // geo::PixelPlaneGeo::UpdateDecompPixelOrigin()
 
@@ -1127,7 +1128,7 @@ void geo::PixelPlaneGeo::UpdatePlaneCenter() {
   
   geo::vect::round0(fCenter, 1e-7); // round dimensions less than 1 nm to 0
   
-  fDecompFrame.SetOrigin(fCenter); // equivalent to GetCenter() now
+  fDecompFrame.SetReferencePoint(fCenter); // equivalent to GetCenter() now
 
 } // geo::PixelPlaneGeo::UpdatePlaneCenter()
 

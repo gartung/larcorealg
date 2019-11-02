@@ -393,7 +393,7 @@ void geo::PlaneGeo::DetectGeometryDirections() {
       << "'] has a shape which is a " << pShape->IsA()->GetName()
       << ", not a TGeoBBox! Dimensions won't be available.";
     // set it invalid
-    fDecompFrame.SetOrigin(geo::origin());
+    fDecompFrame.SetReferencePoint(geo::origin());
     fDecompFrame.SetMainDir({ 0., 0., 0. });
     fDecompFrame.SetSecondaryDir({ 0., 0., 0. });
     fFrameSize = { 0.0, 0.0 };

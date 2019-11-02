@@ -843,7 +843,7 @@ namespace geo{
     //
     // update the origin of the reference frame (the middle of the first wire)
     //
-    fDecompWire.SetOrigin(geo::vect::toPoint(FirstWire().GetCenter()));
+    fDecompWire.SetReferencePoint(geo::vect::toPoint(FirstWire().GetCenter()));
 
   } // WirePlaneGeo::UpdateDecompWireOrigin()
 
@@ -887,7 +887,7 @@ namespace geo{
     
     geo::vect::round0(fCenter, 1e-7); // round dimensions less than 1 nm to 0
     
-    fDecompFrame.SetOrigin(fCenter); // equivalent to GetCenter() now
+    fDecompFrame.SetReferencePoint(fCenter); // equivalent to GetCenter() now
 
   } // WirePlaneGeo::UpdateWirePlaneCenter()
 

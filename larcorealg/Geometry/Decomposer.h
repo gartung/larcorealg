@@ -223,6 +223,9 @@ namespace geo {
     void SetBase(AffinePlaneBase_t const& base) { fPlaneBase = base; }
 
     /// Change the 3D point of the reference frame origin
+    void SetReferencePoint(Point_t const& point)
+      { fPlaneBase.SetOrigin(point); }
+    [[deprecated("Use \"SetReferencePoint()\" instead")]]
     void SetOrigin(Point_t const& point) { fPlaneBase.SetOrigin(point); }
 
     /// Change the main direction of the projection base
@@ -438,7 +441,10 @@ namespace geo {
       { fPlaneDecomp.SetBase(base); }
 
     /// Change the 3D point of the reference frame origin
-    void SetOrigin(Point_t const& point) { fPlaneDecomp.SetOrigin(point); }
+    void SetReferencePoint(Point_t const& point)
+      { fPlaneDecomp.SetReferencePoint(point); }
+    [[deprecated("Use \"SetReferencePoint()\" instead")]]
+    void SetOrigin(Point_t const& point) { fPlaneDecomp.SetReferencePoint(point); }
 
     /// Change the main direction of the projection base
     void SetMainDir(Vector_t const& dir) { fPlaneDecomp.SetMainDir(dir); }
