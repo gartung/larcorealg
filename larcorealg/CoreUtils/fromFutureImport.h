@@ -11,7 +11,7 @@
 #define LARCOREALG_COREUTILS_FROMFUTUREIMPORT_H
 
 /**
- * @defgroup FutureStandards
+ * @defgroup FutureStandards Features from future C++ standards
  * @brief Features expected to be provided by future C++ standards.
  */
 

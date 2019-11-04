@@ -253,9 +253,8 @@ namespace geo {
     /// @{
     /// @name Plane size and coordinates
 
-    //@{
     /**
-     * @brief Return the direction of plane width.
+     * @brief Returns the direction of plane width.
      * @tparam Vector the type of vector to return (current default: `TVector3`)
      *
      * The precise definition of the sides is arbitrary, but they are defined
@@ -266,10 +265,17 @@ namespace geo {
     template <typename Vector>
     Vector WidthDir() const
       { return geo::vect::convertTo<Vector>(fDecompFrame.MainDir()); }
+    
+    /**
+     * @brief Returns the direction of plane width as `DefaultVector_t` vector.
+     *
+     * The precise definition of the sides is arbitrary, but they are defined
+     * to lie on the wire plane and so that `WidthDir()`, `DepthDir()` and
+     * `GetNormalDirection()` make a orthonormal base.
+     * That base (width, depth, normal) is guaranteed to be positive defined.
+     */
     DefaultVector_t WidthDir() const { return WidthDir<DefaultVector_t>(); }
-    //@}
 
-    //@{
     /**
      * @brief Return the direction of plane depth.
      * @tparam Vector the type of vector to return (current default: `TVector3`)
@@ -282,8 +288,16 @@ namespace geo {
     template <typename Vector>
     Vector DepthDir() const
       { return geo::vect::convertTo<Vector>(fDecompFrame.SecondaryDir()); }
+    
+    /**
+     * @brief Return the direction of plane depth as `DefaultVector_t` vector.
+     *
+     * The precise definition of the sides is arbitrary, but they are defined
+     * to lie on the wire plane and so that `WidthDir()`, `DepthDir()` and
+     * `GetNormalDirection()` make a orthonormal base.
+     * That base (width, depth, normal) is guaranteed to be positive defined.
+     */
     DefaultVector_t DepthDir() const { return DepthDir<DefaultVector_t>(); }
-    //@}
 
     /**
      * @brief Return the width of the plane.
@@ -345,10 +359,12 @@ namespace geo {
       { return HasWire(wireid); }
     //@}
 
+    //@{
     /// Return the iwire'th wire in the plane.
     /// @throws cet::exception (category "WireOutOfRange") if no such wire
     /// @note In the past, no check was performed.
     geo::WireGeo Wire(unsigned int iwire) const { return doWire(iwire); }
+    //@}
 
     //@{
     /**
@@ -366,6 +382,7 @@ namespace geo {
       { return Wire(wireid); }
     //@}
 
+    //@{
     /**
      * @brief Returns the wire number iwire from this plane.
      * @param iwire the number of local wire
@@ -374,6 +391,7 @@ namespace geo {
      */
     geo::WirePtr WirePtr(unsigned int iWire) const
       { return doWirePtr(iWire); }
+    //@}
 
     //@{
     /**
@@ -401,15 +419,20 @@ namespace geo {
       { return WirePtr(wireid); }
     //@}
 
-
+    //@{
     /// Return the first wire in the plane.
     geo::WireGeo FirstWire() const { return doFirstWire(); }
+    //@}
 
+    //@{
     /// Return the middle wire in the plane.
     geo::WireGeo MiddleWire() const { return doMiddleWire(); }
+    //@}
 
+    //@{
     /// Return the last wire in the plane.
     geo::WireGeo LastWire() const { return doLastWire(); }
+    //@}
     
     // @{
     /**
@@ -450,9 +473,12 @@ namespace geo {
     /// @{
     /// @name Plane geometry properties
 
+    // @{
     /// Return the wire pitch (in centimeters). It is assumed constant.
     double WirePitch() const { return doWirePitch(); }
+    // @}
 
+    // @{
     /**
      * @brief Returns whether the higher z wires have higher wire ID.
      * @return whether the higher z wires have higher wire ID
@@ -463,6 +489,7 @@ namespace geo {
      * but it is implemented in a faster and independent way.
      */
     bool WireIDincreasesWithZ() const { return doWireIDincreasesWithZ(); }
+    // @}
 
     //@{
     /**
@@ -593,6 +620,7 @@ namespace geo {
     //@}
 
 
+    //@{
     /**
      * @brief Returns the wire closest to the specified position.
      * @param pos world coordinates of the point [cm]
@@ -616,8 +644,10 @@ namespace geo {
      */
     geo::WireGeo NearestWire(geo::Point_t const& pos) const
       { return doNearestWire(pos); }
+    //@}
 
 
+    //@{
     /**
      * @brief Returns the closest valid wire ID to the specified wire.
      * @param wireNo number of the wire on this plane
@@ -635,8 +665,10 @@ namespace geo {
      */
     geo::WireID ClosestWireID(geo::WireID::WireID_t wireNo) const
       { return doClosestWireID(wireNo); }
+    //@}
 
 
+    //@{
     /**
      * @brief Returns the closest valid wire ID to the specified wire.
      * @param wireid the wire ID (must be on this plane)
@@ -648,6 +680,7 @@ namespace geo {
      * `ClosestWireID(geo::WireID::WireID_t)`.
      */
     geo::WireID ClosestWireID(geo::WireID const& wireid) const; // inline
+    //@}
 
 
     //@{
@@ -710,6 +743,7 @@ namespace geo {
     //@}
 
 
+    //@{
     /**
      * @brief Returns an area covered by the wires in the plane.
      *
@@ -719,10 +753,20 @@ namespace geo {
      *
      */
     Rect const& ActiveArea() const { return doActiveArea(); }
+    //@}
 
+    //@{
     /// Returns a volume including all the wires in the plane.
     lar::util::simple_geo::Volume<> Coverage() const { return doCoverage(); }
+    //@}
 
+    /// @}
+    // --- END -- Plane geometry properties ------------------------------------
+
+    // --- BEGIN -- Plane printout ---------------------------------------------
+    /// @name Plane printout
+    /// @{
+    
     /**
      * @brief Prints information about this plane.
      * @tparam Stream type of output stream to use
@@ -784,9 +828,9 @@ namespace geo {
     
     /// Maximum value for print verbosity.
     static constexpr unsigned int MaxVerbosity = 7;
-
+    
     /// @}
-    // --- END -- Plane geometry properties ------------------------------------
+    // --- END -- Plane printout -----------------------------------------------
 
 
     // --- BEGIN -- Projections on wire length/wire coordinate direction base --
@@ -847,6 +891,7 @@ namespace geo {
       { return PlaneCoordinate(geo::vect::toPoint(point)); }
     //@}
 
+    //@{
     /**
      * @brief Returns the coordinate of the point on the plane, in wire units.
      * @param point world coordinate of the point to get the coordinate of
@@ -864,6 +909,7 @@ namespace geo {
     template <typename Point>
     double WireCoordinate(Point const& point) const
       { return doWireCoordinate(geo::vect::toPoint(point)); }
+    //@}
 
 
     //@{
@@ -885,7 +931,6 @@ namespace geo {
       { return doDecomposePoint(point); }
     WireDecomposedVector_t DecomposePoint(TVector3 const& point) const
       { return DecomposePoint(geo::vect::toPoint(point)); }
-
     //@}
 
     //@{
@@ -1093,6 +1138,7 @@ namespace geo {
       { return isProjectionOnPlane(geo::vect::toPoint(point)); }
     //@}
 
+    //@{
     /**
      * @brief Returns a projection vector that, added to the argument, gives a
      *        projection inside (or at the border of) the plane.
@@ -1121,7 +1167,9 @@ namespace geo {
     WidthDepthProjection_t DeltaFromPlane
       (WidthDepthProjection_t const& proj, double wMargin, double dMargin)
        const;
+    //@}
 
+    //@{
     /**
      * @brief Returns a projection vector that, added to the argument, gives a
      *        projection inside (or at the border of) the area of plane.
@@ -1138,7 +1186,9 @@ namespace geo {
     WidthDepthProjection_t DeltaFromPlane
       (WidthDepthProjection_t const& proj, double margin = 0.0) const
       { return DeltaFromPlane(proj, margin, margin); }
+    //@}
 
+    //@{
     /**
      * @brief Returns a projection vector that, added to the argument, gives a
      *        projection inside (or at the border of) the active area of plane.
@@ -1169,7 +1219,9 @@ namespace geo {
     WidthDepthProjection_t DeltaFromActivePlane
       (WidthDepthProjection_t const& proj, double wMargin, double dMargin)
       const;
+    //@}
 
+    //@{
     /**
      * @brief Returns a projection vector that, added to the argument, gives a
      *        projection inside (or at the border of) the active area of plane.
@@ -1186,7 +1238,9 @@ namespace geo {
     WidthDepthProjection_t DeltaFromActivePlane
       (WidthDepthProjection_t const& proj, double margin = 0.0) const
       { return DeltaFromActivePlane(proj, margin, margin); }
+    //@}
 
+    //@{
     /**
      * @brief Returns the projection, moved onto the plane if necessary.
      * @param proj projection to be checked and moved
@@ -1205,7 +1259,9 @@ namespace geo {
      */
     WidthDepthProjection_t MoveProjectionToPlane
       (WidthDepthProjection_t const& proj) const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the point, moved so that its projection is over the plane.
      * @param point point to be checked and moved
@@ -1218,6 +1274,7 @@ namespace geo {
      * frame, as described in MoveProjectionToPlane().
      */
     geo::Point_t MovePointOverPlane(geo::Point_t const& point) const;
+    //@}
     
 
     //@{
@@ -1568,7 +1625,7 @@ namespace geo {
      */
     virtual void doUpdateAfterSorting(geo::BoxBoundedGeo const&) {}
     
-    /// Called after `SortWires()`. TODO not clear what is the best way to act here
+    /// Called after `SortWires()`.
     virtual void doUpdateWireAfterSorting
       (geo::WireID const& wireid, bool flip) {}
 
