@@ -1461,7 +1461,7 @@ namespace geo {
   /** **************************************************************************
    * @brief Description of geometry of one entire detector
    *
-   * @note All lengths are specified in centimetres
+   * @note All lengths are specified in centimeters
    *
    *
    * How to correctly instantiate a GeometryCore object
@@ -1490,16 +1490,16 @@ namespace geo {
    * Configuration parameters
    * -------------------------
    *
-   * - *Name* (string; mandatory): string identifying the detector; it can be
+   * - **Name** (string; mandatory): string identifying the detector; it can be
    *   different from the base name of the file used to initialize the geometry;
    *   standard names are recommended by each experiment.
    *   This name can be used, for example, to select which channel mapping
    *   algorithm to use.
-   * - *SurfaceY* (real; mandatory): depth of the detector, in centimetrs;
-   *   see SurfaceY() for details
-   * - *MinWireZDist* (real; default: 3)
-   * - *PositionEpsilon* (real; default: 0.01%) set the default tolerance
-   *   (see DefaultWiggle())
+   * - **SurfaceY** (real; mandatory): depth of the detector, in centimeters;
+   *   see `SurfaceY()` for details
+   * - **MinWireZDist** (real; default: 3)
+   * - **PositionEpsilon** (real; default: 0.01%) set the default tolerance
+   *   (see `DefaultWiggle()`)
    *
    */
   class GeometryCore {
@@ -1751,7 +1751,10 @@ namespace geo {
     GeometryCore& operator= (GeometryCore const&) = delete;
     GeometryCore& operator= (GeometryCore&&) = delete;
 
-
+    // --- BEGIN -- Detector information ---------------------------------------
+    /// @name Detector information
+    /// @{
+    
     /**
      * @brief Returns the tolerance used in looking for positions
      * @return the tolerance value
@@ -1764,189 +1767,29 @@ namespace geo {
      * @todo Confirm the definition of wiggle: this one is taken from other doc
      */
     double DefaultWiggle() const { return fPositionWiggle; }
-
-    /**
-     * @brief Returns the full directory path to the geometry file source
-     * @return the full directory path to the geometry file source
-     *
-     * This is the full path of the source of the detector geometry GeometryCore
-     * relies on.
-     */
-    std::string ROOTFile() const { return fROOTfile; }
-
-    /**
-     * @brief Returns the full directory path to the GDML file source
-     * @return the full directory path to the GDML file source
-     *
-     * This is the full path of the source of the detector geometry handed to
-     * the detector simulation (GEANT).
-     */
-    std::string GDMLFile() const { return fGDMLfile; }
-
-
-
-    // BEGIN Detector information
-    /// @name Detector information
-    /// @{
-
-    //
-    // global features
-    //
-    /// Returns a string with the name of the detector, as configured
+    
+    
+    /// Returns a string with the name of the detector, as configured.
     std::string DetectorName() const { return fDetectorName; }
-
-
-    //
-    // position
-    //
-
-    /// Returns a pointer to the world volume.
-    TGeoVolume const* WorldVolume() const;
-
-
+    
+    
     /**
-     * @brief Fills the arguments with the boundaries of the world
-     * @param xlo (output) pointer to the lower x coordinate
-     * @param xlo (output) pointer to the upper x coordinate
-     * @param ylo (output) pointer to the lower y coordinate
-     * @param ylo (output) pointer to the upper y coordinate
-     * @param zlo (output) pointer to the lower z coordinate
-     * @param zlo (output) pointer to the upper z coordinate
-     * @throw cet::exception (`"GeometryCore"` category) if no world found
-     * @see `GetWorldVolumeName()`
+     * @brief The position of the detector respect to earth surface.
+     * @return typical vertical (_y_) position at surface in centimeters
      *
-     * This method fills the boundaries of the world volume
-     * (`GetWorldVolumeName()`).
-     *
-     * If a pointer is null, its coordinate is skipped.
-     *
-     * @deprecated Use the version without arguments instead.
-     */
-    void WorldBox(double* xlo, double* xhi,
-                  double* ylo, double* yhi,
-                  double* zlo, double* zhi) const;
-
-    /// Returns a box with the extremes of the world volume (from shape axes).
-    /// @see `GetWorldVolumeName()`
-    geo::BoxBoundedGeo WorldBox() const;
-
-    /**
-     * @brief The position of the detector respect to earth surface
-     * @return typical y position at surface in units of cm
-     *
-     * This is the depth (y) of the surface (where earth meets air) for this
+     * This is the depth (_y_) of the surface (where earth meets air) for this
      * detector site.
-     * The number is expressed in world coordinates and in centimetres,
+     * The number is expressed in world coordinates and in centimeters,
      * and it represents the y coordinate of earth surface.
      * A negative value means that the origin of coordinates, typically matching
-     * the detector centre, is above surface.
+     * the detector center, is above surface.
      *
      * @todo check that this is actually how it is used
      */
     //
     geo::Length_t SurfaceY() const { return fSurfaceY; }
-
-
-    //
-    // object description and information
-    //
-
-    /// Access to the ROOT geometry description manager
-    TGeoManager* ROOTGeoManager() const;
-
-    /// Return the name of the world volume (needed by Geant4 simulation)
-    const std::string GetWorldVolumeName() const;
-
-    /// Returns the absolute  coordinates of the detector enclosure volume [cm].
-    /// @param name name of the volume to be sought (default: `volDetEnclosure`)
-    /// @throw cet::exception if the specified volume is not found
-    geo::BoxBoundedGeo DetectorEnclosureBox
-      (std::string const& name = "volDetEnclosure") const;
-
-
-    //@{
-    /**
-     * @brief Returns the name of the deepest volume containing specified point
-     * @param point the location to query, in world coordinates
-     * @return name of the volume containing the point
-     *
-     * @todo what happens if none?
-     * @todo Unify the coordinates type
-     */
-    std::string VolumeName(geo::Point_t const& point) const;
-    std::string VolumeName(TVector3 const& point) const
-      { return VolumeName(geo::vect::toPoint(point)); }
-    //@}
-
-
-    /**
-     * @brief Returns all the nodes with volumes with any of the specified names
-     * @param vol_names list of names of volumes
-     * @return list of nodes found
-     *
-     * All the nodes in the geometry are checked, and all the ones that contain
-     * a volume with a name among the ones specified in vol_names are saved
-     * in the collection and returned.
-     */
-    std::vector<TGeoNode const*> FindAllVolumes
-      (std::set<std::string> const& vol_names) const;
-
-    /**
-     * @brief Returns paths of all nodes with volumes with the specified names
-     * @param vol_names list of names of volumes
-     * @return list paths of the found nodes
-     *
-     * All the nodes in the geometry are checked, and the path of all the ones
-     * that contain a volume with a name among the ones specified in vol_names
-     * is saved in the collection and returned.
-     * A node path is a ordered list of all nodes leading to the final one,
-     * starting from thetop level (root) down. The node at the `back()` of the
-     * path is the one with name in vol_names.
-     * No empty paths are returned.
-     */
-    std::vector<std::vector<TGeoNode const*>> FindAllVolumePaths
-      (std::set<std::string> const& vol_names) const;
-
-
-    /// Returns the material at the specified position
-    TGeoMaterial const* Material(geo::Point_t const& point) const;
-    //@{
-    /**
-     * @brief Name of the deepest material containing the point xyz
-     * @return material of the origin by default
-     */
-    std::string MaterialName(TVector3 const& point) const
-      { return MaterialName(geo::vect::toPoint(point)); }
-    std::string MaterialName(geo::Point_t const& point) const;
-    //@}
-
-
-    //@{
-    /// Returns the total mass [kg] of the specified volume (default: world).
-    double TotalMass() const { return TotalMass(GetWorldVolumeName()); }
-    double TotalMass(std::string vol) const;
-    //@}
-
-    //@{
-    /**
-     * @brief Returns the column density between two points.
-     * @param p1 the first point
-     * @param p2 the second point
-     * @return the column density [kg / cm&sup2;]
-     *
-     * The column density is defined as
-     * @f$ \int_{\vec{p}_{1}}^{\vec{p}_{2}} \rho(\vec{p}) d\vec{p} @f$
-     * where @f$ \rho(\vec{p}) @f$ is the density at point @f$ \vec{p} @f$,
-     * which the integral leads from `p1` to `p2` in a straight line.
-     *
-     * Both points are specified in world coordinates.
-     */
-    double MassBetweenPoints
-      (geo::Point_t const& p1, geo::Point_t const& p2) const;
-    double MassBetweenPoints(double *p1, double *p2) const;
-    //@}
-
-
+    
+    
     /**
      * @brief Prints geometry information with maximum verbosity.
      * @tparam Stream type of output stream
@@ -1985,9 +1828,215 @@ namespace geo {
       ) const;
 
     /// @}
-    // END Detector information
+    // --- END -- Detector information -----------------------------------------
+    
+    
+    
+    // --- BEGIN -- Detector geometry description ------------------------------
+    /**
+     * @name Detector geometry description
+     * 
+     * Information is extracted directly from the input GDML description.
+     */
+    /// @{
+    
+    //
+    // files
+    //
+    //@{
+    /**
+     * @brief Returns the full directory path to the geometry file source
+     * @return the full directory path to the geometry file source
+     *
+     * This is the full path of the source of the detector geometry GeometryCore
+     * relies on.
+     */
+    std::string ROOTFile() const { return fROOTfile; }
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Returns the full directory path to the GDML file source
+     * @return the full directory path to the GDML file source
+     *
+     * This is the full path of the source of the detector geometry handed to
+     * the detector simulation (GEANT).
+     */
+    std::string GDMLFile() const { return fGDMLfile; }
+    //@}
+    
+    
+    //
+    // world and detector enclosure volumes
+    //
+    //@{
+    /// Returns a pointer to the world volume.
+    TGeoVolume const* WorldVolume() const;
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Fills the arguments with the boundaries of the world
+     * @param xlo (output) pointer to the lower x coordinate
+     * @param xhi (output) pointer to the upper x coordinate
+     * @param ylo (output) pointer to the lower y coordinate
+     * @param yhi (output) pointer to the upper y coordinate
+     * @param zlo (output) pointer to the lower z coordinate
+     * @param zhi (output) pointer to the upper z coordinate
+     * @throw cet::exception (`"GeometryCore"` category) if no world found
+     * @see `GetWorldVolumeName()`
+     *
+     * This method fills the boundaries of the world volume
+     * (`GetWorldVolumeName()`).
+     *
+     * If a pointer is null, its coordinate is skipped.
+     *
+     * @deprecated Use the version without arguments instead.
+     */
+    void WorldBox(double* xlo, double* xhi,
+                  double* ylo, double* yhi,
+                  double* zlo, double* zhi) const;
+    //@}
+    
+    //@{
+    /// Returns a box with the extremes of the world volume (from shape axes).
+    /// @see `GetWorldVolumeName()`
+    geo::BoxBoundedGeo WorldBox() const;
+    //@}
+    
+    
+    //@{
+    /// Return the name of the world volume (needed by Geant4 simulation)
+    const std::string GetWorldVolumeName() const;
+    //@}
+    
+    
+    //@{
+    /// Returns the absolute  coordinates of the detector enclosure volume [cm].
+    /// @param name name of the volume to be sought (default: `volDetEnclosure`)
+    /// @throw cet::exception if the specified volume is not found
+    geo::BoxBoundedGeo DetectorEnclosureBox
+      (std::string const& name = "volDetEnclosure") const;
+    //@}
+    
+    
+    //
+    // volume object description and information
+    //
 
+    //@{
+    /// Access to the ROOT geometry description manager
+    TGeoManager* ROOTGeoManager() const;
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Returns the name of the deepest volume containing specified point
+     * @param point the location to query, in world coordinates
+     * @return name of the volume containing the point
+     *
+     * @todo what happens if none?
+     * @todo Unify the coordinates type
+     */
+    std::string VolumeName(geo::Point_t const& point) const;
+    std::string VolumeName(TVector3 const& point) const
+      { return VolumeName(geo::vect::toPoint(point)); }
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Returns all the nodes with volumes with any of the specified names
+     * @param vol_names list of names of volumes
+     * @return list of nodes found
+     *
+     * All the nodes in the geometry are checked, and all the ones that contain
+     * a volume with a name among the ones specified in vol_names are saved
+     * in the collection and returned.
+     */
+    std::vector<TGeoNode const*> FindAllVolumes
+      (std::set<std::string> const& vol_names) const;
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Returns paths of all nodes with volumes with the specified names
+     * @param vol_names list of names of volumes
+     * @return list paths of the found nodes
+     *
+     * All the nodes in the geometry are checked, and the path of all the ones
+     * that contain a volume with a name among the ones specified in vol_names
+     * is saved in the collection and returned.
+     * A node path is a ordered list of all nodes leading to the final one,
+     * starting from thetop level (root) down. The node at the `back()` of the
+     * path is the one with name in vol_names.
+     * No empty paths are returned.
+     */
+    std::vector<std::vector<TGeoNode const*>> FindAllVolumePaths
+      (std::set<std::string> const& vol_names) const;
+    //@}
+    
+    
+    //@{
+    /// Returns the material at the specified position.
+    TGeoMaterial const* Material(geo::Point_t const& point) const;
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Name of the deepest material containing the specified `point`.
+     * @return material of the origin by default
+     */
+    std::string MaterialName(TVector3 const& point) const
+      { return MaterialName(geo::vect::toPoint(point)); }
+    std::string MaterialName(geo::Point_t const& point) const;
+    //@}
+    
+    
+    //@{
+    /// Returns the total mass [kg] of the world volume.
+    double TotalMass() const { return TotalMass(GetWorldVolumeName()); }
+    //@}
+    
+    //@{
+    /// Returns the total mass [kg] of the specified volume.
+    double TotalMass(std::string const& vol) const;
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Returns the column density between two points.
+     * @param p1 the first point
+     * @param p2 the second point
+     * @return the column density [kg / cm&sup2;]
+     *
+     * The column density is defined as
+     * @f$ \int_{\vec{p}_{1}}^{\vec{p}_{2}} \rho(\vec{p}) d\vec{p} @f$
+     * where @f$ \rho(\vec{p}) @f$ is the density at point @f$ \vec{p} @f$,
+     * which the integral leads from `p1` to `p2` in a straight line.
+     *
+     * Both points are specified in world coordinates.
+     */
+    double MassBetweenPoints
+      (geo::Point_t const& p1, geo::Point_t const& p2) const;
+    double MassBetweenPoints(double *p1, double *p2) const;
+    //@}
 
+    /// @}
+    // --- END -- Detector geometry description --------------------------------
+    
+    
+    
+    // --- BEGIN -- Generic iterators ------------------------------------------
+    /// @name Generic iterators
+    /// @{
+    
     /**
      * @brief Returns the ID of the first element of the detector.
      * @tparam GeoID type of the ID to be returned
@@ -2037,8 +2086,13 @@ namespace geo {
      */
     template <typename GeoID, typename ContextID>
     GeoID GetEndID(ContextID const& id) const;
+    
+    /// @name Generic iterators
+    // --- END -- Generic iterators --------------------------------------------
 
 
+
+    // --- BEGIN -- Cryostat access and information ----------------------------
     /// @name Cryostat access and information
     /// @{
 
@@ -2048,12 +2102,12 @@ namespace geo {
 
     //@{
     /**
-     * @brief Returns the number of cryostats in the detector
+     * @brief Returns the number of cryostats in the detector.
      *
-     * The NElements() and NSiblingElements() methods are overloaded and their
-     * return depends on the type of ID.
+     * The `NElements()` and `NSiblingElements()` methods are overloaded and
+     * their return depends on the type of ID.
      *
-     * @todo Change return type to size_t
+     * @todo Change return type to `std::size_t`
      */
     unsigned int Ncryostats() const { return Cryostats().size(); }
     unsigned int NElements() const { return Ncryostats(); }
@@ -2077,23 +2131,33 @@ namespace geo {
     bool HasElement(geo::CryostatID const& cryoid) const
       { return HasCryostat(cryoid); }
     //@}
-
+    
+    
     //@{
     /**
      * @brief Returns the specified cryostat
      * @param cstat number of cryostat
+     * @return a constant reference to the specified cryostat
+     * @throw cet::exception (`GeometryCore` category) if cryostat not present
+     *
+     * @deprecated Use `Cryostat(geo::CryostatID const&) const` instead.
+     */
+    CryostatGeo const& Cryostat(unsigned int const cstat = 0) const
+      { return Cryostat(geo::CryostatID(cstat)); }
+    //@}
+    
+    
+    //@{
+    /**
+     * @brief Returns the specified cryostat
      * @param cryoid cryostat ID
      * @return a constant reference to the specified cryostat
      * @throw cet::exception (`GeometryCore` category) if cryostat not present
      *
      * The GetElement() method is overloaded and its return depends on the type
      * of ID.
-     *
-     * @todo Make the cryostat number mandatory (as CryostatID)
      */
     CryostatGeo const& Cryostat(geo::CryostatID const& cryoid) const;
-    CryostatGeo const& Cryostat(unsigned int const cstat = 0) const
-      { return Cryostat(geo::CryostatID(cstat)); }
     CryostatGeo const& GetElement(geo::CryostatID const& cryoid) const
       { return Cryostat(cryoid); }
     //@}
@@ -2126,28 +2190,32 @@ namespace geo {
     geo::CryostatID::CryostatID_t FindCryostatAtPosition
       (double const worldLoc[3]) const;
     //@}
-
-
+    
+    
+    //@{
     /**
      * @brief Returns the cryostat at specified location.
      * @param point the location [cm]
      * @return pointer to the `geo::CryostatGeo` including `point`, or `nullptr`
      *
-     * The tolerance used here is the one returned by DefaultWiggle().
+     * The tolerance used here is the one returned by `DefaultWiggle()`.
      */
     geo::CryostatGeo const* PositionToCryostatPtr
       (geo::Point_t const& point) const;
-
+    //@}
+    
+    //@{
     /**
      * @brief Returns the ID of the cryostat at specified location.
      * @param point the location [cm]
      * @return ID of the cryostat including `point` (invalid if none)
      *
-     * The tolerance used here is the one returned by DefaultWiggle().
+     * The tolerance used here is the one returned by `DefaultWiggle()`.
      */
     geo::CryostatID PositionToCryostatID(geo::Point_t const& point) const;
-
-
+    //@}
+    
+    
     //@{
     /**
      * @brief Returns the cryostat at specified location.
@@ -2155,13 +2223,15 @@ namespace geo {
      * @return a constant reference to the `geo::CryostatGeo` containing `point`
      * @throws cet::exception ("Geometry" category) if no cryostat matches
      *
-     * The tolerance used here is the one returned by DefaultWiggle().
+     * The tolerance used here is the one returned by `DefaultWiggle()`.
      */
     CryostatGeo const& PositionToCryostat(geo::Point_t const& point) const;
     CryostatGeo const& PositionToCryostat(double const point[3]) const
       { return PositionToCryostat(geo::vect::makePointFromCoords(point)); }
     //@}
-
+    
+    
+    //@{
     /**
      * @brief Returns the cryostat at specified location
      * @param worldLoc 3D coordinates of the point (world reference frame)
@@ -2169,13 +2239,15 @@ namespace geo {
      * @return a constant reference to the CryostatGeo object of the cryostat
      * @throws cet::exception ("Geometry" category) if no cryostat matches
      *
-     * The tolerance used here is the one returned by DefaultWiggle().
+     * The tolerance used here is the one returned by `DefaultWiggle()`.
      *
      * @deprecated Use `PositionToCryostat(geo::Point_t const&)` instead.
      */
     CryostatGeo const& PositionToCryostat
       (double const worldLoc[3], geo::CryostatID& cid) const;
-
+    //@}
+    
+    //@{
     /**
      * @brief Returns the cryostat at specified location
      * @param worldLoc 3D coordinates of the point (world reference frame)
@@ -2183,84 +2255,100 @@ namespace geo {
      * @return a constant reference to the CryostatGeo object of the cryostat
      * @throws cet::exception ("Geometry" category) if no cryostat matches
      *
-     * The tolerance used here is the one returned by DefaultWiggle().
+     * The tolerance used here is the one returned by `DefaultWiggle()`.
      *
      * @deprecated Use `PositionToCryostat(geo::Point_t const&)` instead.
      */
     CryostatGeo const& PositionToCryostat
       (double const worldLoc[3], unsigned int &cstat) const;
-
+    //@}
+    
+    
     //
     // iterators
     //
 
+    //@{
     /// Initializes the specified ID with the ID of the first cryostat
     void GetBeginID(geo::CryostatID& id) const
       { id = geo::CryostatID(0, HasCryostat(geo::CryostatID(0))); }
-
+    //@}
+    
+    //@{
     /// Initializes the specified ID with the invalid ID after the last cryostat
     void GetEndID(geo::CryostatID& id) const
       { id = geo::CryostatID(Ncryostats(), false); }
-
+    //@}
+    
+    //@{
     /// Sets the ID to the ID after the specified one.
     /// @return whether the ID is actually valid (validity flag is also set)
     bool IncrementID(geo::CryostatID& id) const; // inline implementation
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first cryostat ID
     cryostat_id_iterator begin_cryostat_id() const
       { return cryostat_id_iterator(this, cryostat_id_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last cryostat ID
     cryostat_id_iterator end_cryostat_id() const
       { return cryostat_id_iterator(this, cryostat_id_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first cryostat
     cryostat_iterator begin_cryostat() const
       { return cryostat_iterator(this, cryostat_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last cryostat
     cryostat_iterator end_cryostat() const
       { return cryostat_iterator(this, cryostat_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /**
-     * @brief Enables ranged-for loops on all cryostat IDs of the detector
-     * @returns an object suitable for ranged-for loops on all cryostat IDs
+     * @brief Enables ranged-for loops on all cryostat IDs of the detector.
+     * @return an object suitable for ranged-for loops on all cryostat IDs
+     * @see `IterateCryostats()`
      *
      * Example of usage:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * for (geo::CryostatID const& cID: geom->IterateCryostatIDs()) {
+     *   geo::CryostatGeo const& Cryo = geom->Cryostat(cID);
      *
-     *     for (geo::CryostatID const& cID: geom->IterateCryostatIDs()) {
-     *       geo::CryostatGeo const& Cryo = geom->Cryostat(cID);
+     *   // useful code here
      *
-     *       // useful code here
-     *
-     *     } // for all cryostats
+     * } // for all cryostats
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      */
-    IteratorBox<
-      cryostat_id_iterator,
-      &GeometryCore::begin_cryostat_id, &GeometryCore::end_cryostat_id
-      >
-    IterateCryostatIDs() const { return { this }; }
-
+    inline auto IterateCryostatIDs() const;
+    //@}
+    
+    //@{
     /**
-     * @brief Enables ranged-for loops on all cryostats of the detector
+     * @brief Enables ranged-for loops on all cryostats of the detector.
      * @returns an object suitable for ranged-for loops on all cryostats
      *
      * Example of usage:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * for (geo::CryostatGeo const& Cryo: geom->IterateCryostats()) {
      *
-     *     for (geo::CryostatGeo const& Cryo: geom->IterateCryostats()) {
+     *   // useful code here
      *
-     *       // useful code here
-     *
-     *     } // for all cryostats
+     * } // for all cryostats
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      */
-    IteratorBox<
-      cryostat_iterator,
-      &GeometryCore::begin_cryostat, &GeometryCore::end_cryostat
-      >
-    IterateCryostats() const { return { this }; }
-
+    inline auto IterateCryostats() const;
+    //@}
+    
+    
     //
     // single object features
     //
@@ -2285,8 +2373,9 @@ namespace geo {
     geo::Length_t CryostatLength(unsigned int cstat = 0) const
       { return CryostatLength(geo::CryostatID(cstat)); }
     //@}
-
-
+    
+    
+    //@{
     /**
      * @brief Returns the boundaries of the specified cryostat
      * @param boundaries (output) pointer to an area of 6 doubles for boundaries
@@ -2304,7 +2393,9 @@ namespace geo {
      */
     void CryostatBoundaries
       (double* boundaries, geo::CryostatID const& cid) const;
-
+    //@}
+    
+    //@{
     /**
      * @brief Returns the boundaries of the specified cryostat
      * @param boundaries (output) pointer to an area of 6 doubles for boundaries
@@ -2323,32 +2414,45 @@ namespace geo {
     void CryostatBoundaries
       (double* boundaries, unsigned int cstat = 0) const
       { CryostatBoundaries(boundaries, geo::CryostatID(cstat)); }
-
-
+    //@}
+    
+    
     //
     // object description
     //
 
     //@{
     /**
-     * @brief Return the name of LAr TPC volume
-     * @param cstat index of the cryostat
-     * @return the name of the specified TPC
+     * @brief Returns the name of the cryostat volume.
+     * @param cid ID of the cryostat
+     * @return the name of the specified cryostat
      *
      * This information is used in the event display.
      *
-     * @todo Use a cryostat ID instead
-     * @todo What if it does not exist?
+     * @todo What if `cid` does not exist?
      */
     std::string GetCryostatVolumeName(geo::CryostatID const& cid) const;
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the name of the cryostat volume.
+     * @param cstat index of the cryostat
+     * @return the name of the specified cryostat
+     *
+     * @deprecated Use `GetCryostatVolumeName(geo::CryostatID const&) const`
+     *             instead.
+     */
     std::string GetCryostatVolumeName(unsigned int const cstat = 0) const
       { return GetCryostatVolumeName(geo::CryostatID(cstat)); }
     //@}
 
-    /// @} Cryostat access and information
+    /// @}
+    // --- END -- Cryostat access and information ------------------------------
 
 
 
+    // --- BEGIN -- TPC access and information ---------------------------------
     /// @name TPC access and information
     /// @{
 
@@ -2356,24 +2460,64 @@ namespace geo {
     // group features
     //
 
+    //@{
     /**
-     * @brief Returns the total number of TPCs in the specified cryostat
-     * @param cstat cryostat number
+     * @brief Returns the total number of TPCs in the specified cryostat.
+     * @param cryoid cryostat ID
+     * @return number of TPCs in specified cryostat, or `0` if no cryostat found
      *
-     * @todo Make the cryostat number mandatory (as CryostatID)
-     * @todo Change return type to size_t
-     * @todo what happens if it does not exist?
+     * The `NElements()` methods are overloaded and their
+     * return depends on the type of ID.
+     *
+     * @todo Change return type to `std::size_t`
+     */
+    unsigned int NTPC(geo::CryostatID const& cryoid) const
+      {
+        CryostatGeo const* pCryo = GetElementPtr(cryoid);
+        return pCryo? pCryo->NElements(): 0;
+      }
+    unsigned int NElements(geo::CryostatID const& cryoid) const
+      { return NTPC(cryoid); }
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the total number of TPCs in the cryostat with `tpcid`.
+     * @param tpcid TPC ID
+     * @return number of TPCs in the cryostat of `tpcid`, or `0` if no TPC
+     * @see `NTPC()`
+     *
+     * The `NSiblingElements()` methods are overloaded and their
+     * return depends on the type of ID.
+     *
+     * @todo Change return type to `std::size_t`
+     */
+    unsigned int NSiblingElements(geo::TPCID const& tpcid) const
+      { return NTPC(tpcid); }
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the total number of TPCs in the specified cryostat.
+     * @param cstat cryostat number
+     * 
+     * @deprecated Use `NTPC(geo::CryostatID const&) const` instead.
      */
     unsigned int NTPC(unsigned int cstat = 0) const
       { return NTPC(geo::CryostatID(cstat)); }
+    //@}
 
+    //@{
     /// Returns the largest number of TPCs a cryostat in the detector has
     unsigned int MaxTPCs() const;
+    //@}
 
+    //@{
     /// Returns the total number of TPCs in the detector
     unsigned int TotalNTPC() const;
-
-
+    
+    
+    //@{
     /**
      * @brief Returns a container with one entry per TPC.
      * @tparam T type of data in the container
@@ -2405,7 +2549,9 @@ namespace geo {
     template <typename T>
     geo::TPCDataContainer<T> makeTPCData() const
       { return { Ncryostats(), MaxTPCs() }; }
-
+    //@}
+    
+    //@{
     /**
      * @brief Returns a container with one entry per TPC.
      * @tparam T type of data in the container
@@ -2428,68 +2574,54 @@ namespace geo {
     template <typename T>
     geo::TPCDataContainer<T> makeTPCData(T const& defValue) const
       { return { Ncryostats(), MaxTPCs(), defValue }; }
-
-
-
-    //@{
-    /**
-     * @brief Returns the total number of TPCs in the specified cryostat
-     * @param cryoid cryostat number
-     * @return number of TPCs in specified cryostat, or 0 if no cryostat found
-     *
-     * The NElements() and NSiblingElements() methods are overloaded and their
-     * return depends on the type of ID.
-     *
-     * @todo Change return type to size_t
-     */
-    unsigned int NTPC(geo::CryostatID const& cryoid) const
-      {
-        CryostatGeo const* pCryo = GetElementPtr(cryoid);
-        return pCryo? pCryo->NElements(): 0;
-      }
-    unsigned int NElements(geo::CryostatID const& cryoid) const
-      { return NTPC(cryoid); }
-    unsigned int NSiblingElements(geo::TPCID const& tpcid) const
-      { return NTPC(tpcid); }
     //@}
-
-
+    
+    
     //
     // access
     //
-    /// Returns whether we have the specified TPC
+    //@{
+    /// Returns whether we have the specified TPC.
     bool HasTPC(geo::TPCID const& tpcid) const
       {
         CryostatGeo const* pCryo = CryostatPtr(tpcid);
         return pCryo? pCryo->HasTPC(tpcid): false;
       }
-
-    /// Returns whether we have the specified TPC
     bool HasElement(geo::TPCID const& tpcid) const { return HasTPC(tpcid); }
+    //@}
 
 
     //@{
     /**
-     * @brief Returns the specified TPC
+     * @brief Returns the specified TPC.
      * @param tpcid ID of the tpc
+     * @return a constant reference to the specified TPC
+     * @throw cet::exception (`GeometryCore` category) if cryostat not present
+     * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
+     *
+     * The `GetElement()` method is overloaded and its return depends on the
+     * type of ID.
+     */
+    geo::TPCGeo const& TPC(geo::TPCID const& tpcid) const
+      { return Cryostat(tpcid).TPC(tpcid); }
+    geo::TPCGeo const& GetElement(geo::TPCID const& tpcid) const
+      { return TPC(tpcid); }
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the specified TPC.
      * @param tpc tpc number within the cryostat
      * @param cstat number of cryostat
      * @return a constant reference to the specified TPC
      * @throw cet::exception (`GeometryCore` category) if cryostat not present
      * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
      *
-     * The GetElement() method is overloaded and its return depends on the type
-     * of ID.
-     *
-     * @todo remove the version with integers
+     * @deprecated Use `TPC(geo::TPCID const&) const` instead.
      */
-    TPCGeo const& TPC
+    geo::TPCGeo const& TPC
       (unsigned int const tpc   = 0, unsigned int const cstat = 0) const
       { return TPC(geo::TPCID(cstat, tpc)); }
-    TPCGeo const& TPC(geo::TPCID const& tpcid) const
-      { return Cryostat(tpcid).TPC(tpcid); }
-    TPCGeo const& GetElement(geo::TPCID const& tpcid) const
-      { return TPC(tpcid); }
     //@}
 
     //@{
@@ -2509,7 +2641,9 @@ namespace geo {
     TPCGeo const* GetElementPtr(geo::TPCID const& tpcid) const
       { return TPCPtr(tpcid); }
     //@}
-
+    
+    
+    //@{
     /**
      * @brief Returns the ID of the TPC at specified location.
      * @param worldLoc 3D coordinates of the point (world reference frame) [cm]
@@ -2517,11 +2651,12 @@ namespace geo {
      */
     geo::TPCID FindTPCAtPosition(double const worldLoc[3]) const
       { return FindTPCAtPosition(geo::vect::makePointFromCoords(worldLoc)); }
-
+    //@}
+    
     //@{
     /**
      * @brief Returns the ID of the TPC at specified location.
-     * @param worldLoc 3D point (world reference frame, centimeters)
+     * @param point 3D point (world reference frame, centimeters)
      * @return the TPC ID, or an invalid one if no TPC is there
      */
     geo::TPCID FindTPCAtPosition(geo::Point_t const& point) const;
@@ -2529,12 +2664,14 @@ namespace geo {
       { return FindTPCAtPosition(geo::vect::toPoint(point)); }
     //@}
 
+    //@{
     /**
      * @brief Returns the TPC at specified location.
      * @param point the location [cm]
      * @return the `geo::TPCGeo` including `point`, or `nullptr` if none
      */
     geo::TPCGeo const* PositionToTPCptr(geo::Point_t const& point) const;
+    //@}
 
 
     //@{
@@ -2549,29 +2686,34 @@ namespace geo {
       { return PositionToTPC(geo::vect::makePointFromCoords(point)); }
     //@}
 
+    //@{
     /**
      * @brief Returns the TPC at specified location.
-     * @param point the location [cm]
+     * @param worldLoc the location [cm]
      * @param tpc _(output)_ where to store the number of TPC
      * @param cstat _(output)_ where to store the number of cryostat
      * @return a constant reference to the `geo::TPCGeo` including `point`
      * @throws cet::exception ("Geometry" category) if no TPC matches
      * @deprecated Use `PositionToTPCID()` or `PositionToTPC().ID()`
      */
-    TPCGeo const& PositionToTPC
+    geo::TPCGeo const& PositionToTPC
       (double const worldLoc[3], unsigned int &tpc, unsigned int &cstat) const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the TPC at specified location.
-     * @param point the location [cm]
+     * @param worldLoc the location [cm]
      * @param tpcid _(output)_ where to store the TPC ID
      * @return a constant reference to the `geo::TPCGeo` including `point`
      * @throws cet::exception ("Geometry" category) if no TPC matches
      * @deprecated Use `PositionToTPCID()` or `PositionToTPC().ID()`
      */
-    TPCGeo const& PositionToTPC
+    geo::TPCGeo const& PositionToTPC
       (double const worldLoc[3], TPCID& tpcid) const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the ID of the TPC at specified location.
      * @param point the location [cm]
@@ -2579,67 +2721,95 @@ namespace geo {
      * @see `PositionToTPC()`
      */
     geo::TPCID PositionToTPCID(geo::Point_t const& point) const;
+    //@}
 
     ///
     /// iterators
     ///
-
+    
+    //@{
     /// Initializes the specified ID with the ID of the first TPC.
     void GetBeginID(geo::TPCID& id) const
       { GetBeginID(id.asCryostatID()); id.TPC = 0; }
-
+    //@}
+    
+    //@{
     /// Initializes the specified ID with the invalid ID after the last TPC.
     void GetEndID(geo::TPCID& id) const
       { GetEndID(id.asCryostatID()); id.TPC = 0; }
-
+    //@}
+    
+    //@{
     /// Sets the ID to the ID after the specified one.
     /// @return whether the ID is actually valid (validity flag is also set)
     bool IncrementID(geo::TPCID& id) const; // inline implementation
-
+    //@}
+    
+    //@{
     /// Returns the ID of the first TPC in the specified cryostat.
     geo::TPCID GetBeginTPCID(geo::CryostatID const& id) const
       { return { id, 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the (possibly invalid) ID after the last TPC of the specified
     /// cryostat.
     geo::TPCID GetEndTPCID(geo::CryostatID const& id) const
       { return { id.Cryostat + 1, 0 }; }
-
-
+    //@}
+    
+    
+    //@{
     /// Returns an iterator pointing to the first TPC ID in the detector.
     TPC_id_iterator begin_TPC_id() const
       { return TPC_id_iterator(this, TPC_id_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last TPC ID in the detector.
     TPC_id_iterator end_TPC_id() const
       { return TPC_id_iterator(this, TPC_id_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first TPC ID in the specified
     /// cryostat.
     TPC_id_iterator begin_TPC_id(geo::CryostatID const& cid) const
       { return TPC_id_iterator(this, GetBeginTPCID(cid)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last TPC ID in the specified
     /// cryostat.
     TPC_id_iterator end_TPC_id(geo::CryostatID const& cid) const
       { return TPC_id_iterator(this, GetEndTPCID(cid)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first TPC in the detector
     TPC_iterator begin_TPC() const
       { return TPC_iterator(this, TPC_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last TPC in the detector
     TPC_iterator end_TPC() const
       { return TPC_iterator(this, TPC_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first TPC in the detector
     TPC_iterator begin_TPC(geo::CryostatID const& cid) const
       { return TPC_iterator(this, GetBeginTPCID(cid)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last TPC in the detector
     TPC_iterator end_TPC(geo::CryostatID const& cid) const
       { return TPC_iterator(this, GetEndTPCID(cid)); }
-
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all TPC IDs of the detector
      * @returns an object suitable for ranged-for loops on all TPC IDs
@@ -2654,12 +2824,10 @@ namespace geo {
      * } // for all TPC
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    IteratorBox<
-      TPC_id_iterator,
-      &GeometryCore::begin_TPC_id, &GeometryCore::end_TPC_id
-      >
-    IterateTPCIDs() const { return { this }; }
-
+    inline auto IterateTPCIDs() const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all TPC IDs of the specified cryostat.
      * @param cid the ID of the cryostat to loop the TPC IDs of
@@ -2678,27 +2846,36 @@ namespace geo {
      * } // for all TPC in cryostat #1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      TPC_id_iterator, geo::CryostatID,
-      &GeometryCore::begin_TPC_id, &GeometryCore::end_TPC_id
-      >
-    IterateTPCIDs(geo::CryostatID const& cid) const { return { this, cid }; }
-
+    inline auto IterateTPCIDs(geo::CryostatID const& cid) const;
+    //@}
+    
+    //@{
     /// `IterateTPCIDs()` is not supported on TPC IDs.
     void IterateTPCIDs(geo::TPCID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCIDs()` is not supported on plane IDs.
     void IterateTPCIDs(geo::PlaneID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCIDs()` is not supported on wire IDs.
     void IterateTPCIDs(geo::WireID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCIDs()` is not supported on readout IDs.
     void IterateTPCIDs(readout::TPCsetID const&) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCIDs()` is not supported on readout IDs.
     void IterateTPCIDs(readout::ROPID const&) const = delete;
-
+    //@}
+    
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all TPCs of the detector.
      * @returns an object suitable for ranged-for loops on all TPCs
@@ -2714,10 +2891,10 @@ namespace geo {
      * } // for TPCs
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    IteratorBox
-      <TPC_iterator, &GeometryCore::begin_TPC, &GeometryCore::end_TPC>
-    IterateTPCs() const { return { this }; }
-
+    inline auto IterateTPCs() const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all TPCs of the specified cryostat.
      * @param cid the ID of the cryostat to loop the TPCs of
@@ -2735,27 +2912,34 @@ namespace geo {
      * } // for TPCs in cryostat 1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      TPC_iterator, geo::CryostatID,
-      &GeometryCore::begin_TPC, &GeometryCore::end_TPC
-      >
-    IterateTPCs(geo::CryostatID const& cid) const { return { this, cid }; }
-
+    inline auto IterateTPCs(geo::CryostatID const& cid) const;
+    //@}
+    
+    //@{
     /// `IterateTPCs()` is not supported on TPC IDs.
     void IterateTPCs(geo::TPCID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCs()` is not supported on plane IDs.
     void IterateTPCs(geo::PlaneID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCs()` is not supported on wire IDs.
     void IterateTPCs(geo::WireID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCs()` is not supported on readout IDs.
     void IterateTPCs(readout::TPCsetID const&) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateTPCs()` is not supported on readout IDs.
     void IterateTPCs(readout::ROPID const&) const = delete;
-
+    //@}
+    
 
     //
     // single object features
@@ -2765,17 +2949,28 @@ namespace geo {
     /**
      * @brief Returns the half width of the active volume of the specified TPC.
      * @param tpcid ID of the TPC
+     * @return the value of the half width of the specified TPC
+     * @throw cet::exception (`GeometryCore` category) if cryostat not present
+     * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
+     * @see `geo::TPCGeo::ActiveHalfWidth()`
+     *
+     * @todo rename the function
+     */
+    geo::Length_t DetHalfWidth(geo::TPCID const& tpcid) const;
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the half width of the active volume of the specified TPC.
      * @param tpc TPC number within the cryostat
      * @param cstat number of cryostat
      * @return the value of the half width of the specified TPC
      * @throw cet::exception (`GeometryCore` category) if cryostat not present
      * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
-     * @see geo::TPCGeo::ActiveHalfWidth()
+     * @see `geo::TPCGeo::ActiveHalfWidth()`
      *
-     * @todo deprecate this function
-     * @todo rename the function
+     * @deprecated Use `DetHalfWidth(geo::TPCID const&) const` instead.
      */
-    geo::Length_t DetHalfWidth(geo::TPCID const& tpcid) const;
     geo::Length_t DetHalfWidth
       (unsigned int tpc = 0, unsigned int cstat = 0) const
       { return DetHalfWidth(geo::TPCID(cstat, tpc)); }
@@ -2785,19 +2980,32 @@ namespace geo {
     /**
      * @brief Returns the half height of the active volume of the specified TPC.
      * @param tpcid ID of the TPC
+     * @return the value of the half height of the specified TPC
+     * @throw cet::exception (`GeometryCore` category) if cryostat not present
+     * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
+     * @see `geo::TPCGeo::ActiveHalfHeight()`
+     *
+     * See `geo::TPCGeo::ActiveHalfHeight()` for more details.
+     *
+     * @todo rename the function
+     */
+    geo::Length_t DetHalfHeight(geo::TPCID const& tpcid) const;
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the half height of the active volume of the specified TPC.
      * @param tpc TPC number within the cryostat
      * @param cstat number of cryostat
      * @return the value of the half height of the specified TPC
      * @throw cet::exception (`GeometryCore` category) if cryostat not present
      * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
-     * @see geo::TPCGeo::ActiveHalfHeight()
+     * @see `geo::TPCGeo::ActiveHalfHeight()`
      *
      * See `geo::TPCGeo::ActiveHalfHeight()` for more details.
      *
-     * @todo deprecate this function
-     * @todo rename the function
+     * @deprecated Use `DetHalfHeight(geo::TPCID const&) const` instead.
      */
-    geo::Length_t DetHalfHeight(geo::TPCID const& tpcid) const;
     geo::Length_t DetHalfHeight
       (unsigned int tpc = 0, unsigned int cstat = 0) const
       { return DetHalfHeight(geo::TPCID(cstat, tpc)); }
@@ -2807,19 +3015,33 @@ namespace geo {
     /**
      * @brief Returns the length of the active volume of the specified TPC.
      * @param tpcid ID of the TPC
+     * @return the value of the length of the specified TPC
+     * @throw cet::exception (`GeometryCore` category) if cryostat not present
+     * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
+     * @see `geo::TPCGeo::ActiveLength()`
+     *
+     * See `geo::TPCGeo::ActiveLength()` for more details.
+     *
+     * @todo rename the function
+     */
+    geo::Length_t DetLength(geo::TPCID const& tpcid) const;
+    //@}
+
+
+    //@{
+    /**
+     * @brief Returns the length of the active volume of the specified TPC.
      * @param tpc TPC number within the cryostat
      * @param cstat number of cryostat
      * @return the value of the length of the specified TPC
      * @throw cet::exception (`GeometryCore` category) if cryostat not present
      * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
-     * @see geo::TPCGeo::ActiveLength()
+     * @see `geo::TPCGeo::ActiveLength()`
      *
      * See `geo::TPCGeo::ActiveLength()` for more details.
      *
-     * @todo deprecate this function
-     * @todo rename the function
+     * @deprecated Use `DetLength(geo::TPCID const&) const` instead.
      */
-    geo::Length_t DetLength(geo::TPCID const& tpcid) const;
     geo::Length_t DetLength(unsigned int tpc = 0, unsigned int cstat = 0) const
       { return DetLength(geo::TPCID(cstat, tpc)); }
     //@}
@@ -2829,6 +3051,39 @@ namespace geo {
     /**
      * @brief Returns the center of side of the detector facing the beam.
      * @param tpcid ID of the TPC
+     * @return position of center of TPC face toward beam as `DefaultPoint_t`
+     * @see `geo::TPCGeo::GetFrontFaceCenter()`
+     *
+     * Effectively, this is the center of the side of TPC active volume
+     * which faces the negative _z_ direction, the first that a beam following
+     * the positive _z_ direction would hit.
+     */
+    DefaultPoint_t GetTPCFrontFaceCenter(geo::TPCID const& tpcid) const
+      { return GetTPCFrontFaceCenter<DefaultPoint_t>(); }
+    //@}
+
+
+    //@{
+    /**
+     * @brief Returns the center of side of the detector facing the beam.
+     * @tparam Point type of point object to return
+     * @param tpcid ID of the TPC
+     * @return the position of center of TPC face toward the beam
+     * @see `geo::TPCGeo::GetFrontFaceCenter()`
+     *
+     * Effectively, this is the center of the side of TPC active volume
+     * which faces the negative _z_ direction, the first that a beam following
+     * the positive _z_ direction would hit.
+     */
+    template <typename Point>
+    Point GetTPCFrontFaceCenter(geo::TPCID const& tpcid) const
+      { return TPC(tpcid).GetFrontFaceCenter<Point>(); }
+    //@}
+
+
+    //@{
+    /**
+     * @brief Returns the center of side of the detector facing the beam.
      * @param tpc tpc number within the cryostat
      * @param cstat number of cryostat
      * @return the position of center of TPC face toward the beam
@@ -2836,17 +3091,25 @@ namespace geo {
      * Effectively, this is the center of the side of TPC active volume
      * which faces the negative _z_ direction, the first that a beam following
      *
+     * @deprecated Use `GetTPCFrontFaceCenter(geo::TPCID const&) const` instead.
      */
-    template <typename Point>
-    Point GetTPCFrontFaceCenter(geo::TPCID const& tpcid) const
-      { return TPC(tpcid).GetFrontFaceCenter<Point>(); }
-    DefaultPoint_t GetTPCFrontFaceCenter(geo::TPCID const& tpcid) const
-      { return GetTPCFrontFaceCenter<DefaultPoint_t>(); }
-
     template <typename Point>
     Point GetTPCFrontFaceCenter
       (unsigned int tpc = 0, unsigned int cstat = 0) const
       { return GetTPCFrontFaceCenter<Point>(geo::TPCID(cstat, tpc)); }
+    //@}
+
+
+    //@{
+    /**
+     * @brief Returns the center of side of the detector facing the beam.
+     * @tparam Point type of point object to return
+     * @param tpc tpc number within the cryostat
+     * @param cstat number of cryostat
+     * @return the position of center of TPC face toward the beam
+     *
+     * @deprecated Use `GetTPCFrontFaceCenter(geo::TPCID const&) const` instead.
+     */
     DefaultPoint_t GetTPCFrontFaceCenter
       (unsigned int tpc = 0, unsigned int cstat = 0) const
       { return GetTPCFrontFaceCenter<DefaultPoint_t>(cstat, tpc); }
@@ -2859,27 +3122,37 @@ namespace geo {
 
     //@{
     /**
-     * @brief Return the name of specified LAr TPC volume
+     * @brief Returns the name of specified LAr TPC volume.
      * @param tpcid ID of the TPC
+     * @return the name of the specified TPC
+     *
+     * This information is used by Geant4 simulation.
+     *
+     * @todo What if it does not exist?
+     */
+    std::string GetLArTPCVolumeName(geo::TPCID const& tpcid) const;
+    //@}
+
+    //@{
+    /**
+     * @brief Return the name of specified LAr TPC volume
      * @param tpc index of TPC in the cryostat
      * @param cstat index of the cryostat
      * @return the name of the specified TPC
      *
-     * This information is used by Geant4 simulation
-     *
-     * @todo Use a TPCID instead
-     * @todo What if it does not exist?
+     * @deprecated Use `GetLArTPCVolumeName(geo::TPCID const&) const` instead.
      */
-    std::string GetLArTPCVolumeName(geo::TPCID const& tpcid) const;
     std::string GetLArTPCVolumeName
       (unsigned int const tpc = 0, unsigned int const cstat = 0) const
       { return GetLArTPCVolumeName(geo::TPCID(cstat, tpc)); }
     //@}
 
-    /// @} TPC access and information
+    /// @}
+    // --- END -- TPC access and information -----------------------------------
 
 
 
+    // --- BEGIN -- Plane access and information -------------------------------
     /// @name Plane access and information
     /// @{
 
@@ -2887,21 +3160,58 @@ namespace geo {
     // group features
     //
 
+    //@{
+    /**
+     * @brief Returns the total number of planes in the specified TPC
+     * @param tpcid TPC ID
+     * @return number of planes in specified TPC, or 0 if no TPC found
+     *
+     * The `NElements()` methods are overloaded and their
+     * return depends on the type of ID.
+     *
+     * @todo Change return type to `std::size_t`.
+     */
+    unsigned int Nplanes(geo::TPCID const& tpcid) const
+      {
+        TPCGeo const* pTPC = GetElementPtr(tpcid);
+        return pTPC? pTPC->NElements(): 0;
+      }
+    unsigned int NElements(geo::TPCID const& tpcid) const
+      { return Nplanes(tpcid); }
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the number of planes in the TPC containing `planeid`.
+     * @param planeid plane ID
+     * @return number of planes in TPC containing `planeid`, or `0` if no TPC
+     *
+     * The `NSiblingElements()` methods are overloaded and their
+     * return depends on the type of ID.
+     */
+    unsigned int NSiblingElements(geo::PlaneID const& planeid) const
+      { return Nplanes(planeid); }
+    //@}
+
+    //@{
     /**
      * @brief Returns the total number of wire planes in the specified TPC
      * @param tpc tpc number within the cryostat
      * @param cstat cryostat number
-     *
-     * @todo Make all the arguments mandatory (as TPCID)
-     * @todo Change return type to size_t
-     * @todo what happens if TPC does not exist?
+     * 
+     * @deprecated Use `Nplanes(geo::TPCID const&) const` instead.
      */
-    unsigned int Nplanes(unsigned int tpc   = 0, unsigned int cstat = 0) const
+    unsigned int Nplanes(unsigned int tpc = 0, unsigned int cstat = 0) const
       { return Nplanes(geo::TPCID(cstat, tpc)); }
+    //@}
 
+    //@{
     /// Returns the largest number of planes among all TPCs in this detector
     unsigned int MaxPlanes() const;
-
+    //@}
+    
+    
+    //@{
     /**
      * @brief Returns a container with one entry per wire plane.
      * @tparam T type of data in the container
@@ -2932,7 +3242,9 @@ namespace geo {
     template <typename T>
     geo::PlaneDataContainer<T> makePlaneData() const
       { return { Ncryostats(), MaxTPCs(), MaxPlanes() }; }
-
+    //@}
+    
+    //@{
     /**
      * @brief Returns a container with one entry per wire plane.
      * @tparam T type of data in the container
@@ -2954,31 +3266,10 @@ namespace geo {
     template <typename T>
     geo::PlaneDataContainer<T> makePlaneData(T const& defValue) const
       { return { Ncryostats(), MaxTPCs(), MaxPlanes(), defValue }; }
-
-
-    //@{
-    /**
-     * @brief Returns the total number of planes in the specified TPC
-     * @param tpcid TPC ID
-     * @return number of planes in specified TPC, or 0 if no TPC found
-     *
-     * The NElements() and NSiblingElements() methods are overloaded and their
-     * return depends on the type of ID.
-     *
-     * @todo Change return type to size_t
-     */
-    unsigned int Nplanes(geo::TPCID const& tpcid) const
-      {
-        TPCGeo const* pTPC = GetElementPtr(tpcid);
-        return pTPC? pTPC->NElements(): 0;
-      }
-    unsigned int NElements(geo::TPCID const& tpcid) const
-      { return Nplanes(tpcid); }
-    unsigned int NSiblingElements(geo::PlaneID const& planeid) const
-      { return Nplanes(planeid); }
     //@}
-
-
+    
+    
+    //@{
     /**
      * @brief Returns the number of views (different wire orientations)
      *
@@ -2991,7 +3282,10 @@ namespace geo {
      * @todo Change return type to size_t
      */
     unsigned int Nviews() const;
-
+    //@}
+    
+    
+    //@{
     /**
      * @brief Returns a list of possible PlaneIDs in the detector
      * @return a constant reference to the set of plane IDs
@@ -3001,6 +3295,7 @@ namespace geo {
      */
     [[deprecated("Iterate through geo::GeometryCore::IteratePlaneIDs() instead")]]
     std::set<PlaneID> const& PlaneIDs() const;
+    //@}
 
 
     //
@@ -3011,8 +3306,8 @@ namespace geo {
     /**
      * @brief Returns whether we have the specified plane
      *
-     * The HasElement() method is overloaded and its meaning depends on the type
-     * of ID.
+     * The `HasElement()` method is overloaded and its meaning depends on the
+     * type of ID.
      *
      */
     bool HasPlane(geo::PlaneID const& planeid) const
@@ -3026,25 +3321,16 @@ namespace geo {
 
     //@{
     /**
-     * @brief Returns the specified wire
+     * @brief Returns the specified wire plane.
      * @param planeid ID of the plane
-     * @param p plane number within the TPC
-     * @param tpc TPC number within the cryostat
-     * @param cstat number of cryostat
      * @return a constant reference to the specified plane
      * @throw cet::exception (`GeometryCore` category) if cryostat not present
      * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
      * @throw cet::exception (`PlaneOutOfRange` category) if no such plane
      *
-     * The GetElement() method is overloaded and its return depends on the type
-     * of ID.
-     *
-     * @todo remove the version with integers
+     * The `GetElement()` method is overloaded and its return depends on the
+     * type of ID.
      */
-    PlaneGeo const& Plane
-      (unsigned int const p, unsigned int const tpc   = 0, unsigned int const cstat = 0)
-      const
-      { return Plane(geo::PlaneID(cstat, tpc, p)); }
     PlaneGeo const& Plane(geo::PlaneID const& planeid) const
       { return TPC(planeid).Plane(planeid); }
     PlaneGeo const& GetElement(geo::PlaneID const& planeid) const
@@ -3053,11 +3339,30 @@ namespace geo {
 
     //@{
     /**
+     * @brief Returns the specified wire plane.
+     * @param p plane number within the TPC
+     * @param tpc TPC number within the cryostat
+     * @param cstat number of cryostat
+     * @return a constant reference to the specified plane
+     * @throw cet::exception (`GeometryCore` category) if cryostat not present
+     * @throw cet::exception (`TPCOutOfRange` category) if no such TPC
+     * @throw cet::exception (`PlaneOutOfRange` category) if no such plane
+     *
+     * @deprecated Use `Plane(geo::PlaneID const&) const` instead.
+     */
+    PlaneGeo const& Plane
+      (unsigned int const p, unsigned int const tpc   = 0, unsigned int const cstat = 0)
+      const
+      { return Plane(geo::PlaneID(cstat, tpc, p)); }
+    //@}
+
+    //@{
+    /**
      * @brief Returns the specified plane
      * @param planeid plane ID
      * @return a constant pointer to the specified plane, or nullptr if none
      *
-     * The GetElementPtr() method is overloaded and its return depends on the
+     * The `GetElementPtr()` method is overloaded and its return depends on the
      * type of ID.
      */
     PlaneGeo const* PlanePtr(geo::PlaneID const& planeid) const
@@ -3073,90 +3378,130 @@ namespace geo {
     // iterators
     //
 
+    //@{
     /// Initializes the specified ID with the ID of the first plane.
     void GetBeginID(geo::PlaneID& id) const
       { GetBeginID(id.asTPCID()); id.Plane = 0; }
-
+    //@}
+    
+    //@{
     /// Initializes the specified ID with the invalid ID after the last plane.
     void GetEndID(geo::PlaneID& id) const
       { GetEndID(id.asTPCID()); id.Plane = 0; }
-
+    //@}
+    
+    //@{
     /// Sets the ID to the ID after the specified one.
     /// @return whether the ID is actually valid (validity flag is also set)
     bool IncrementID(geo::PlaneID& id) const; // inline implementation
-
+    //@}
+    
+    //@{
     /// Returns the ID of the first plane of the specified cryostat.
     geo::PlaneID GetBeginPlaneID(geo::CryostatID const& id) const
       { return { GetBeginTPCID(id), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the (possibly invalid) ID after the last plane of the specified
     /// cryostat.
     geo::PlaneID GetEndPlaneID(geo::CryostatID const& id) const
       { return { GetEndTPCID(id), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the ID of the first plane of the specified TPC.
     geo::PlaneID GetBeginPlaneID(geo::TPCID const& id) const
       { return { id, 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the (possibly invalid) ID after the last plane of the specified
     /// TPC.
     geo::PlaneID GetEndPlaneID(geo::TPCID const& id) const
       { return { GetNextID(id), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first plane ID in the detector
     plane_id_iterator begin_plane_id() const
       { return plane_id_iterator(this, plane_id_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last plane ID in the detector
     plane_id_iterator end_plane_id() const
       { return plane_id_iterator(this, plane_id_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first plane ID in the specified
     /// cryostat.
     plane_id_iterator begin_plane_id(geo::CryostatID const& ID) const
       { return plane_id_iterator(this, GetBeginPlaneID(ID)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last plane ID in the specified
     /// cryostat.
     plane_id_iterator end_plane_id(geo::CryostatID const& ID) const
       { return plane_id_iterator(this, GetEndPlaneID(ID)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first plane ID in the specified
     /// TPC.
     plane_id_iterator begin_plane_id(geo::TPCID const& ID) const
       { return plane_id_iterator(this, GetBeginPlaneID(ID)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last plane ID in the specified
     /// TPC.
     plane_id_iterator end_plane_id(geo::TPCID const& ID) const
       { return plane_id_iterator(this, GetEndPlaneID(ID)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first plane in the detector
     plane_iterator begin_plane() const
       { return plane_iterator(this, plane_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last plane in the detector
     plane_iterator end_plane() const
       { return plane_iterator(this, plane_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first plane in the specified
     /// cryostat.
     plane_iterator begin_plane(geo::CryostatID const& ID) const
       { return plane_iterator(this, GetBeginPlaneID(ID)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last plane in the specified
     /// cryostat.
     plane_iterator end_plane(geo::CryostatID const& ID) const
       { return plane_iterator(this, GetEndPlaneID(ID)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first plane in the specified TPC.
     plane_iterator begin_plane(geo::TPCID const& ID) const
       { return plane_iterator(this, GetBeginPlaneID(ID)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last plane in the specified TPC.
     plane_iterator end_plane(geo::TPCID const& ID) const
       { return plane_iterator(this, GetEndPlaneID(ID)); }
-
+    //@}
+    
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all plane IDs of the detector.
      * @returns an object suitable for ranged-for loops on all plane IDs
@@ -3171,12 +3516,10 @@ namespace geo {
      * } // for all plane IDs
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    IteratorBox<
-      plane_id_iterator,
-      &GeometryCore::begin_plane_id, &GeometryCore::end_plane_id
-      >
-    IteratePlaneIDs() const { return { this }; }
-
+    inline auto IteratePlaneIDs() const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all plane IDs of the specified
      *        cryostat.
@@ -3196,12 +3539,10 @@ namespace geo {
      * } // for all planes in cryostat #1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      plane_id_iterator, geo::CryostatID,
-      &GeometryCore::begin_plane_id, &GeometryCore::end_plane_id
-      >
-    IteratePlaneIDs(geo::CryostatID const& cid) const { return { this, cid }; }
-
+    inline auto IteratePlaneIDs(geo::CryostatID const& cid) const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all plane IDs of the specified TPC.
      * @param tid the ID of the TPC to loop the plane IDs of
@@ -3220,26 +3561,32 @@ namespace geo {
      * } // for all planes in C:0 T:1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      plane_id_iterator, geo::TPCID,
-      &GeometryCore::begin_plane_id, &GeometryCore::end_plane_id
-      >
-    IteratePlaneIDs(geo::TPCID const& tid) const { return { this, tid }; }
-
-
+    inline auto IteratePlaneIDs(geo::TPCID const& tid) const;
+    //@}
+    
+    
+    //@{
     /// `IteratePlaneIDs()` is not supported on plane IDs.
     void IteratePlaneIDs(geo::PlaneID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IteratePlaneIDs()` is not supported on wire IDs.
     void IteratePlaneIDs(geo::WireID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IteratePlaneIDs()` is not supported on readout IDs.
     void IteratePlaneIDs(readout::TPCsetID const&) const = delete;
-
+    //@}
+    
+    //@{
     /// `IteratePlaneIDs()` is not supported on readout IDs.
     void IteratePlaneIDs(readout::ROPID const&) const = delete;
+    //@}
+    
 
-
+    //@{
     /**
      * @brief Enables ranged-for loops on all planes of the detector.
      * @returns an object suitable for ranged-for loops on all planes
@@ -3253,12 +3600,10 @@ namespace geo {
      * } // for all planes
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    IteratorBox<
-      plane_iterator,
-      &GeometryCore::begin_plane, &GeometryCore::end_plane
-      >
-    IteratePlanes() const { return { this }; }
-
+    inline auto IteratePlanes() const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all planes of the specified cryostat.
      * @param cid the ID of the cryostat to loop the planes of
@@ -3276,12 +3621,10 @@ namespace geo {
      * } // for planes in cryostat 1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      plane_iterator, geo::CryostatID,
-      &GeometryCore::begin_plane, &GeometryCore::end_plane
-      >
-    IteratePlanes(geo::CryostatID const& cid) const { return { this, cid }; }
-
+    inline auto IteratePlanes(geo::CryostatID const& cid) const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all planes of the specified TPC.
      * @param tid the ID of the TPC to loop the planes of
@@ -3299,24 +3642,29 @@ namespace geo {
      * } // for planes in C:0 T:1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      plane_iterator, geo::TPCID,
-      &GeometryCore::begin_plane, &GeometryCore::end_plane
-      >
-    IteratePlanes(geo::TPCID const& tid) const { return { this, tid }; }
-
+    inline auto IteratePlanes(geo::TPCID const& tid) const;
+    //@}
+    
+    //@{
     /// `IteratePlanes()` is not supported on plane IDs.
     void IteratePlanes(geo::PlaneID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IteratePlanes()` is not supported on wire IDs.
     void IteratePlanes(geo::WireID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IteratePlanes()` is not supported on readout IDs.
     void IteratePlanes(readout::TPCsetID const&) const = delete;
-
+    //@}
+    
+    //@{
     /// `IteratePlanes()` is not supported on readout IDs.
     void IteratePlanes(readout::ROPID const&) const = delete;
-
+    //@}
+    
 
     //
     // single object features
@@ -3324,54 +3672,87 @@ namespace geo {
 
     //@{
     /**
-     * @brief Returns the distance between two planes
+     * @brief Returns the distance between two planes [cm]
+     * @param pid1 ID of the first plane
+     * @param pid2 ID of the second plane
+     * @return distance between the planes
+     * @see `geo::TPCGeo::PlanePitch()`
+     *
+     * The distance is defined to be always non-negative.
+     * 
+     * If the two planes do not belong to the same TPC the result is undefined.
+     *
+     * @todo change the behaviour when planes are on different TPCs
+     *       (either give the right answer or throw an exception).
+     */
+    geo::Length_t PlanePitch(geo::PlaneID const& pid1, geo::PlaneID const& pid2) const;
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the distance between two planes [cm]
+     * @param tpcid ID of the TPC where the two planes are contained
      * @param p1 index of the first plane
      * @param p2 index of the second plane
-     * @param tpc tpc number within the cryostat
-     * @param cstat cryostat number
      * @return distance between the planes
+     * @see `geo::TPCGeo::PlanePitch()`
      *
-     * @todo add a version with plane IDs
-     * @todo deprecate this function
-     * @todo add a default version for a given TPCID
-     * @todo add a version with two plane indices for a given TPCID
-     * @todo return the absolute value of the distance (makes the order unimportant)
-     * @todo document what will happen (in the future methods) with planes on different TPCs
+     * The distance is defined to be always non-negative.
      */
     geo::Length_t PlanePitch(
       geo::TPCID const& tpcid,
       geo::PlaneID::PlaneID_t p1 = 0, geo::PlaneID::PlaneID_t p2 = 1
       )
       const;
-    geo::Length_t PlanePitch(geo::PlaneID const& pid1, geo::PlaneID const& pid2) const;
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the distance between two planes [cm]
+     * @param p1 index of the first plane
+     * @param p2 index of the second plane
+     * @param tpc tpc number within the cryostat
+     * @param cstat cryostat number
+     * @return distance between the planes
+     * 
+     * @deprecated Use
+     *             `PlanePitch(geo::TPCID const&, geo::PlaneID::PlaneID_t, geo::PlaneID::PlaneID_t p2) const`
+     *             instead.
+     */
     geo::Length_t PlanePitch(unsigned int p1 = 0,
                              unsigned int p2 = 1,
                              unsigned int tpc = 0,
                              unsigned int cstat = 0) const;
     //@}
 
+    //@{
     /**
-     * @brief Returns the view (wire orientation) on the channels of specified TPC plane
-     * @param plane TPC plane ID
-     * @return the type of signal on the specified plane, or geo::kUnknown
+     * @brief Returns the view on the channels of specified TPC plane.
+     * @param pid ID of the plane
+     * @return the type of signal on the specified plane, or `geo::kUnknown`
      */
     View_t View(geo::PlaneID const& pid) const;
+    //@}
 
+    //@{
     /**
-     * @brief Returns the type of signal on the channels of specified TPC plane
-     * @param plane TPC plane ID
-     * @return the type of signal on the specified plane, or geo::kMysteryType
+     * @brief Returns the type of signal on the channels of specified TPC plane.
+     * @param pid ID of the plane
+     * @return the type of signal on the specified plane, or `geo::kMysteryType`
+     * @throws cet::exception (category: `"GeometryCore"`) if can't map the
+     *                        wire plane to any readout plane (ROP)
      *
      * Assumes that all the channels on the plane have the same signal type.
-     *
-     * @todo verify that kMysteryType is returned on invalid plane
      */
     SigType_t SignalType(geo::PlaneID const& pid) const;
+    //@}
 
 
-    /// @} Plane access and information
+    /// @}
+    // --- END -- Plane access and information ---------------------------------
 
 
+    // --- BEGIN -- Wire access and information --------------------------------
     /// @name Wire access and information
     /// @{
 
@@ -3379,30 +3760,30 @@ namespace geo {
     // group features
     //
 
+    //@{
     /**
      * @brief Returns the total number of wires in the specified plane
      * @param p plane number within the TPC
      * @param tpc tpc number within the cryostat
      * @param cstat cryostat number
      *
-     * @todo Make all the arguments mandatory (as PlaneID)
-     * @todo Change return type to size_t
-     * @todo what happens if it does not exist?
+     * @deprecated Use `Nwires(geo::PlaneID const&) const` instead.
      */
     unsigned int Nwires
       (unsigned int p, unsigned int tpc   = 0, unsigned int cstat = 0) const
       { return Nwires(geo::PlaneID(cstat, tpc, p)); }
+    //@}
 
     //@{
     /**
-     * @brief Returns the total number of wires in the specified plane
+     * @brief Returns the total number of wires in the specified plane.
      * @param planeid plane ID
      * @return number of wires in specified plane, or 0 if no plane found
      *
-     * The NElements() and NSiblingElements() methods are overloaded and their
+     * The `NElements()` methods are overloaded and their
      * return depends on the type of ID.
      *
-     * @todo Change return type to size_t
+     * @todo Change return type to `std::size_t`
      */
     unsigned int Nwires(geo::PlaneID const& planeid) const
       {
@@ -3411,13 +3792,28 @@ namespace geo {
       }
     unsigned int NElements(geo::PlaneID const& planeid) const
       { return Nwires(planeid); }
+    //@}
+    
+    //@{
+    /**
+     * @brief Returns the number of wires in the plane containing `wireid`.
+     * @param wireid plane ID
+     * @return number of wires in the plane with `wireid`, or `0` if no plane.
+     *
+     * The `NSiblingElements()` methods are overloaded and their
+     * return depends on the type of ID.
+     *
+     * @todo Change return type to std::size_t
+     */
     unsigned int NSiblingElements(geo::WireID const& wireid) const
       { return Nwires(wireid); }
+    //@}
 
+    //@{
     /// Returns the largest number of wires among all planes in this detector
     unsigned int MaxWires() const;
-
     //@}
+
 
 
     //
@@ -3479,110 +3875,162 @@ namespace geo {
     // iterators
     //
 
+    //@{
     /// Initializes the specified ID with the ID of the first wire.
     void GetBeginID(geo::WireID& id) const
       { GetBeginID(id.asPlaneID()); id.Wire = 0; }
-
+    //@}
+    
+    //@{
     /// Initializes the specified ID with the invalid ID after the last wire.
     void GetEndID(geo::WireID& id) const
       { GetEndID(id.asPlaneID()); id.Wire = 0; }
-
+    //@}
+    
+    //@{
     /// Sets the ID to the ID after the specified one.
     /// @return whether the ID is actually valid (validity flag is also set)
     bool IncrementID(geo::WireID& id) const; // inline implementation
-
+    //@}
+    
+    //@{
     /// Returns the ID of the first wire in the specified cryostat.
     geo::WireID GetBeginWireID(geo::CryostatID const& id) const
       { return { GetBeginPlaneID(id), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the (possibly invalid) ID after the last wire in the specified
     /// cryostat.
     geo::WireID GetEndWireID(geo::CryostatID const& id) const
       { return { GetEndPlaneID(id), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the ID of the first wire of the specified TPC.
     geo::WireID GetBeginWireID(geo::TPCID const& id) const
       { return { geo::PlaneID(id, 0), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the (possibly invalid) ID after the last wire of the specified
     /// TPC.
     geo::WireID GetEndWireID(geo::TPCID const& id) const
       { return { geo::PlaneID(GetNextID(id), 0), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the ID of the first wire of the specified wire plane.
     geo::WireID GetBeginWireID(geo::PlaneID const& id) const
       { return { id, 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns the (possibly invalid) ID after the last wire of the specified
     /// wire plane.
     geo::WireID GetEndWireID(geo::PlaneID const& id) const
       { return { GetNextID(id), 0 }; }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire ID in the detector.
     wire_id_iterator begin_wire_id() const
       { return wire_id_iterator(this, wire_id_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire ID in the detector.
     wire_id_iterator end_wire_id() const
       { return wire_id_iterator(this, wire_id_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire ID in specified cryostat.
     wire_id_iterator begin_wire_id(geo::CryostatID const& id) const
       { return wire_id_iterator(this, GetBeginWireID(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire ID in specified
     /// cryostat.
     wire_id_iterator end_wire_id(geo::CryostatID const& id) const
       { return wire_id_iterator(this, GetEndWireID(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire ID in specified TPC.
     wire_id_iterator begin_wire_id(geo::TPCID const& id) const
       { return wire_id_iterator(this, GetBeginWireID(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire ID in specified TPC.
     wire_id_iterator end_wire_id(geo::TPCID const& id) const
       { return wire_id_iterator(this, GetEndWireID(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire ID in specified plane.
     wire_id_iterator begin_wire_id(geo::PlaneID const& id) const
       { return wire_id_iterator(this, GetBeginWireID(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire ID in specified plane.
     wire_id_iterator end_wire_id(geo::PlaneID const& id) const
       { return wire_id_iterator(this, GetEndWireID(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire in the detector
     wire_iterator begin_wire() const
       { return wire_iterator(this, wire_iterator::begin_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire in the detector
     wire_iterator end_wire() const
       { return wire_iterator(this, wire_iterator::end_pos); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire in specified cryostat.
     wire_iterator begin_wire(geo::CryostatID const& id) const
       { return wire_iterator(begin_wire_id(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire in specified cryostat.
     wire_iterator end_wire(geo::CryostatID const& id) const
       { return wire_iterator(end_wire_id(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire in specified TPC.
     wire_iterator begin_wire(geo::TPCID const& id) const
       { return wire_iterator(begin_wire_id(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire in specified TPC.
     wire_iterator end_wire(geo::TPCID const& id) const
       { return wire_iterator(end_wire_id(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing to the first wire in specified plane.
     wire_iterator begin_wire(geo::PlaneID const& id) const
       { return wire_iterator(begin_wire_id(id)); }
-
+    //@}
+    
+    //@{
     /// Returns an iterator pointing after the last wire in specified plane.
     wire_iterator end_wire(geo::PlaneID const& id) const
       { return wire_iterator(end_wire_id(id)); }
-
+    //@}
+    
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all wire IDs of the detector.
      * @returns an object suitable for ranged-for loops on all wire IDs
@@ -3598,12 +4046,10 @@ namespace geo {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      */
-    IteratorBox<
-      wire_id_iterator,
-      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
-      >
-    IterateWireIDs() const { return { this }; }
-
+    inline auto IterateWireIDs() const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all wire IDs of specified cryostat.
      * @param cid the ID of the cryostat to loop the wires of
@@ -3622,13 +4068,10 @@ namespace geo {
      * } // for all wires
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      wire_id_iterator,
-      geo::CryostatID,
-      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
-      >
-    IterateWireIDs(geo::CryostatID const& cid) const { return { this, cid }; }
-
+    inline auto IterateWireIDs(geo::CryostatID const& cid) const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all wire IDs of specified TPC.
      * @param tid the ID of the TPC to loop the wires of
@@ -3647,13 +4090,10 @@ namespace geo {
      * } // for all wires in C:0 T:1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      wire_id_iterator,
-      geo::TPCID,
-      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
-      >
-    IterateWireIDs(geo::TPCID const& tid) const { return { this, tid }; }
-
+    inline auto IterateWireIDs(geo::TPCID const& tid) const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all wire IDs of specified wire plane.
      * @param pid the ID of the wire plane to loop the wires of
@@ -3672,23 +4112,26 @@ namespace geo {
      * } // for all wires in C:0 T:0 P:1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      wire_id_iterator,
-      geo::PlaneID,
-      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
-      >
-    IterateWireIDs(geo::PlaneID const& pid) const { return { this, pid }; }
-
+    inline auto IterateWireIDs(geo::PlaneID const& pid) const;
+    //@}
+    
+    //@{
     /// `IterateWireIDs()` is not supported on wire IDs.
-    void IterateWireIDs(geo::WireID const& pid) const = delete;
-
+    void IterateWireIDs(geo::WireID const& wid) const = delete;
+    //@}
+    
+    //@{
     /// `IterateWireIDs()` is not supported on readout IDs.
     void IterateWireIDs(readout::TPCsetID const&) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateWireIDs()` is not supported on readout IDs.
     void IterateWireIDs(readout::ROPID const&) const = delete;
+    //@}
+    
 
-
+    //@{
     /**
      * @brief Enables ranged-for loops on all wires of the detector.
      * @returns an object suitable for ranged-for loops on all wires
@@ -3702,12 +4145,10 @@ namespace geo {
      * } // for all wires
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    IteratorBox<
-      wire_iterator,
-      &GeometryCore::begin_wire, &GeometryCore::end_wire
-      >
-    IterateWires() const { return { this }; }
-
+    inline auto IterateWires() const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all wires of specified cryostat.
      * @param cid the ID of the cryostat to loop the wires of
@@ -3725,13 +4166,10 @@ namespace geo {
      * } // for all wires
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      wire_iterator,
-      geo::CryostatID,
-      &GeometryCore::begin_wire, &GeometryCore::end_wire
-      >
-    IterateWires(geo::CryostatID const& cid) const { return { this, cid }; }
-
+    inline auto IterateWires(geo::CryostatID const& cid) const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all wires of specified TPC.
      * @param tid the ID of the TPC to loop the wires of
@@ -3749,13 +4187,10 @@ namespace geo {
      * } // for all wires in C:0 T:1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      wire_iterator,
-      geo::TPCID,
-      &GeometryCore::begin_wire, &GeometryCore::end_wire
-      >
-    IterateWires(geo::TPCID const& tid) const { return { this, tid }; }
-
+    inline auto IterateWires(geo::TPCID const& tid) const;
+    //@}
+    
+    //@{
     /**
      * @brief Enables ranged-for loops on all wires of specified wire plane.
      * @param pid the ID of the wire plane to loop the wires of
@@ -3773,64 +4208,89 @@ namespace geo {
      * } // for all wires in C:0 T:0 T:1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      wire_iterator,
-      geo::PlaneID,
-      &GeometryCore::begin_wire, &GeometryCore::end_wire
-      >
-    IterateWires(geo::PlaneID const& tid) const { return { this, tid }; }
-
+    inline auto IterateWires(geo::PlaneID const& pid) const;
+    //@}
+    
+    //@{
     /// `IterateWires()` is not supported on wire IDs.
     void IterateWires(geo::WireID const& pid) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateWires()` is not supported on readout IDs.
     void IterateWires(readout::TPCsetID const&) const = delete;
-
+    //@}
+    
+    //@{
     /// `IterateWires()` is not supported on readout IDs.
     void IterateWires(readout::ROPID const&) const = delete;
-
+    //@}
+    
+    
     //
     // single object features
     //
 
     //@{
     /**
-     * @brief Returns the distance between two consecutive wires.
-     * @param p plane number within the TPC
-     * @param tpc tpc number within the cryostat
-     * @param cstat cryostat number
-     * @return the distance between the two wires
+     * @brief Returns the distance between two consecutive wires [cm]
+     * @param planeid ID if the plane
+     * @return the distance between the two wires, in centimeters
      *
      * @note The current geometry assumptions imply that wire pitch is constant
      *       between all wires on the same wire plane. This is an assumption
      *       non-trivial to remove.
-     *
-     * @todo add a version with wire IDs
-     * @todo deprecate this function
-     * @todo document what will happen (in the future methods) with wires on different planes
-     *
      */
     geo::Length_t WirePitch(geo::PlaneID const& planeid) const;
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the distance between two consecutive wires [cm]
+     * @param plane plane number within the TPC
+     * @param tpc tpc number within the cryostat
+     * @param cstat cryostat number
+     * @return the distance between the two wires, in centimeters
+     *
+     * @deprecated Use `WirePitch(geo::PlaneID const&) const` instead.
+     */
     geo::Length_t WirePitch(unsigned int plane = 0,
                             unsigned int tpc = 0,
                             unsigned int cstat = 0) const
       { return WirePitch(geo::PlaneID(cstat, tpc, plane)); }
     //@}
 
+    //@{
     /**
-     * @brief Returns the distance between two wires in the specified view
-     * @param w1 index of the first wire
-     * @param w2 index of the second wire
-     * @param p plane number within the TPC
-     * @param tpc tpc number within the cryostat
-     * @param cstat cryostat number
-     * @return the distance between the two wires
+     * @brief Returns the distance between two wires in the specified view [cm]
+     * @param view view to query
+     * @return the distance between the two wires, in centimeters
      *
      * This method assumes that all the wires on all the planes on the specified
      * view of all TPCs have the same pitch.
+     * This is not a LArSoft geometry requirement.
+     * 
+     * @deprecated Use `WirePitch(geo::PlaneID const&) const` instead.
      */
     geo::Length_t WirePitch(geo::View_t view) const;
+    //@}
 
+
+    //@{
+    /**
+     * @brief Returns the angle of the wires in the specified view from vertical
+     * @param view the view
+     * @param tpcid ID of the TPC
+     * @return the angle [radians]
+     * @throw cet::exception ("GeometryCore" category) if no such view
+     *
+     * The angle is defined as in `geo::PlaneGeo::ThetaZ()`.
+     *
+     * This method assumes all wires in the view have the same angle (it queries
+     * for the first).
+     */
+    double WireAngleToVertical(geo::View_t view, geo::TPCID const& tpcid) const;
+    //@}
 
     //@{
     /**
@@ -3838,26 +4298,23 @@ namespace geo {
      * @param view the view
      * @param TPC the index of the TPC in the specified cryostat
      * @param Cryo the cryostat
-     * @param tpcid ID of the TPC
      * @return the angle [radians]
      * @throw cet::exception ("GeometryCore" category) if no such view
      *
-     * The angle is defined as in WireGeo::ThetaZ().
-     *
-     * This method assumes all wires in the view have the same angle (it queries
-     * for the first).
-     *
-     * @deprecated This does not feel APA-ready
+     * @deprecated Use
+     *             `WireAngleToVertical(geo::View_t, geo::TPCID const&) const`
+     *             instead.
      */
-    double WireAngleToVertical(geo::View_t view, geo::TPCID const& tpcid) const;
     double WireAngleToVertical(geo::View_t view, int TPC=0, int Cryo=0) const
       { return WireAngleToVertical(view, geo::TPCID(Cryo, TPC)); }
     //@}
 
-    /// @} Wire access and information
+    /// @}
+    // --- END -- Wire access and information ----------------------------------
 
 
 
+    // --- BEGIN -- Wire geometry queries --------------------------------------
     /**
      * @name Wire geometry queries
      *
@@ -3874,6 +4331,7 @@ namespace geo {
     // simple geometry queries
     //
 
+    //@{
     /**
      * @brief Fills two arrays with the coordinates of the wire end points
      * @param wireid ID of the wire
@@ -3888,7 +4346,9 @@ namespace geo {
      */
     void WireEndPoints
       (geo::WireID const& wireid, double *xyzStart, double *xyzEnd) const;
+    //@}
 
+    //@{
     /**
      * @brief Fills two arrays with the coordinates of the wire end points
      * @param cstat cryostat number
@@ -3909,11 +4369,13 @@ namespace geo {
       double *xyzStart, double *xyzEnd
       ) const
       { WireEndPoints(geo::WireID(cstat, tpc, plane, wire), xyzStart, xyzEnd); }
+    //@}
 
     //@{
     /**
      * @brief Returns a segment whose ends are the wire end points
-     * @param wireid ID of the wire
+     * @tparam Point type of point to use for the result
+     * @param wireID ID of the wire
      * @return a segment whose ends are the wire end points
      * @throws cet::exception wire not present
      *
@@ -3925,15 +4387,30 @@ namespace geo {
      */
     template <typename Point>
     Segment<Point> WireEndPoints(geo::WireID const& wireID) const;
+    //@}
+    
+    //@{
+    /**
+     * @brief Returns a segment whose ends are the wire end points
+     * @param wireID ID of the wire
+     * @return a segment whose ends are the wire end points as `DefaultPoint_t`
+     * @throws cet::exception wire not present
+     *
+     * The start and end are assigned as returned from the geo::WireGeo object.
+     * The rules for this assignment are documented in that class.
+     *
+     * @deprecated use the wire ID interface instead (but note that it does not
+     *             sort the ends)
+     */
     Segment<DefaultPoint_t> WireEndPoints(geo::WireID const& wireID) const
       { return WireEndPoints<DefaultPoint_t>(wireID); }
-
     //@}
 
     //
     // closest wire
     //
 
+    //@{
     /**
      * @brief Returns the ID of wire closest to position in the specified TPC.
      * @param point the point to be tested [cm]
@@ -3974,22 +4451,21 @@ namespace geo {
      */
     geo::WireID NearestWireID
       (geo::Point_t const& point, geo::PlaneID const& planeid) const;
-
+    //@}
+    
     //@{
     /**
      * @brief Returns the ID of wire closest to position in the specified TPC.
      * @param point the point to be tested [cm]
      * @param planeid ID of the plane
-     * @param PlaneNo plane number within the TPC
-     * @param TPCNo tpc number within the cryostat
-     * @param cstat cryostat number
      * @return the ID of the wire, or an invalid wire ID
      * @bug Instead of returning an invalid wire ID, an exception is thrown!
      *
      * The different versions allow different way to provide the position.
      *
-     * @deprecated Use the version with a `geo::Point_t` and `PlaneID` arguments
-     * @todo remove the integers version
+     * @deprecated Use
+     *             `NearestWireID(geo::Point_t const&, geo::PlaneID const&) const`
+     *             instead.
      */
     geo::WireID NearestWireID
       (const double point[3], geo::PlaneID const& planeid) const;
@@ -3998,6 +4474,22 @@ namespace geo {
     geo::WireID   NearestWireID
       (const TVector3& point, geo::PlaneID const& planeid) const
       { return NearestWireID(geo::vect::toPoint(point), planeid); }
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the ID of wire closest to position in the specified TPC.
+     * @param point the point to be tested [cm]
+     * @param PlaneNo plane number within the TPC
+     * @param TPCNo tpc number within the cryostat
+     * @param cstat cryostat number
+     * @return the ID of the wire, or an invalid wire ID
+     * @bug Instead of returning an invalid wire ID, an exception is thrown!
+     * 
+     * @deprecated Use
+     *             `NearestWireID(geo::Point_t const&, geo::PlaneID const&) const`
+     *             instead.
+     */
     geo::WireID   NearestWireID(const double point[3],
                                       unsigned int const PlaneNo,
                                       unsigned int const TPCNo = 0,
@@ -4020,33 +4512,35 @@ namespace geo {
      { return NearestWireID(point, geo::PlaneID(cstat, TPCNo, PlaneNo)); }
     //@}
 
+    //@{
     /**
-     * @brief Returns the index of wire closest to position in the specified TPC
+     * @brief Returns the index of wire closest to position in the specified
+     *        plane.
      * @param point the point to be tested [cm]
      * @param planeid ID of the plane
      * @return the index of the wire, or `geo::WireID::InvalidID` on failure
      * @bug Actually, on failure an exception `geo::InvalidWireError` is thrown
      *
-     * @deprecated Use NearestWireID() instead.
+     * @deprecated Use
+     *             `NearestWireID(geo::Point_t const&, geo::PlaneID const&) const`
+     *             instead.
      */
     geo::WireID::WireID_t NearestWire
       (geo::Point_t const& point, geo::PlaneID const& planeid) const;
+    //@}
 
     //@{
     /**
-     * @brief Returns the index of wire closest to position in the specified TPC
+     * @brief Returns the index of wire closest to position in the specified plane.
      * @param worldLoc 3D coordinates of the point (world reference frame)
      * @param planeid ID of the plane
-     * @param PlaneNo plane number within the TPC
-     * @param TPCNo tpc number within the cryostat
-     * @param cstat cryostat number
      * @return the index of the wire
      *
      * The different versions allow different way to provide the position.
      *
-     * @deprecated Use NearestWireID() instead.
-     * @todo remove the integers version
-     * @todo what happens when no wire is found?
+     * @deprecated Use
+     *             `NearestWireID(geo::Point_t const&, geo::PlaneID const&) const`
+     *             instead.
      */
     unsigned int       NearestWire
       (const double worldLoc[3], geo::PlaneID const& planeid)  const;
@@ -4055,6 +4549,23 @@ namespace geo {
     unsigned int       NearestWire
       (const TVector3& worldLoc, geo::PlaneID const& planeid)  const
       { return NearestWire(geo::vect::toPoint(worldLoc), planeid); }
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the index of wire closest to position in the specified plane.
+     * @param worldLoc 3D coordinates of the point (world reference frame)
+     * @param PlaneNo plane number within the TPC
+     * @param TPCNo tpc number within the cryostat
+     * @param cstat cryostat number
+     * @return the index of the wire
+     *
+     * The different versions allow different way to provide the position.
+     *
+     * @deprecated Use
+     *             `NearestWireID(geo::Point_t const&, geo::PlaneID const&) const`
+     *             instead.
+     */
     unsigned int       NearestWire(const double worldLoc[3],
                                    unsigned int const PlaneNo,
                                    unsigned int const TPCNo = 0,
@@ -4078,6 +4589,7 @@ namespace geo {
     //@}
 
 
+    //@{
     /**
      * @brief Returns the index of the nearest wire to the specified position
      * @param YPos y coordinate on the wire plane
@@ -4096,7 +4608,9 @@ namespace geo {
      */
     geo::Length_t WireCoordinate
       (double YPos, double ZPos, geo::PlaneID const& planeid) const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the index of the nearest wire to the specified position
      * @param YPos y coordinate on the wire plane
@@ -4107,13 +4621,16 @@ namespace geo {
      * @return an index interpolation between the two nearest wires
      * @see ChannelMapAlg::WireCoordinate()
      *
-     * @deprecated Use the version with plane ID instead
+     * @deprecated Use
+     *             `WireCoordinate(double, double, geo::PlaneID const&) const`
+     *             instead.
      */
     geo::Length_t WireCoordinate(double YPos, double ZPos,
                                  unsigned int PlaneNo,
                                  unsigned int TPCNo,
                                  unsigned int cstat) const
       { return WireCoordinate(YPos, ZPos, geo::PlaneID(cstat, TPCNo, PlaneNo)); }
+    //@}
 
     //@{
     /**
@@ -4142,6 +4659,7 @@ namespace geo {
     // in the TPC intersect or not, and if they do then
     // determine the coordinates of the intersection.
 
+    //@{
     /**
      * @brief Computes the intersection between two lines on a plane
      * @param A_start_x x coordinate of one point of the first segment
@@ -4167,7 +4685,9 @@ namespace geo {
       double B_start_x, double B_start_y, double B_end_x, double B_end_y,
       double& x, double& y
       ) const;
+    //@}
 
+    //@{
     /**
      * @brief Computes the intersection between two segments on a plane
      * @param A_start_x x coordinate of the start of the first segment
@@ -4194,6 +4714,7 @@ namespace geo {
       double B_start_x, double B_start_y, double B_end_x, double B_end_y,
       double& x, double& y
       ) const;
+    //@}
 
     //@{
     /**
@@ -4224,6 +4745,7 @@ namespace geo {
       (WireID const& wid1, WireID const& wid2, TVector3& intersection) const;
     //@}
 
+    //@{
     /**
      * @brief Computes the intersection between two wires.
      * @param wid1 ID of the first wire
@@ -4249,7 +4771,9 @@ namespace geo {
     bool WireIDsIntersect
       (WireID const& wid1, WireID const& wid2, WireIDIntersection& widIntersect)
       const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the intersection point of two wires
      * @param wid1 ID of the first wire
@@ -4271,7 +4795,9 @@ namespace geo {
                            geo::WireID const& wid2,
                            double &y,
                            double &z) const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the intersection point of two wires
      * @param wire1 wire index of the first wire
@@ -4305,8 +4831,10 @@ namespace geo {
           y, z
           );
       }
+    //@}
 
 
+    //@{
     /**
      * @brief Returns the plane that is not in the specified arguments
      * @param pid1 a plane
@@ -4320,8 +4848,9 @@ namespace geo {
      */
     geo::PlaneID ThirdPlane
       (geo::PlaneID const& pid1, geo::PlaneID const& pid2) const;
+    //@}
 
-
+    //@{
     /**
      * @brief Returns the slope on the third plane, given it in the other two
      * @param pid1 ID of the plane of the first slope
@@ -4343,7 +4872,9 @@ namespace geo {
     double ThirdPlaneSlope(geo::PlaneID const& pid1, double slope1,
                            geo::PlaneID const& pid2, double slope2,
                            geo::PlaneID const& output_plane) const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the slope on the third plane, given it in the other two
      * @param pid1 ID of the plane of the first slope
@@ -4363,10 +4894,11 @@ namespace geo {
      */
     double ThirdPlaneSlope(geo::PlaneID const& pid1, double slope1,
                            geo::PlaneID const& pid2, double slope2) const;
+    //@}
 
     //@{
     /**
-     * @brief Returns the slope on the third plane, given it in the other two
+     * @brief Returns the slope on the third plane, given it in the other two.
      * @param plane1 index of the plane of the first slope
      * @param slope1 slope as seen on the first plane
      * @param plane2 index of the plane of the second slope
@@ -4389,6 +4921,29 @@ namespace geo {
           geo::PlaneID(tpcid, plane2), slope2
           );
       }
+    //@}
+
+    //@{
+    /**
+     * @brief Returns the slope on the third plane, given it in the other two.
+     * @param plane1 index of the plane of the first slope
+     * @param slope1 slope as seen on the first plane
+     * @param plane2 index of the plane of the second slope
+     * @param slope2 slope as seen on the second plane
+     * @param tpc number of TPC in the cryostat
+     * @param cstat number of cryostat
+     * @return the slope on the third plane, or -999. if slope would be infinity
+     * @throws cet::exception (category: "GeometryCore") if different TPC
+     * @throws cet::exception (category: "GeometryCore") if same plane
+     * @throws cet::exception (category: "GeometryCore") if other than 3 planes
+     *
+     * Given a slope as projected in two planes, returns the slope as projected
+     * in the third plane.
+     * 
+     * @deprecated Use `ThirdPlaneSlope(geo::PlaneID::PlaneID_t, double,
+     *             geo::PlaneID::PlaneID_t, double, geo::TPCID const&) const`
+     *             instead.
+     */
     double ThirdPlaneSlope(unsigned int plane1, double slope1,
                            unsigned int plane2, double slope2,
                            unsigned int tpc, unsigned int cstat) const
@@ -4398,13 +4953,13 @@ namespace geo {
       }
     //@}
 
-
+    //@{
     /**
      * @brief Returns dT/dW on the third plane, given it in the other two
      * @param pid1 ID of the plane of the first dT/dW
-     * @param dTdW1 dT/dW as seen on the first plane
+     * @param slope1 dT/dW as seen on the first plane
      * @param pid2 ID of the plane of the second dT/dW
-     * @param dTdW2 dT/dW  as seen on the second plane
+     * @param slope2 dT/dW  as seen on the second plane
      * @param output_plane ID of the plane on which to calculate the slope
      * @return dT/dW on the third plane, or -999. if dT/dW would be infinity
      * @throws cet::exception (category: "GeometryCore") if different TPC
@@ -4422,9 +4977,9 @@ namespace geo {
     /**
      * @brief Returns dT/dW on the third plane, given it in the other two
      * @param pid1 ID of the plane of the first dT/dW
-     * @param dTdW1 dT/dW as seen on the first plane
+     * @param slope1 dT/dW as seen on the first plane
      * @param pid2 ID of the plane of the second dT/dW
-     * @param dTdW2 dT/dW  as seen on the second plane
+     * @param slope2 dT/dW  as seen on the second plane
      * @return dT/dW on the third plane, or -999. if dT/dW would be infinity
      * @throws cet::exception (category: "GeometryCore") if different TPC
      * @throws cet::exception (category: "GeometryCore") if same plane
@@ -4438,8 +4993,9 @@ namespace geo {
      */
     double ThirdPlane_dTdW(geo::PlaneID const& pid1, double slope1,
                            geo::PlaneID const& pid2, double slope2) const;
+    //@}
 
-
+    //@{
     /**
      * @brief Returns the slope on the third plane, given it in the other two
      * @param angle1 angle or the wires on the first plane
@@ -4456,7 +5012,9 @@ namespace geo {
       double angle2, double slope2,
       double angle_target
       );
+    //@}
 
+    //@{
     /**
      * @brief Returns the slope on the third plane, given it in the other two
      * @param angle1 angle or the wires on the first plane
@@ -4478,11 +5036,13 @@ namespace geo {
       double angle2, double pitch2, double dTdW2,
       double angle_target, double pitch_target
       );
+    //@}
 
-    /// @} Wire geometry queries
+    /// @}
+    // --- END -- Wire geometry queries ----------------------------------------
 
 
-
+    // --- BEGIN -- Optical detector access and information --------------------
     /**
      * @name Optical detector geometry access and information
      * @anchor GeometryCoreOpDetGeometry
@@ -4506,32 +5066,38 @@ namespace geo {
     // group features
     //
 
+    //@{
     /// Number of OpDets in the whole detector
     unsigned int NOpDets() const;
+    //@}
 
 
     //
     // access
     //
+    //@{
     /**
      * @brief Returns the `geo::OpDetGeo` object for the given channel number.
      * @param OpChannel optical detector unique channel number
      * @see GeometryCoreOpDetGeometry "optical detector identification"
      */
     OpDetGeo const& OpDetGeoFromOpChannel(unsigned int OpChannel) const;
+    //@}
 
+    //@{
     /**
      * @brief Returns the `geo::OpDetGeo` object for the given detector number.
      * @param OpDet optical detector unique number
      * @see GeometryCoreOpDetGeometry "optical detector identification"
      */
     OpDetGeo const& OpDetGeoFromOpDet(unsigned int OpDet) const;
-
-
+    //@}
+    
+    
     //@{
     /**
      * @brief Find the nearest OpChannel to some point
-     * @param xyz point to be queried, in world coordinates
+     * @param point point to be queried, in world coordinates
      * @return the nearest OpChannel to the point,
      *         or `std::numeric_limits<unsigned int>::max()` if invalid point
      *
@@ -4557,12 +5123,16 @@ namespace geo {
 	  *
      * @todo Change to use CryostatID
      */
+    //@{
     std::string OpDetGeoName(unsigned int c = 0) const;
+    //@}
 
     /// @} Optical detector access and information
+    // --- END -- Optical detector access and information ----------------------
 
 
 
+    // --- BEGIN -- Auxiliary detectors access and information -----------------
     /// @name Auxiliary detectors access and information
     /// @{
 
@@ -4586,7 +5156,7 @@ namespace geo {
      * @brief Returns the number of sensitive components of auxiliary detector
      * @param aid ID of the auxiliary detector
      * @return number of sensitive components in the auxiliary detector aid
-     * @thrws cet::exception (category "Geometry") if aid does not exist
+     * @throws cet::exception (category "Geometry") if aid does not exist
      */
     unsigned int NAuxDetSensitive(size_t const& aid) const;
 
@@ -4703,9 +5273,11 @@ namespace geo {
 						       uint32_t    const& channel) const; // return the AuxDetSensitiveGeo for the given
 
     /// @} Auxiliary detectors access and information
+    // --- END -- Auxiliary detectors access and information -------------------
 
 
 
+    // --- BEGIN -- TPC readout channels and views -----------------------------
     /// @name TPC readout channels and views
     /// @{
 
@@ -4744,26 +5316,30 @@ namespace geo {
      */
     bool HasChannel(raw::ChannelID_t channel) const;
 
-    //@{
     /**
-     * @brief Returns the ID of the TPC channel connected to the specified wire
+     * @brief Returns the ID of the TPC channel connected to the specified wire.
+     * @param wireid the ID of the wire
+     * @return the ID of the channel
+     * 
+     * If the wire does not exist, the result is undefined.
+     */
+    raw::ChannelID_t PlaneWireToChannel(geo::WireID const& wireid) const;
+
+    /**
+     * @brief Returns the ID of the TPC channel connected to the specified wire.
      * @param plane the number of plane
      * @param wire the number of wire
      * @param tpc the number of TPC
-     * @param cryostat the number of cryostat
-     * @param wireid the ID of the wire
-     * @return the ID of the channel, or raw::InvalidChannelID if invalid wire
+     * @param cstat the number of cryostat
+     * @return the ID of the channel
      *
-     * @todo Verify the raw::InvalidChannelID part
-     * @todo remove the integers version
+     * @deprecated Use `PlaneWireToChannel(geo::WireID const&) const` instead.
      */
-    raw::ChannelID_t  PlaneWireToChannel(WireID const& wireid) const;
-    raw::ChannelID_t  PlaneWireToChannel(unsigned int const plane,
-                                         unsigned int const wire,
-                                         unsigned int const tpc = 0,
-                                         unsigned int const cstat = 0) const
+    raw::ChannelID_t PlaneWireToChannel(unsigned int const plane,
+                                        unsigned int const wire,
+                                        unsigned int const tpc = 0,
+                                        unsigned int const cstat = 0) const
       { return PlaneWireToChannel(geo::WireID(cstat, tpc, plane, wire)); }
-    //@}
 
     //
     // single object features
@@ -4809,6 +5385,7 @@ namespace geo {
     // geometry queries
     //
 
+    //@{
     /**
      * @brief Returns the ID of the channel nearest to the specified position
      * @param worldLoc 3D coordinates of the point (world reference frame)
@@ -4817,22 +5394,23 @@ namespace geo {
      * @bug on invalid wire, a `geo::InvalidWireError` exception is thrown
      *
      */
-    raw::ChannelID_t  NearestChannel
+    raw::ChannelID_t NearestChannel
       (geo::Point_t const& worldLoc, geo::PlaneID const& planeid) const;
+    //@}
 
     //@{
     /**
      * @brief Returns the ID of the channel nearest to the specified position
      * @param worldLoc 3D coordinates of the point (world reference frame)
-     * @param PlaneNo the number of plane
-     * @param TPCNo the number of TPC
-     * @param cstat the number of cryostat
-     * @return the ID of the channel, or raw::InvalidChannelID if invalid wire
+     * @param planeid ID of the plane the channel is looked into
+     * @return the ID of the channel, or `raw::InvalidChannelID` if invalid
      * @bug on invalid wire, a `geo::InvalidWireError` exception is thrown
      *
      * The different versions allow different way to provide the position.
-     *
-     * @todo remove the integers version
+     * 
+     * @deprecated Use
+     *             `NearestChannel(geo::Point_t const&, geo::PlaneID const&) const`
+     *             instead.
      */
     raw::ChannelID_t  NearestChannel
       (const double worldLoc[3], geo::PlaneID const& planeid) const;
@@ -4841,6 +5419,24 @@ namespace geo {
     raw::ChannelID_t  NearestChannel
       (const TVector3& worldLoc, geo::PlaneID const& planeid) const
       { return NearestChannel(geo::vect::toPoint(worldLoc), planeid); }
+    //@}
+    
+    //@{
+    /**
+     * @brief Returns the ID of the channel nearest to the specified position
+     * @param worldLoc 3D coordinates of the point (world reference frame)
+     * @param PlaneNo the number of plane
+     * @param TPCNo the number of TPC
+     * @param cstat the number of cryostat
+     * @return the ID of the channel, or `raw::InvalidChannelID` if invalid
+     * @bug on invalid wire, a `geo::InvalidWireError` exception is thrown
+     *
+     * The different versions allow different way to provide the position.
+     * 
+     * @deprecated Use
+     *             `NearestChannel(geo::Point_t const&, geo::PlaneID const&) const`
+     *             instead.
+     */
     raw::ChannelID_t  NearestChannel(const double worldLoc[3],
                                        unsigned int const PlaneNo,
                                        unsigned int const TPCNo = 0,
@@ -4862,7 +5458,9 @@ namespace geo {
                                        unsigned int const cstat = 0) const
       { return NearestChannel(worldLoc, geo::PlaneID(cstat, TPCNo, PlaneNo)); }
     //@}
-
+    
+    
+    //@{
     /**
      * @brief Returns an intersection point of two channels
      * @param c1 one channel ID
@@ -4878,11 +5476,14 @@ namespace geo {
      */
     bool ChannelsIntersect
       (raw::ChannelID_t c1, raw::ChannelID_t c2, double &y, double &z) const;
+    //@}
 
-    /// @} TPC readout channels
+    /// @}
+    // --- END -- TPC readout channels and views -------------------------------
 
 
 
+    // --- BEGIN -- TPC set information ----------------------------------------
     /// @name TPC set information
     /// @{
 
@@ -4890,19 +5491,24 @@ namespace geo {
     // group features
     //
 
-    //@{
     /**
-     * @brief Returns the total number of TPC sets in the specified cryostat
+     * @brief Returns the total number of TPC sets in the specified cryostat.
      * @param cryoid cryostat ID
      * @return number of TPC sets in the cryostat, or 0 if no cryostat found
-     *
-     * The NSiblingElements() method is overloaded and its
-     * return depends on the type of ID.
      */
     unsigned int NTPCsets(readout::CryostatID const& cryoid) const;
+
+    /**
+     * @brief Returns the number of TPC sets in the cryostat with `tpcsetid`.
+     * @param tpcsetid ID of the TPC set
+     * @return number of TPC sets in cryostat with `tpcsetid`,
+     *         or `0` if no cryostat
+     *
+     * The `NSiblingElements()` method is overloaded and its
+     * return depends on the type of ID.
+     */
     unsigned int NSiblingElements(readout::TPCsetID const& tpcsetid) const
       { return NTPCsets(tpcsetid); }
-    //@}
 
     /// Returns the largest number of TPC sets any cryostat in the detector has
     unsigned int MaxTPCsets() const;
@@ -5005,11 +5611,7 @@ namespace geo {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      */
-    IteratorBox<
-      TPCset_id_iterator,
-      &GeometryCore::begin_TPCset_id, &GeometryCore::end_TPCset_id
-      >
-    IterateTPCsetIDs() const { return { this }; }
+    inline auto IterateTPCsetIDs() const;
 
     /**
      * @brief Enables ranged-for loops on all TPC set IDs of the specified
@@ -5029,11 +5631,7 @@ namespace geo {
      * } // for all TPC sets in cryostat #1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      TPCset_id_iterator, geo::CryostatID,
-      &GeometryCore::begin_TPCset_id, &GeometryCore::end_TPCset_id
-      >
-    IterateTPCsetIDs(geo::CryostatID const& cid) const { return { this, cid }; }
+    inline auto IterateTPCsetIDs(geo::CryostatID const& cid) const;
 
 
 #if 0
@@ -5070,9 +5668,9 @@ namespace geo {
 
 
     /**
-     * @brief Returns the centre of side of the detector facing the beam
+     * @brief Returns the center of side of the detector facing the beam
      * @param tpcsetid ID of the TPC set
-     * @return vector of the position of centre of TPC set face toward the beam
+     * @return vector of the position of center of TPC set face toward the beam
      */
     geo::Point_t GetTPCsetFrontFaceCenter
       (readout::TPCsetID const& tpcsetid) const;
@@ -5080,10 +5678,12 @@ namespace geo {
 
 #endif // 0
 
-    /// @} TPC set information
+    /// @}
+    // --- END -- TPC set information ------------------------------------------
 
 
 
+    // --- BEGIN -- Readout plane information ----------------------------------
     /// @name Readout plane information
     /// @{
 
@@ -5091,23 +5691,30 @@ namespace geo {
     // group features
     //
 
-    //@{
     /**
-     * @brief Returns the total number of ROP in the specified TPC set
+     * @brief Returns the total number of ROP in the specified TPC set.
      * @param tpcsetid TPC set ID
      * @return number of readout planes in the TPC set, or 0 if no TPC set found
      *
-     * Note that this methods explicitly check the existence of the TPC set.
-     *
-     * The NSiblingElements() method is overloaded and its
-     * return depends on the type of ID.
+     * Note that this method explicitly checks the existence of the TPC set.
      */
     unsigned int NROPs(readout::TPCsetID const& tpcsetid) const;
+
+    /**
+     * @brief Returns the total number of ROP in the TPC set with `ropid`.
+     * @param ropid ID of the readout plane
+     * @return number of readout planes in the TPC set with `ropid`, or `0`
+     *         if no TPC set
+     *
+     * Note that this method explicitly checks the existence of the TPC set.
+     *
+     * The `NSiblingElements()` method is overloaded and its
+     * return depends on the type of ID.
+     */
     unsigned int NSiblingElements(readout::ROPID const& ropid) const
       { return NROPs(ropid); }
-    //@}
 
-    /// Returns the largest number of ROPs a TPC set in the detector has
+    /// Returns the largest number of ROPs a TPC set in the detector has.
     unsigned int MaxROPs() const;
 
 
@@ -5252,11 +5859,7 @@ namespace geo {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      */
-    IteratorBox<
-      ROP_id_iterator,
-      &GeometryCore::begin_ROP_id, &GeometryCore::end_ROP_id
-      >
-    IterateROPIDs() const { return { this }; }
+    inline auto IterateROPIDs() const;
 
     /**
      * @brief Enables ranged-for loops on all readout plane IDs of the specified
@@ -5276,11 +5879,7 @@ namespace geo {
      * } // for all readout planes in cryostat #1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      ROP_id_iterator, geo::CryostatID,
-      &GeometryCore::begin_ROP_id, &GeometryCore::end_ROP_id
-      >
-    IterateROPIDs(geo::CryostatID const& cid) const { return { this, cid }; }
+    inline auto IterateROPIDs(geo::CryostatID const& cid) const;
 
     /**
      * @brief Enables ranged-for loops on all readout plane IDs of the specified
@@ -5300,11 +5899,7 @@ namespace geo {
      * } // for all readout planes in C:0 S:1
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    LocalIteratorBox<
-      ROP_id_iterator, readout::TPCsetID,
-      &GeometryCore::begin_ROP_id, &GeometryCore::end_ROP_id
-      >
-    IterateROPIDs(readout::TPCsetID const& sid) const { return { this, sid }; }
+    inline auto IterateROPIDs(readout::TPCsetID const& sid) const;
 
 
     /**
@@ -5337,9 +5932,11 @@ namespace geo {
 
 
     /// @} Readout plane information
+    // --- END -- Readout plane information ------------------------------------
 
 
 
+    // --- BEGIN -- Optical readout channels -----------------------------------
     /**
      * @name Optical readout channels
      * @anchor GeometryCoreOpDetChannel
@@ -5382,6 +5979,7 @@ namespace geo {
     unsigned int OpDetFromCryo(unsigned int o, unsigned int c) const;
 
     /// @} Optical readout channels
+    // --- END -- Optical readout channels -------------------------------------
 
 
     //
@@ -5404,6 +6002,8 @@ namespace geo {
     bool ValueInRange(double value, double min, double max) const;
 
 
+
+    // --- BEGIN -- Geometry initialization ------------------------------------
     /// @name Geometry initialization
     /// @{
 
@@ -5494,7 +6094,8 @@ namespace geo {
     void ApplyChannelMap(std::shared_ptr<geo::ChannelMapAlg> pChannelMap);
     
     /// @}
-
+    // --- END -- Geometry initialization --------------------------------------
+    
 
   protected:
     /// Sets the detector name
@@ -5647,9 +6248,249 @@ namespace geo {
 
 
 
-//******************************************************************************
-//*** inline implementation
-//***
+//------------------------------------------------------------------------------
+//--- inline implementation
+//------------------------------------------------------------------------------
+inline auto geo::GeometryCore::IterateCryostatIDs() const {
+  return IteratorBox<
+      cryostat_id_iterator,
+      &GeometryCore::begin_cryostat_id, &GeometryCore::end_cryostat_id
+      >
+    { this };
+} // geo::GeometryCore::IterateCryostatIDs()
+
+
+inline auto geo::GeometryCore::IterateCryostats() const {
+  return IteratorBox<
+      cryostat_iterator,
+      &GeometryCore::begin_cryostat, &GeometryCore::end_cryostat
+      >
+    { this };
+} // geo::GeometryCore::IterateCryostats()
+
+
+//------------------------------------------------------------------------------
+inline auto geo::GeometryCore::IterateTPCIDs() const {
+  return IteratorBox<
+      TPC_id_iterator,
+      &GeometryCore::begin_TPC_id, &GeometryCore::end_TPC_id
+      >
+    { this };
+} // geo::GeometryCore::IterateTPCIDs()
+
+
+inline auto geo::GeometryCore::IterateTPCIDs(geo::CryostatID const& cid) const {
+  return LocalIteratorBox<
+      TPC_id_iterator, geo::CryostatID,
+      &GeometryCore::begin_TPC_id, &GeometryCore::end_TPC_id
+      >
+    { this, cid };
+} // geo::GeometryCore::IterateTPCIDs(geo::CryostatID)
+
+
+inline auto geo::GeometryCore::IterateTPCs() const {
+  return IteratorBox
+      <TPC_iterator, &GeometryCore::begin_TPC, &GeometryCore::end_TPC>
+    { this }; 
+} // geo::GeometryCore::IterateTPCs()
+
+
+inline auto geo::GeometryCore::IterateTPCs(geo::CryostatID const& cid) const {
+  return LocalIteratorBox<
+      TPC_iterator, geo::CryostatID,
+      &GeometryCore::begin_TPC, &GeometryCore::end_TPC
+      >
+    { this, cid };
+} // geo::GeometryCore::IterateTPCs(CryostatID)
+
+
+//------------------------------------------------------------------------------
+inline auto geo::GeometryCore::IteratePlaneIDs() const {
+  return IteratorBox<
+      plane_id_iterator,
+      &GeometryCore::begin_plane_id, &GeometryCore::end_plane_id
+      >
+   { this };
+} // geo::GeometryCore::IteratePlaneIDs()
+
+
+inline auto geo::GeometryCore::IteratePlaneIDs(geo::CryostatID const& cid) const
+{
+  return LocalIteratorBox<
+      plane_id_iterator, geo::CryostatID,
+      &GeometryCore::begin_plane_id, &GeometryCore::end_plane_id
+      >
+    { this, cid };
+} // geo::GeometryCore::IteratePlaneIDs(CryostatID)
+
+
+inline auto geo::GeometryCore::IteratePlaneIDs(geo::TPCID const& tid) const {
+  return LocalIteratorBox<
+      plane_id_iterator, geo::TPCID,
+      &GeometryCore::begin_plane_id, &GeometryCore::end_plane_id
+      >
+    { this, tid };
+} // geo::GeometryCore::IteratePlaneIDs(TPCID)
+
+
+inline auto geo::GeometryCore::IteratePlanes() const {
+  return IteratorBox<
+      plane_iterator,
+      &GeometryCore::begin_plane, &GeometryCore::end_plane
+      >
+    { this };
+} // geo::GeometryCore::IteratePlanes()
+
+
+inline auto geo::GeometryCore::IteratePlanes(geo::CryostatID const& cid) const {
+  return LocalIteratorBox<
+      plane_iterator, geo::CryostatID,
+      &GeometryCore::begin_plane, &GeometryCore::end_plane
+      >
+    { this, cid };
+} // geo::GeometryCore::IteratePlanes(CryostatID)
+
+
+inline auto geo::GeometryCore::IteratePlanes(geo::TPCID const& tid) const {
+  return LocalIteratorBox<
+      plane_iterator, geo::TPCID,
+      &GeometryCore::begin_plane, &GeometryCore::end_plane
+      >
+    { this, tid };
+} // geo::GeometryCore::IteratePlanes(TPCID)
+
+
+//------------------------------------------------------------------------------
+inline auto geo::GeometryCore::IterateWireIDs() const {
+  return IteratorBox<
+      wire_id_iterator,
+      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
+      >
+    { this };
+} // geo::GeometryCore::IterateWireIDs()
+
+
+inline auto geo::GeometryCore::IterateWireIDs(geo::CryostatID const& cid) const
+{
+  return LocalIteratorBox<
+      wire_id_iterator,
+      geo::CryostatID,
+      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
+      >
+    { this, cid };
+} // geo::GeometryCore::IterateWireIDs(CryostatID)
+
+
+inline auto geo::GeometryCore::IterateWireIDs(geo::TPCID const& tid) const {
+  return LocalIteratorBox<
+      wire_id_iterator,
+      geo::TPCID,
+      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
+      >
+    { this, tid }; 
+} // geo::GeometryCore::IterateWireIDs(TPCID)
+
+
+inline auto geo::GeometryCore::IterateWireIDs(geo::PlaneID const& pid) const {
+  return LocalIteratorBox<
+      wire_id_iterator,
+      geo::PlaneID,
+      &GeometryCore::begin_wire_id, &GeometryCore::end_wire_id
+      >
+    { this, pid }; 
+} // geo::GeometryCore::IterateWireIDs(PlaneID)
+
+
+inline auto geo::GeometryCore::IterateWires() const { 
+  return IteratorBox<
+      wire_iterator,
+      &GeometryCore::begin_wire, &GeometryCore::end_wire
+      >
+    { this };
+} // geo::GeometryCore::IterateWires()
+
+
+inline auto geo::GeometryCore::IterateWires(geo::CryostatID const& cid) const {
+  return LocalIteratorBox<
+      wire_iterator,
+      geo::CryostatID,
+      &GeometryCore::begin_wire, &GeometryCore::end_wire
+      >
+    { this, cid };
+} // geo::GeometryCore::IterateWires(CryostatID)
+
+
+inline auto geo::GeometryCore::IterateWires(geo::TPCID const& tid) const {
+  return LocalIteratorBox<
+      wire_iterator,
+      geo::TPCID,
+      &GeometryCore::begin_wire, &GeometryCore::end_wire
+      >
+    { this, tid };
+} // geo::GeometryCore::IterateWires(TPCID)
+
+
+inline auto geo::GeometryCore::IterateWires(geo::PlaneID const& pid) const {
+  return LocalIteratorBox<
+      wire_iterator,
+      geo::PlaneID,
+      &GeometryCore::begin_wire, &GeometryCore::end_wire
+      >
+    { this, pid };
+} // geo::GeometryCore::IterateWires(PlaneID)
+
+
+//------------------------------------------------------------------------------
+inline auto geo::GeometryCore::IterateTPCsetIDs() const {
+  return IteratorBox<
+      TPCset_id_iterator,
+      &GeometryCore::begin_TPCset_id, &GeometryCore::end_TPCset_id
+      >
+   { this };
+} // geo::GeometryCore::IterateTPCsetIDs()
+
+
+inline auto geo::GeometryCore::IterateTPCsetIDs
+  (geo::CryostatID const& cid) const
+{
+  return LocalIteratorBox<
+      TPCset_id_iterator, geo::CryostatID,
+      &GeometryCore::begin_TPCset_id, &GeometryCore::end_TPCset_id
+      >
+    { this, cid };
+} // geo::GeometryCore::IterateTPCsetIDs(CryostatID)
+
+
+//------------------------------------------------------------------------------
+inline auto geo::GeometryCore::IterateROPIDs() const {
+  return IteratorBox<
+      ROP_id_iterator,
+      &GeometryCore::begin_ROP_id, &GeometryCore::end_ROP_id
+      >
+    { this };
+} // geo::GeometryCore::IterateROPIDs()
+
+
+inline auto geo::GeometryCore::IterateROPIDs(geo::CryostatID const& cid) const {
+  return LocalIteratorBox<
+      ROP_id_iterator, geo::CryostatID,
+      &GeometryCore::begin_ROP_id, &GeometryCore::end_ROP_id
+      >
+    { this, cid };
+} // geo::GeometryCore::IterateROPIDs(CryostatID)
+
+
+inline auto geo::GeometryCore::IterateROPIDs(readout::TPCsetID const& sid) const
+{
+  return LocalIteratorBox<
+      ROP_id_iterator, readout::TPCsetID,
+      &GeometryCore::begin_ROP_id, &GeometryCore::end_ROP_id
+      >
+    { this, sid };
+} // geo::GeometryCore::IterateROPIDs(TPCsetID)
+
+
+//------------------------------------------------------------------------------
 inline bool geo::GeometryCore::IncrementID(geo::CryostatID& id) const {
   ++id.Cryostat;
   if (id) id.isValid = HasCryostat(id); // if invalid already, it stays so
@@ -5702,6 +6543,9 @@ inline bool geo::GeometryCore::IncrementID(readout::ROPID& id) const {
   id.ROP = 0;
   return IncrementID(id.asTPCsetID()); // also sets validity
 } // geo::GeometryCore::IncrementID(readout::ROPID)
+
+
+//------------------------------------------------------------------------------
 
 
 

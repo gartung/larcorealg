@@ -1,5 +1,5 @@
 /**
- * @file   RealComparisons.h
+ * @file   larcorealg/CoreUtils/RealComparisons.h
  * @brief  Class for approximate comparisons
  * @author Gianluca Petrillo (petrillo@fnal.gov)
  * @date   November 2, 2016
@@ -8,8 +8,8 @@
  *
  */
 
-#ifndef LARCORE_COREUTILS_REALCOMPARISONS_H
-#define LARCORE_COREUTILS_REALCOMPARISONS_H
+#ifndef LARCOREALG_COREUTILS_REALCOMPARISONS_H
+#define LARCOREALG_COREUTILS_REALCOMPARISONS_H
 
 // C/C++ standard libraries
 #include <cmath> // std::abs()
@@ -266,4 +266,4 @@ namespace lar {
 } // namespace lar
 
 
-#endif // LARCORE_COREUTILS_REALCOMPARISONS_H
+#endif // LARCOREALG_COREUTILS_REALCOMPARISONS_H

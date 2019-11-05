@@ -114,7 +114,7 @@ void StandardDecomposerTest() {
   //
   //  Change the 3D point of the reference frame origin
   //
-  //    void SetOrigin(Point_t const& point)
+  //    void SetReferencePoint(Point_t const& point)
   //
   //  Change the main direction of the projection base
   //
@@ -131,7 +131,7 @@ void StandardDecomposerTest() {
   BOOST_CHECK_EQUAL(defaultBase.NormalDir(),      -Zaxis);
   BOOST_CHECK_EQUAL(defaultBase.ReferencePoint(), ReferencePoint);
 
-  defaultBase.SetOrigin(Origin);
+  defaultBase.SetReferencePoint(Origin);
   BOOST_CHECK_EQUAL(defaultBase.MainDir(),        Yaxis);
   BOOST_CHECK_EQUAL(defaultBase.SecondaryDir(),   Xaxis);
   BOOST_CHECK_EQUAL(defaultBase.NormalDir(),      -Zaxis);

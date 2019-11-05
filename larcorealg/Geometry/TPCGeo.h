@@ -379,6 +379,7 @@ namespace geo {
     /// @deprecated Use `Plane(p).GetCenter()` or equivalent.
     const double*     PlaneLocation(unsigned int p)             const;
     double            Plane0Pitch(unsigned int p)               const;
+    /// Returns the distance between two planes [cm]
     double            PlanePitch(unsigned int p1=0,
                                  unsigned int p2=1)             const;
     double WirePitch(unsigned plane = 0) const;

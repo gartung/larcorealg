@@ -675,6 +675,7 @@ class geo::PixelPlaneGeo: public geo::PlaneGeo {
     (WireLocator const&) const override
     { return nullptr; }
   
+  /// Dumps to string the details of the specified wire `wloc`.
   virtual std::string doWireInfo(
     WireLocator const& wloc,
     std::string indent = "", unsigned int verbosity = 1

@@ -1,5 +1,5 @@
 /**
- * @file   geometrydatacontainers_test.cc
+ * @file   geometrydatacontainers_test.cxx
  * @brief  Unit test for GeometryDataContainers.h library.
  * @author Gianluca Petrillo (petrillo@fnal.gov)
  * @date   January 2nd, 2018

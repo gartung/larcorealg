@@ -1,5 +1,5 @@
 /**
- * @file   NameSelector_test.cc
+ * @file   NameSelector_test.cxx
  * @brief  Test of NameSelector class
  * @author Gianluca Petrillo (petrillo@fnal.gov)
  * @date   July 24th, 2015

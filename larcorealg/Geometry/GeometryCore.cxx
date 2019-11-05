@@ -1070,7 +1070,7 @@ namespace geo {
   // Return the total mass of the detector
   //
   //
-  double GeometryCore::TotalMass(std::string vol) const
+  double GeometryCore::TotalMass(std::string const& vol) const
   {
     //the TGeoNode::GetVolume() returns the TGeoVolume of the detector outline
     //and ROOT calculates the mass in kg for you

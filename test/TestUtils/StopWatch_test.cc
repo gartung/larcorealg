@@ -1,5 +1,5 @@
 /**
- * @file   StopWatch_test.cpp
+ * @file   StopWatch_test.cc
  * @brief  Test for the StopWatch class
  * @author Gianluca Petrillo (petrillo@fnal.gov)
  * @date   July 3, 2016

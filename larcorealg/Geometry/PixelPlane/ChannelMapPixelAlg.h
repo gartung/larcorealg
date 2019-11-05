@@ -124,10 +124,22 @@ class geo::ChannelMapPixelAlg: public geo::ChannelMapAlg {
   
   // --- BEGIN -- channel mapping ----------------------------------------------
   
-  //@{
   /**
    * @brief Returns the channel ID a sensitive element is connected to.
    * @param wireID ID of the element
+   * @return the ID of the channel
+   *
+   * Behaviour on an invalid or not present wires is undefined.
+   */
+  virtual raw::ChannelID_t PlaneWireToChannel
+    (geo::WireID const& wireID) const override;
+  
+  /**
+   * @brief Returns the channel ID a sensitive element is connected to.
+   * @param plane number of wire plane inside the TPC
+   * @param wire number of wire insied the wire plane
+   * @param tpc number of the TPC inside the cryostat
+   * @param cstat number of the cryostat
    * @return the ID of the channel
    * @see `PlaneWireToChannel(geo::WireID const&) const`
    *
@@ -135,14 +147,11 @@ class geo::ChannelMapPixelAlg: public geo::ChannelMapAlg {
    *
    * @deprecated Use the version with `geo::WireID`
    */
-  virtual raw::ChannelID_t PlaneWireToChannel
-    (geo::WireID const& wireID) const override;
   virtual raw::ChannelID_t PlaneWireToChannel(
     unsigned int plane, unsigned int wire,
     unsigned int tpc, unsigned int cstat
     ) const override
     { return PlaneWireToChannel({ cstat, tpc, plane, wire }); }
-  //@}
 
   /// @brief `PlaneIDs()` function is not supported.
   virtual std::set<PlaneID> const& PlaneIDs() const override;

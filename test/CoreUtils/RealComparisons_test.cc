@@ -1,5 +1,5 @@
 /**
- * @file    RealComparison_test.cc
+ * @file    RealComparisons_test.cc
  * @brief   Unit test for RealComparisons class
  * @author  Gianluca Petrillo (petrillo@fnal.gov)
  * @date    November 4th, 2016

@@ -102,35 +102,36 @@ namespace geo{
       (raw::ChannelID_t channel) const = 0;
 
     /**
-     * @brief Return the signal type of the specified channel
+     * @brief Returns the signal type of the specified channel.
      * @param channel ID of the channel
-     * @return signal type of the channel, or geo::kMysteryType if not known
+     * @return signal type of the channel, or `geo::kMysteryType` if not known
      *
      * On any type of error (e.g., invalid or unknown channel ID),
-     * geo::kMysteryType is returned.
+     * `geo::kMysteryType` is returned.
      */
     geo::SigType_t SignalTypeForChannel(raw::ChannelID_t const channel) const;
 
   protected:
 
     /**
-     * @brief Return the signal type of the specified channel
+     * @brief Return the signal type of the specified channel.
      * @param channel ID of the channel
-     * @return signal type of the channel, or geo::kMysteryType if not known
+     * @return signal type of the channel, or `geo::kMysteryType` if not known
      *
      * On any type of error (e.g., invalid or unknown channel ID),
-     * geo::kMysteryType is returned.
+     * `geo::kMysteryType` is returned.
      */
     virtual geo::SigType_t SignalTypeForChannelImpl(raw::ChannelID_t const channel) const = 0;
 
   public:
 
     /**
-     * @brief Return the signal type on the specified readout plane
+     * @brief Returns the signal type on the specified readout plane.
      * @param ropid ID of the readout plane
-     * @return signal type on the plane, or geo::kMysteryType if not known
+     * @return signal type on the plane, or `geo::kMysteryType` if not known
      *
-     * If the readout plane ID is marked invalid, geo::kMysteryType is returned.
+     * If the readout plane ID is marked invalid, `geo::kMysteryType` is
+     * returned.
      * If the readout plane is not marked invalid, but it does not match an
      * existing readout plane, the result is undefined.
      *
@@ -164,11 +165,8 @@ namespace geo{
      * @brief Returns the channel ID a wire is connected to
      * @param wireID ID of the wire
      * @return the ID of the channel
-     * @see PlaneWireToChannel(geo::WireID const&)
      *
-     * Behaviour on an invalid or not present wires is undefined.
-     *
-     * @deprecated Use the version with `geo::WireID`
+     * Behaviour on an invalid or not present wire is undefined.
      */
     virtual raw::ChannelID_t PlaneWireToChannel(geo::WireID const& wireID) const
       {
@@ -185,7 +183,8 @@ namespace geo{
      * @return the ID of the channel
      * @see PlaneWireToChannel(geo::WireID const&)
      *
-     * @deprecated Use the version with `geo::WireID`
+     * @deprecated Use `PlaneWireToChannel(geo::WireID const&) const` instead
+     *             (implementations still need to override this one too).
      */
     virtual raw::ChannelID_t PlaneWireToChannel(unsigned int plane,
                                                 unsigned int wire,
