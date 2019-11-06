@@ -18,7 +18,7 @@ geo::GeoNodePath::operator std::string() const {
   std::string s = "[";
   auto it = fNodes.cbegin(), end = fNodes.cend();
   if (it != end) {
-    s += (*it++)->GetName();
+    s += (*it)->GetName();
     while (++it != fNodes.cend()) {
       s += '/';
       s += (*it)->GetName();
