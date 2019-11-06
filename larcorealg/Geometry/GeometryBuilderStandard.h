@@ -29,6 +29,7 @@
 #include "TGeoNode.h"
 
 // C++ standard library
+#include <regex>
 #include <memory> // std::unique_ptr<>
 #include <string_view>
 #include <limits> // std::numeric_limits<>
@@ -42,7 +43,33 @@ namespace geo {
    * The builder manages several components, each devoted to the extraction of
    * a specific type of geometry object (e.g. cryostat, or wire plane within a
    * TPC).
-   *
+   * 
+   * 
+   * Configuration
+   * ==============
+   * 
+   * In the following, elements of the geometry are recognised by comparing the
+   * _name_ of the describing object (`TGeoNode::GetName()`) to a pattern.
+   * The pattern is a regular expression (as in `std::regex` with default flags)
+   * which needs to match part of the name (e.g. `"^volCryostat"` will match
+   * a node called `"volCryostat_0"`).
+   * 
+   * Configuration parameters:
+   *  * **cryostatPattern** (default: `"^volCryostat"`): pattern to find
+   *      cryostat volumes in the GDML/ROOT geometry structure
+   *  * **TPCPattern** (default: `"^volTPC"`): pattern to find TPC volumes in
+   *      the cryostat volumes
+   *  * **planePattern** (default: `"^volTPCPlane"`): pattern to find sensitive
+   *      plane volumes (wire or pixel anode planes) in the TPC volumes
+   *  * **sensElemPattern** (default: `"^volWire"`): pattern to find sensitive
+   *      element volumes (wires, pixels) in the sensitive plane volumes
+   *  * **opDetPattern** (default: `"^volOpDetSensitive"`): pattern to find
+   *      optical detector volumes in the cryostat volumes
+   *  * **auxDetPattern** (default: `"^volAuxDet"`): pattern to find
+   *      auxiliary detector volumes in the GDML/ROOT geometry structure
+   *  * **auxDetSensPattern** (default: `"sensitive"`): pattern to find
+   *      sensitive detector volumes in the auxiliary detectors
+   * 
    *
    * Further customization notes
    * ============================
@@ -122,10 +149,47 @@ namespace geo {
         std::numeric_limits<Path_t::Depth_t>::max() // default
         };
 
-      fhicl::Atom<std::string> opDetGeoName {
-        Name("opDetGeoName"),
+      fhicl::Atom<std::string> cryostatPattern {
+        Name("cryostatPattern"),
+        Comment("pattern to recognise a cryostat GDML/ROOT node"),
+        "^volCryostat" // default
+        };
+
+      fhicl::Atom<std::string> TPCPattern {
+        Name("TPCPattern"),
+        Comment("pattern to recognise a TPC GDML/ROOT node"),
+        "^volTPC" // default
+        };
+
+      fhicl::Atom<std::string> planePattern {
+        Name("planePattern"),
+        Comment("pattern to recognise a sensitive plane GDML/ROOT node"),
+        "^volTPCPlane" // default
+        };
+
+      fhicl::Atom<std::string> sensElemPattern {
+        Name("sensElemPattern"),
+        Comment("pattern to recognise a sensitive element GDML/ROOT node"),
+        "^volTPCWire" // default
+        };
+
+      fhicl::Atom<std::string> auxDetPattern {
+        Name("auxDetPattern"),
+        Comment("pattern to recognise a auxiliary detector GDML/ROOT node"),
+        "^volAuxDet" // default
+        };
+
+      fhicl::Atom<std::string> auxDetSensPattern {
+        Name("auxDetSensPattern"),
+        Comment
+         ("pattern to recognise a sensitive auxiliary detector GDML/ROOT node"),
+        "Sensitive" // default
+        };
+
+      fhicl::Atom<std::string> opDetPattern {
+        Name("opDetPattern"),
         Comment("the start of the name of optical detector GDML nodes"),
-        "volOpDetSensitive" // default
+        "^volOpDetSensitive" // default
         };
 
     }; // struct Config
@@ -140,9 +204,14 @@ namespace geo {
 
     /// Maximum level to descend into in the path.
     Path_t::Depth_t fMaxDepth = std::numeric_limits<Path_t::Depth_t>::max();
-
-    /// Name of the optical detector nodes.
-    std::string fOpDetGeoName = "volOpDetSensitive";
+    
+    std::regex fCryostatPattern; ///< Pattern used to match cryostat nodes.
+    std::regex fTPCPattern; ///< Pattern used to match TPC nodes.
+    std::regex fPlanePattern; ///< Pattern used to match sensitive plane nodes.
+    std::regex fSensElemPattern; ///< Pattern to match sensitive element nodes.
+    std::regex fAuxDetPattern; ///< Pattern to match aux. detector nodes.
+    std::regex fAuxDetSensPattern; ///< Pattern for sensitive aux. det. nodes.
+    std::regex fOpDetPattern; ///< Pattern to match optical detector nodes.
 
 
     // --- BEGIN Auxiliary detector information --------------------------------
@@ -412,13 +481,21 @@ namespace geo {
      * @tparam IsObj function to identify if a node is of the right type
      * @tparam MakeObj class method creating the target object from a path
      * @param path the path to the node describing the object
+     * @param min (default: `0`) minimum number required
+     * @param objName (default: none) name of the object being extracted,
+     *                for messages
      * @return a fully constructed object of type `ObjGeo`
+     * @throw cet::exception (category: "GeometryBuilder") if not enough objects
+     *                       have been collected
      *
      * This implementation first evaluates if the current node in the specified
      * path is suitable to create a `ObjGeo`; if not, then it descends into the
      * node daughters and recursively to their descendents.
      * For each candidate node, a `ObjGeo` is created. All descendents of the
      * candidates are ignored.
+     * 
+     * If at the end of the call less than `min` objects have been collected,
+     * an exception is thrown.
      *
      * @note Multithreading note: `path` is allowed to change during processing.
      */
@@ -428,16 +505,21 @@ namespace geo {
       bool (geo::GeometryBuilderStandard::*IsObj)(TGeoNode const&) const,
       ObjGeo (geo::GeometryBuilderStandard::*MakeObj)(Path_t&)
       >
-    GeoPtrColl_t<ObjGeoIF> doExtractGeometryObjects(Path_t& path);
+    GeoPtrColl_t<ObjGeoIF> doExtractGeometryObjects
+      (Path_t& path, std::string const& objName = "", unsigned int min = 0U);
     
-    /// `doExtractGeometryObjects()` wth `ObjGeoIF` same as `ObjGeo`.
+    /// `doExtractGeometryObjects()` with `ObjGeoIF` same as `ObjGeo`.
     template <
       typename ObjGeo,
       bool (geo::GeometryBuilderStandard::*IsObj)(TGeoNode const&) const,
       ObjGeo (geo::GeometryBuilderStandard::*MakeObj)(Path_t&)
       >
-    GeoPtrColl_t<ObjGeo> doExtractGeometryObjects(Path_t& path)
-      { return doExtractGeometryObjects<ObjGeo, ObjGeo, IsObj, MakeObj>(path); }
+    GeoPtrColl_t<ObjGeo> doExtractGeometryObjects
+      (Path_t& path, std::string const& objName = "", unsigned int min = 0U)
+      {
+        return doExtractGeometryObjects<ObjGeo, ObjGeo, IsObj, MakeObj>
+          (path, objName, min);
+      }
 
 
   }; // class GeometryBuilderStandard

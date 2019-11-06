@@ -53,7 +53,13 @@ namespace {
 //------------------------------------------------------------------------------
 geo::GeometryBuilderStandard::GeometryBuilderStandard(Config const& config)
   : fMaxDepth(config.maxDepth())
-  , fOpDetGeoName(config.opDetGeoName())
+  , fCryostatPattern(config.cryostatPattern()) // default flags
+  , fTPCPattern(config.TPCPattern()) // default flags
+  , fPlanePattern(config.planePattern()) // default flags
+  , fSensElemPattern(config.sensElemPattern()) // default flags
+  , fAuxDetPattern(config.auxDetPattern()) // default flags
+  , fAuxDetSensPattern(config.auxDetSensPattern()) // default flags
+  , fOpDetPattern(config.opDetPattern()) // default flags
 {
   MF_LOG_DEBUG("GeometryBuilder")
     << "Loading geometry builder: GeometryBuilderStandard";
@@ -69,7 +75,7 @@ geo::GeometryBuilderStandard::doExtractAuxiliaryDetectors(Path_t& path) {
     &geo::GeometryBuilderStandard::isAuxDetNode,
     &geo::GeometryBuilderStandard::doMakeAuxDet
     >
-    (path);
+    (path, "auxiliary detector");
 
 } // geo::GeometryBuilderStandard::doExtractAuxiliaryDetectors()
 
@@ -93,7 +99,7 @@ geo::GeometryBuilderStandard::doExtractAuxDetSensitive(Path_t& path) {
     &geo::GeometryBuilderStandard::isAuxDetSensitiveNode,
     &geo::GeometryBuilderStandard::makeAuxDetSensitive
     >
-    (path);
+    (path, "sensitive auxiliary detector");
 } // geo::GeometryBuilderStandard::doExtractAuxDetSensitive()
 
 
@@ -115,7 +121,7 @@ geo::GeometryBuilderStandard::doExtractCryostats(Path_t& path) {
     &geo::GeometryBuilderStandard::isCryostatNode,
     &geo::GeometryBuilderStandard::makeCryostat
     >
-    (path);
+    (path, "cryostat", 1U); // require at least 1
 
 } // geo::GeometryBuilderStandard::doExtractCryostats()
 
@@ -140,7 +146,7 @@ geo::GeometryBuilderStandard::doExtractOpDets(Path_t& path) {
     &geo::GeometryBuilderStandard::isOpDetNode,
     &geo::GeometryBuilderStandard::makeOpDet
     >
-    (path);
+    (path, "optical detector");
 } // geo::GeometryBuilderStandard::doExtractOpDets()
 
 
@@ -160,7 +166,7 @@ geo::GeometryBuilderStandard::TPCs_t geo::GeometryBuilderStandard::doExtractTPCs
     &geo::GeometryBuilderStandard::isTPCNode,
     &geo::GeometryBuilderStandard::makeTPC
     >
-    (path);
+    (path, "TPC", 1U); // require at least 1
 
 } // geo::GeometryBuilderStandard::doExtractTPCs()
 
@@ -183,7 +189,7 @@ geo::GeometryBuilderStandard::doExtractPlanes(Path_t& path)
     &geo::GeometryBuilderStandard::isPlaneNode,
     &geo::GeometryBuilderStandard::makePlane
     >
-    (path);
+    (path, "anode plane", 1U); // require at least 1
 
 } // geo::GeometryBuilderStandard::doExtractPlanes()
 
@@ -206,8 +212,8 @@ geo::GeometryBuilderStandard::doExtractWires(Path_t& path)
     &geo::GeometryBuilderStandard::isWireNode,
     &geo::GeometryBuilderStandard::makeWire
     >
-    (path);
-
+    (path, "sensitive element", 2U); // require at least 2
+    
 } // geo::GeometryBuilderStandard::doExtractWires()
 
 
@@ -222,8 +228,7 @@ geo::SenseWireGeo geo::GeometryBuilderStandard::doMakeWire(Path_t& path) {
 
 //------------------------------------------------------------------------------
 bool geo::GeometryBuilderStandard::isAuxDetNode(TGeoNode const& node) const {
-  using namespace std::literals;
-  return starts_with(node.GetName(), "volAuxDet"sv);
+  return std::regex_search(node.GetName(), fAuxDetPattern);
 } // geo::GeometryBuilderStandard::isAuxDetNode()
 
 
@@ -231,43 +236,38 @@ bool geo::GeometryBuilderStandard::isAuxDetNode(TGeoNode const& node) const {
 bool geo::GeometryBuilderStandard::isAuxDetSensitiveNode
   (TGeoNode const& node) const
 {
-  return std::string_view(node.GetName()).find("Sensitive")
-    != std::string_view::npos;
+  return std::regex_search(node.GetName(), fAuxDetSensPattern);
 } // geo::GeometryBuilderStandard::isAuxDetSensitiveNode()
 
 
 //------------------------------------------------------------------------------
 bool geo::GeometryBuilderStandard::isCryostatNode(TGeoNode const& node) const {
-  using namespace std::literals;
-  return starts_with(node.GetName(), "volCryostat"sv);
+  return std::regex_search(node.GetName(), fCryostatPattern);
 } // geo::GeometryBuilderStandard::isCryostatNode()
 
 
 //------------------------------------------------------------------------------
 bool geo::GeometryBuilderStandard::isOpDetNode(TGeoNode const& node) const {
-  return starts_with(node.GetName(), fOpDetGeoName);
+  return std::regex_search(node.GetName(), fOpDetPattern);
 } // geo::GeometryBuilderStandard::isOpDetNode()
 
 
 
 //------------------------------------------------------------------------------
 bool geo::GeometryBuilderStandard::isTPCNode(TGeoNode const& node) const {
-  using namespace std::literals;
-  return starts_with(node.GetName(), "volTPC"sv);
+  return std::regex_search(node.GetName(), fTPCPattern);
 } // geo::GeometryBuilderStandard::isTPCNode()
 
 
 //------------------------------------------------------------------------------
 bool geo::GeometryBuilderStandard::isPlaneNode(TGeoNode const& node) const {
-  using namespace std::literals;
-  return starts_with(node.GetName(), "volTPCPlane"sv);
+  return std::regex_search(node.GetName(), fPlanePattern);
 } // geo::GeometryBuilderStandard::isPlaneNode()
 
 
 //------------------------------------------------------------------------------
 bool geo::GeometryBuilderStandard::isWireNode(TGeoNode const& node) const {
-  using namespace std::literals;
-  return starts_with(node.GetName(), "volTPCWire"sv);
+  return std::regex_search(node.GetName(), fSensElemPattern);
 } // geo::GeometryBuilderStandard::isWireNode()
 
 
@@ -279,7 +279,9 @@ template <
   >
 geo::GeometryBuilder::GeoPtrColl_t<ObjGeoIF>
 geo::GeometryBuilderStandard::doExtractGeometryObjects(
-  Path_t& path
+  Path_t& path,
+  std::string const& objName, /* = "" */
+  unsigned int min /* = 0U */
 ) {
 
   using ObjColl_t = geo::GeometryBuilder::GeoPtrColl_t<ObjGeoIF>;
@@ -287,7 +289,7 @@ geo::GeometryBuilderStandard::doExtractGeometryObjects(
   ObjColl_t objs;
 
   //
-  // if this is a wire, we are set
+  // if this is a target object, we are set
   //
   if ((this->*IsObj)(path.current())) {
     // trying to be very very smart here:
@@ -306,11 +308,25 @@ geo::GeometryBuilderStandard::doExtractGeometryObjects(
   int const n = volume.GetNdaughters();
   for (int i = 0; i < n; ++i) {
     path.append(*(volume.GetNode(i)));
-    extendCollection
-      (objs, doExtractGeometryObjects<ObjGeoIF, ObjGeo, IsObj, MakeObj>(path));
+    extendCollection(
+      objs,
+      doExtractGeometryObjects<ObjGeoIF, ObjGeo, IsObj, MakeObj>
+        (path, objName, 0U)
+      );
     path.pop();
   } // for
-
+  
+  if (objs.size() < min) {
+    throw cet::exception("GeometryBuilder")
+      << "Collected " << objs.size() << " " << objName
+      << " object nodes under path " << std::string(path)
+      << " (at least " << min << " required)\n";
+  }
+  else if (!objs.empty()) { // feels still too noisy
+    MF_LOG_TRACE("GeometryBuilder")
+      << "Found " << objs.size() << " " << objName << " object nodes under "
+      << std::string(path);
+  }
   return objs;
 
 } // geo::GeometryBuilderStandard::doExtractGeometryObjects()
