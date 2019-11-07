@@ -74,6 +74,9 @@ namespace geo {
     /// Returns the depth of the path (elements including up to the current).
     Depth_t depth() const { return fNodes.size(); }
 
+    /// Returns the root node. Undefined if the path is empty.
+    Node_t const& root() const { return *(fNodes.front()); }
+
     /// Returns the current node. Undefined if the path is empty.
     Node_t const& current() const { return *(fNodes.back()); }
 
