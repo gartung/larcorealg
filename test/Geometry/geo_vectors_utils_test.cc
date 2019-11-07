@@ -28,7 +28,7 @@
 #include <array>
 #include <vector>
 #include <numeric> // std::iota()
-#include <type_traits> // std::is_same, std::decay_t
+#include <type_traits> // std::is_same_v, std::decay_t
 #include <stdexcept> // std::runtime_error
 #include <cmath> // std::nan
 
@@ -248,7 +248,7 @@ void test_MiddlePointAccumulator_documentation_class() {
   auto middleAboveGround = pointsAboveGround.middlePoint();
 
 
-  static_assert(std::is_same<decltype(middleAboveGround), geo::Point_t>::value,
+  static_assert(std::is_same_v<decltype(middleAboveGround), geo::Point_t>,
     "unexpected return type for geo::vect::MiddlePointAccumulator::middlePoint()");
   CheckPoint
     (middleAboveGround, expected, "MiddlePointAccumulator::middlePoint()");
@@ -298,6 +298,11 @@ void test_middlePoint() {
   //
   // sequence
   //
+  static_assert(
+    std::is_same_v<
+      decltype(geo::vect::middlePoint(points.begin(), points.end())),
+      geo::Point_t
+    >);
   CheckPoint
     (geo::vect::middlePoint(points.begin(), points.end()), expected, "iterators");
 
@@ -305,6 +310,11 @@ void test_middlePoint() {
   //
   // points (initializer list)
   //
+  static_assert(
+    std::is_same_v<
+      decltype(geo::vect::middlePoint({ points[0], points[1], points[2] })),
+      geo::Point_t
+    >);
   CheckPoint(
     geo::vect::middlePoint({ points[0], points[1], points[2] }), expected,
     "initializer list"
@@ -316,7 +326,7 @@ void test_middlePoint() {
   //
   auto const mp3 = geo::vect::middlePointAs<TVector3>(points.begin(), points.end());
   static_assert(
-    std::is_same<std::decay_t<decltype(mp3)>, TVector3>::value,
+    std::is_same_v<std::decay_t<decltype(mp3)>, TVector3>,
     "geo::vect::middlePointAs<TVector3> does not return a TVector3!"
     );
   CheckPoint(mp3, expected, "geo::vect::middlePointAs(sequence)");
@@ -342,7 +352,7 @@ void test_middlePointAs_documentation() {
     };
   auto mp = geo::vect::middlePointAs<geo::Vector_t>(points.begin(), points.end());
 
-  static_assert(std::is_same<std::decay_t<decltype(mp)>, geo::Vector_t>::value,
+  static_assert(std::is_same_v<std::decay_t<decltype(mp)>, geo::Vector_t>,
     "geo::vect::middlePointAs<geo::Vector_t> result is not geo::Vector_t");
   CheckPoint(mp, geo::Vector_t(2., 4., 6.));
 
@@ -369,7 +379,7 @@ void test_middlePoint_iterators_documentation() {
 
   auto mp = geo::vect::middlePoint(points.begin(), points.end());
 
-  static_assert(std::is_same<std::decay_t<decltype(mp)>, geo::Point_t>::value,
+  static_assert(std::is_same_v<std::decay_t<decltype(mp)>, geo::Point_t>,
     "geo::vect::middlePoint() result is not geo::Point_t");
   CheckPoint(mp, geo::Point_t(2., 4., 6.));
 
@@ -387,7 +397,7 @@ void test_middlePoint_initlist_documentation() {
   auto mp = geo::vect::middlePoint
     ({ geo::Point_t(1., 2., 3.), geo::Point_t(3., 6., 9.) });
 
-  static_assert(std::is_same<std::decay_t<decltype(mp)>, geo::Point_t>::value,
+  static_assert(std::is_same_v<std::decay_t<decltype(mp)>, geo::Point_t>,
     "geo::vect::middlePoint() result is not geo::Point_t");
   CheckPoint(mp, geo::Point_t(2., 4., 6.));
 
@@ -773,7 +783,7 @@ void test_vector2Dconvert() {
   auto dest = geo::vect::convertTo<Dest>(src);
 
   static_assert
-    (std::is_same<decltype(dest), Dest>(), "Unexpected return type!");
+    (std::is_same_v<decltype(dest), Dest>, "Unexpected return type!");
 
   BOOST_CHECK_EQUAL(geo::vect::Xcoord(dest), srcData[0]);
   BOOST_CHECK_EQUAL(geo::vect::Ycoord(dest), srcData[1]);
@@ -802,7 +812,7 @@ void test_vector3Dconvert() {
   auto dest = geo::vect::convertTo<Dest>(src);
 
   static_assert
-    (std::is_same<decltype(dest), Dest>(), "Unexpected return type!");
+    (std::is_same_v<decltype(dest), Dest>, "Unexpected return type!");
 
   BOOST_CHECK_EQUAL(geo::vect::Xcoord(dest), srcData[0]);
   BOOST_CHECK_EQUAL(geo::vect::Ycoord(dest), srcData[1]);
@@ -833,7 +843,7 @@ void test_vector4Dconvert() {
   auto dest = geo::vect::convertTo<Dest>(src);
 
   static_assert
-    (std::is_same<decltype(dest), Dest>(), "Unexpected return type!");
+    (std::is_same_v<decltype(dest), Dest>, "Unexpected return type!");
 
   BOOST_CHECK_EQUAL(geo::vect::Xcoord(dest), srcData[0]);
   BOOST_CHECK_EQUAL(geo::vect::Ycoord(dest), srcData[1]);
@@ -873,7 +883,7 @@ void test_transform() {
 
   auto const neg_v = geo::vect::transformCoords(v, [](auto c){ return -c; });
   static_assert
-    (std::is_same<decltype(neg_v), decltype(v)>(), "Unexpected return type");
+    (std::is_same_v<decltype(neg_v), decltype(v)>, "Unexpected return type");
   BOOST_CHECK(neg_v == -v);
 
 } // test_transform()
@@ -990,7 +1000,7 @@ struct VectorTraitsTester {
   static_assert(!geo::vect::details::HasZ<TVector2>(), "Unexpected TVector2::Z()");
   static_assert(!geo::vect::details::HasT<TVector2>(), "Unexpected TVector2::T()");
   static_assert(geo::vect::dimension<TVector2>() == 2U, "Unexpected TVector2 dimension");
-  static_assert(std::is_same<geo::vect::coordinate_t<TVector2>, double>(), "Unexpected vector type");
+  static_assert(std::is_same_v<geo::vect::coordinate_t<TVector2>, double>, "Unexpected vector type");
 
   //
   // TVector3
@@ -1000,7 +1010,7 @@ struct VectorTraitsTester {
   static_assert( geo::vect::details::HasZ<TVector3>(), "Unexpected TVector3::Z()");
   static_assert(!geo::vect::details::HasT<TVector3>(), "Unexpected TVector3::T()");
   static_assert(geo::vect::dimension<TVector3>() == 3U, "Unexpected TVector3 dimension");
-  static_assert(std::is_same<geo::vect::coordinate_t<TVector3>, double>(), "Unexpected vector type");
+  static_assert(std::is_same_v<geo::vect::coordinate_t<TVector3>, double>, "Unexpected vector type");
 
   //
   // TLorentzVector
@@ -1010,7 +1020,7 @@ struct VectorTraitsTester {
   static_assert( geo::vect::details::HasZ<TLorentzVector>(), "Unexpected TLorentzVector::Z()");
   static_assert( geo::vect::details::HasT<TLorentzVector>(), "Unexpected TLorentzVector::T()");
   static_assert(geo::vect::dimension<TLorentzVector>() == 4U, "Unexpected TLorentzVector dimension");
-  static_assert(std::is_same<geo::vect::coordinate_t<TLorentzVector>, double>(),
+  static_assert(std::is_same_v<geo::vect::coordinate_t<TLorentzVector>, double>,
     "Unexpected TLorentzVector coordinate type");
 
   //
@@ -1021,7 +1031,7 @@ struct VectorTraitsTester {
   static_assert( geo::vect::details::HasZ<geo::Vector_t>(), "Unexpected geo::Vector_t::Z()");
   static_assert(!geo::vect::details::HasT<geo::Vector_t>(), "Unexpected geo::Vector_t::T()");
   static_assert(geo::vect::dimension<geo::Vector_t>() == 3U, "Unexpected geo::Vector_t dimension");
-  static_assert(std::is_same<geo::vect::coordinate_t<geo::Vector_t>, double>(),
+  static_assert(std::is_same_v<geo::vect::coordinate_t<geo::Vector_t>, double>,
     "Unexpected vector type");
 
   //
@@ -1032,7 +1042,7 @@ struct VectorTraitsTester {
   static_assert( geo::vect::details::HasZ<geo::Point_t>(), "Unexpected geo::Point_t::Z()");
   static_assert(!geo::vect::details::HasT<geo::Point_t>(), "Unexpected geo::Point_t::T()");
   static_assert(geo::vect::dimension<geo::Point_t>() == 3U, "Unexpected geo::Point_t dimension");
-  static_assert(std::is_same<geo::vect::coordinate_t<geo::Point_t>, double>(),
+  static_assert(std::is_same_v<geo::vect::coordinate_t<geo::Point_t>, double>,
     "Unexpected vector type");
 
 }; // struct VectorTraitsTester

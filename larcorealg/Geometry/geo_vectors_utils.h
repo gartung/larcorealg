@@ -31,7 +31,7 @@
 // C/C++ standard library
 #include <array>
 #include <vector>
-#include <iterator> // std::back_inserter()
+#include <iterator> // std::back_inserter(), std::iterator_traits
 #include <type_traits> // std::declval(), std::is_same<>, ...
 #include <functional> // std::mem_fn()
 #include <cassert>
@@ -1425,7 +1425,8 @@ namespace geo {
      * @tparam EndIter type of end iterator
      * @param begin iterator to the first point to be averaged
      * @param end iterator after the last point to be averaged
-     * @return an object of type `Point_t` with the value of the middle point
+     * @return an object of the same type as `*begin` with the value of the
+     *         middle point
      *
      * Example of usage:
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
@@ -1441,8 +1442,7 @@ namespace geo {
      *
      */
     template <typename BeginIter, typename EndIter>
-    geo::Point_t middlePoint(BeginIter begin, EndIter end)
-      { return middlePointAs<geo::Point_t>(begin, end); }
+    auto middlePoint(BeginIter begin, EndIter end);
 
     /**
      * @brief Returns the middle of the specified points.
@@ -2134,6 +2134,14 @@ Vector geo::vect::transformCoords(Vector const& v, Pred&& pred) {
 template <typename Vector>
 bool geo::vect::isfinite(Vector const& v)
   { return details::isfiniteImpl(v, details::makeVectorIndices<Vector>()); }
+
+//------------------------------------------------------------------------------
+template <typename BeginIter, typename EndIter>
+inline auto geo::vect::middlePoint(BeginIter begin, EndIter end) {
+  return middlePointAs<typename std::iterator_traits<BeginIter>::value_type>
+    (begin, end);
+} // geo::vect::middlePoint()
+
 
 //------------------------------------------------------------------------------
 
