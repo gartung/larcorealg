@@ -18,7 +18,7 @@
 namespace geo {
   
   /**
-   * @brief Geometry builder which uses `geo::PixelPlane` for sensitive planes.
+   * @brief Geometry builder using `geo::PixelPlaneGeo` for sensitive planes.
    * 
    * This builder works like `geo::GeometryBuilderWireless`, with the exception
    * that it creates `geo::PixelPlane` instead of `geo::WirePlaneGeo` objects.

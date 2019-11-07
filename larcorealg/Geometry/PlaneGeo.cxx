@@ -2,7 +2,8 @@
  * @file   larcorealg/Geometry/PlaneGeo.cxx
  * @brief  Interface for classes describing the geometry of a TPC readout plane.
  * @author Gianluca Petrillo (petrillo@fnal.gov)
- * @date   April 17, 2109
+ * @date   April 17, 2019
+ * @see    `larcorealg/Geometry/PlaneGeo.h`
  * @ingroup Geometry
  * 
  */

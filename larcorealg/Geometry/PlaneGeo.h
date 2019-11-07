@@ -3,6 +3,7 @@
  * @brief  Interface for classes describing the geometry of a TPC readout plane.
  * @author Gianluca Petrillo (petrillo@fnal.gov)
  * @date   April 17, 2019
+ * @see    `larcorealg/Geometry/PlaneGeo.cxx`
  * @ingroup Geometry
  * 
  */
@@ -1525,7 +1526,12 @@ namespace geo {
     /// @name Constructors, destructor and friends
     /// @{
     
-    /// Construct a representation of a single plane of the detector.
+    /**
+     * @brief Construct a representation of a single plane of the detector.
+     * @param node GDML/ROOT object describing the plane itself
+     * @param trans transformation describing position and orientation of the
+     *              plane in the world (based on local-to-world transformation)
+     */
     PlaneGeo(
       TGeoNode const& node,
       geo::TransformationMatrix&& trans
