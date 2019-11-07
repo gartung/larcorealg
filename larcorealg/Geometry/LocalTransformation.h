@@ -110,6 +110,11 @@ namespace geo {
       : fGeoMatrix(transformationFromPath(begin, end)) {}
 
 
+    // --- BEGIN -- Local-to-world transformations -----------------------------
+    /// @name Local-to-world transformations
+    /// @{
+    
+    //@{
     /**
      * @brief Transforms a point from local frame to world frame
      * @param local local coordinates: [0] x, [1] y, [2] z [cm]
@@ -130,7 +135,7 @@ namespace geo {
      * assumed not to, and must not, overlap.
      */
     void LocalToWorld(double const* local, double* world) const;
-
+    //@}
 
     // @{
     /**
@@ -162,6 +167,7 @@ namespace geo {
       { return LocalToWorldImpl<Point>(local); }
     // @}
 
+    //@{
     /**
      * @brief Transforms a vector from local frame to world frame
      * @param local local coordinates: [0] x, [1] y, [2] z [cm]
@@ -174,6 +180,7 @@ namespace geo {
      * assumed not to, and must not, overlap.
      */
     void LocalToWorldVect(double const* local, double* world) const;
+    //@}
 
     //@{
     /**
@@ -198,6 +205,16 @@ namespace geo {
     //@}
 
 
+    /// @}
+    // --- END -- Local-to-world transformations -------------------------------
+    
+    
+    
+    // --- BEGIN -- World-to-local transformations -----------------------------
+    /// @name World-to-local transformations
+    /// @{
+    
+    //@{
     /**
      * @brief Transforms a point from world frame to local frame
      * @param world world coordinates: [0] x, [1] y, [2] z [cm]
@@ -216,6 +233,7 @@ namespace geo {
      * assumed not to, and must not, overlap.
      */
     void WorldToLocal(double const* world, double* local) const;
+    //@}
 
     //@{
     /**
@@ -245,6 +263,7 @@ namespace geo {
       { return WorldToLocalImpl<Point>(world); }
     //@}
 
+    //@{
     /**
      * @brief Transforms a vector from world frame to local frame
      * @param world world coordinates: [0] x, [1] y, [2] z [cm]
@@ -257,7 +276,7 @@ namespace geo {
      * assumed not to, and must not, overlap.
      */
     void WorldToLocalVect(const double* world, double* local) const;
-
+    //@}
 
     //@{
     /**
@@ -281,7 +300,10 @@ namespace geo {
       { return WorldToLocalVectImpl<Vector>(world); }
     //@}
 
+    /// @}
+    // --- END -- World-to-local transformations -------------------------------
 
+    
     /// Direct access to the transformation matrix
     TransformationMatrix_t const& Matrix() const { return fGeoMatrix; }
 
