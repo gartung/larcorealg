@@ -320,6 +320,10 @@ namespace geo {
     /// @see GetBoxCenter()
     geo::BoxBoundedGeo BoundingBox() const;
 
+    /// @brief Returns the object describing the plane volume.
+    /// @return pointer to plane volume object, or `nullptr` if not available
+    TGeoVolume const* GetGeoVolume() const { return fVolume; }
+
     /// @}
     // --- END -- Plane size and coordinates -----------------------------------
 
