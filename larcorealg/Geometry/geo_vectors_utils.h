@@ -398,11 +398,10 @@ namespace geo {
     } // namespace details
 
 
-    // BEGIN Geometry group ------------------------------------------------------
-    /// @ingroup Geometry
-    /// @{
-
+    // --- BEGIN Extra namespace -----------------------------------------------
     /// Convenience utilities not directly related to vectors.
+    /// @ingroup Geometry
+
     namespace extra {
 
       /// Returns `value`, rounded to 0 if closer than `tol`.
@@ -421,10 +420,12 @@ namespace geo {
 
     } // namespace extra
 
-
+    // --- END Extra namespace -------------------------------------------------
+    
+    
     // --- BEGIN Vector coordinate access abstraction --------------------------
-    /// @{
     /**
+     * @ingroup Geometry
      * @name Vector coordinate access abstraction
      *
      * This group of utilities provides a common interface for tasks involving
@@ -575,6 +576,7 @@ namespace geo {
      *   3D vectors and `T` for 4D vectors (metric is irrelevant here)
      *
      */
+    /// @{
 
     //@{
     /// Returns the dimension of the specified vector type.
@@ -592,10 +594,13 @@ namespace geo {
     constexpr auto indices(Vector const&) -> decltype(indices<Vector>());
     //@}
 
+    //@{
     /// Type of coordinate of the specified vector type.
     template <typename Vector>
     using coordinate_t = details::VectorScalar_t<Vector>;
+    //@}
 
+    //@{
     /**
      * @brief Creates a `Vector` object with coordinates from `coords`.
      * @tparam Vector the type of vector to be created
@@ -619,8 +624,10 @@ namespace geo {
      */
     template <typename Vector, typename Coords>
     constexpr Vector makeFromCoords(Coords&& coords);
+    //@}
 
 
+    //@{
     /**
      * @brief Fills a coordinate array with the coordinates of a vector.
      * @tparam Vector type of vector being copied from
@@ -635,18 +642,24 @@ namespace geo {
      */
     template <typename Vector, typename Coords>
     unsigned int fillCoords(Coords& dest, Vector const& src);
+    //@}
 
 
+    //@{
     /// Type of a coordinate reader for a vector type.
     template <typename Vector>
     using CoordReader_t
       = decltype(details::makeCoordReader(&Vector::X));
+    //@}
 
+    //@{
     /// Type of a coordinate manager for a vector type.
     template <typename Vector>
     using CoordManager_t = decltype
       (details::makeCoordManager(&Vector::X, &Vector::SetX));
+    //@}
 
+    //@{
     /**
      * @brief Object that can be bound to a vector to manage its X coordinate.
      * @tparam Vector type of vector to get a manager for
@@ -671,7 +684,9 @@ namespace geo {
     template <typename Vector>
     static constexpr auto XcoordManager
       = details::makeCoordManager(&Vector::X, &Vector::SetX);
+    //@}
 
+    //@{
     /**
      * @brief Object that can be bound to a vector to access its X coordinate.
      * @tparam Vector type of vector to get a manager for
@@ -696,44 +711,58 @@ namespace geo {
     template <typename Vector>
     static constexpr auto XcoordManager<Vector const>
       = details::makeCoordReader(&Vector::X);
+    //@}
 
+    //@{
     /// An object that can be bound to a vector to manage its Y coordinate.
     /// @see `geo::vect::XcoordManager`
     template <typename Vector>
     static constexpr auto const YcoordManager
       = details::makeCoordManager(&Vector::Y, &Vector::SetY);
+    //@}
 
+    //@{
     /// An object that can be bound to a vector to manage its Y coordinate.
     /// @see `geo::vect::XcoordManager`
     template <typename Vector>
     static constexpr auto YcoordManager<Vector const>
       = details::makeCoordReader(&Vector::Y);
+    //@}
 
+    //@{
     /// An object that can be bound to a vector to manage its Z coordinate.
     /// @see `geo::vect::XcoordManager`
     template <typename Vector>
     static constexpr auto ZcoordManager
       = details::makeCoordManager(&Vector::Z, &Vector::SetZ);
+    //@}
 
+    //@{
     /// An object that can be bound to a vector to manage its Z coordinate.
     /// @see `geo::vect::XcoordManager`
     template <typename Vector>
     static constexpr auto ZcoordManager<Vector const>
       = details::makeCoordReader(&Vector::Z);
+    //@}
 
+    //@{
     /// An object that can be bound to a vector to manage its T coordinate.
     /// @see `geo::vect::XcoordManager`
     template <typename Vector>
     static constexpr auto TcoordManager
       = details::makeCoordManager(&Vector::T, &Vector::SetT);
+    //@}
 
+    //@{
     /// An object that can be bound to a vector to manage its T coordinate.
     /// @see `geo::vect::XcoordManager`
     template <typename Vector>
     static constexpr auto TcoordManager<Vector const>
       = details::makeCoordReader(&Vector::T);
+    //@}
 
 
+    //@{
     /**
      * @brief Returns an object that can be bound to a vector to manage one of
      *        its coordinates.
@@ -776,7 +805,9 @@ namespace geo {
      */
     template <typename Vector>
     constexpr auto coordManager(unsigned int n);
+    //@}
 
+    //@{
     /**
      * @brief Returns an object that can be bound to a vector to manage one of
      *        its coordinates.
@@ -790,6 +821,7 @@ namespace geo {
      */
     template <typename Vector>
     constexpr auto coordManager(unsigned int n, Vector& v);
+    //@}
 
 
     //@{
@@ -808,6 +840,7 @@ namespace geo {
     constexpr auto coordReaders(Vector&&);
     //@}
 
+    //@{
     /// Binds the specified constant vector to the coordinate reader.
     template <typename Vector>
     constexpr auto bindCoord
@@ -816,15 +849,18 @@ namespace geo {
         return details::BoundCoordGetter<CoordReader_t<Vector>, Vector const>
           (v, helper);
       }
+    //@}
 
+    //@{
     /// Binds the specified vector to the coordinate manager.
     template <typename Vector>
     auto bindCoord(Vector& v, CoordManager_t<Vector> helper)
       -> details::BoundCoordManager<CoordManager_t<Vector>, Vector>
       { return { v, helper }; }
+    //@}
 
 
-
+    //@{
     /**
      * @brief Returns an object to manage the coordinate X of the vector `v`.
      * @tparam Vector the type of vector to be managed
@@ -838,7 +874,9 @@ namespace geo {
     template <typename Vector>
     auto Xcoord(Vector& v)
       { return bindCoord(v, XcoordManager<Vector>); }
+    //@}
 
+    //@{
     /**
      * @brief Returns an object to manage the coordinate Y of the vector `v`.
      * @tparam Vector the type of vector to be managed
@@ -852,7 +890,9 @@ namespace geo {
     template <typename Vector>
     auto Ycoord(Vector& v)
       { return bindCoord<Vector>(v, YcoordManager<Vector>); }
+    //@}
 
+    //@{
     /**
      * @brief Returns an object to manage the coordinate Z of the vector `v`.
      * @tparam Vector the type of vector to be managed
@@ -866,7 +906,9 @@ namespace geo {
     template <typename Vector>
     auto Zcoord(Vector& v)
       { return bindCoord<Vector>(v, ZcoordManager<Vector>); }
+    //@}
 
+    //@{
     /**
      * @brief Returns an object to manage the coordinate T of the vector `v`.
      * @tparam Vector the type of vector to be managed
@@ -880,7 +922,9 @@ namespace geo {
     template <typename Vector>
     auto Tcoord(Vector& v)
       { return bindCoord<Vector>(v, TcoordManager<Vector>); }
+    //@}
 
+    //@{
     /**
      * @brief Returns an object to manage the coordinate `n` of a vector
      * @tparam Vector the type of vector to be managed
@@ -894,20 +938,26 @@ namespace geo {
      */
     template <typename Vector>
     auto coord(Vector& v, unsigned int n) noexcept;
+    //@}
 
-
+    
+    //@{
     /// Returns an array with all coordinate managers bound to the specified
     /// vector.
     template <typename Vector>
     constexpr auto bindCoordManagers(Vector& v);
+    //@}
 
+    //@{
     /// Returns an array with all coordinate readers bound to the specified
     /// vector.
     template <typename Vector>
     constexpr auto bindCoordReaders(Vector const& v);
+    //@}
 
 
 
+    //@{
     /**
      * @brief Constant iterator to vector coordinates.
      * @tparam Vector the type of vector being iterated
@@ -1033,6 +1083,7 @@ namespace geo {
       // --- END Comparison operators ----------------------------------------------
 
     }; // class CoordConstIterator
+    //@}
 
     template <typename Vector>
     CoordConstIterator<Vector> operator+ (
@@ -1041,16 +1092,22 @@ namespace geo {
       )
       { return v + n; }
 
+
+    //@{
     /// Returns a const-iterator pointing to the first coordinate of `v`.
     template <typename Vector>
     auto vector_cbegin(Vector const& v)
       { return CoordConstIterator(v, 0); }
+    //@}
 
+    //@{
     /// Returns a const-iterator pointing after the last coordinate of `v`.
     template <typename Vector>
     auto vector_cend(Vector const& v)
       { return CoordConstIterator(v, geo::vect::dimension(v)); }
+    //@}
 
+    //@{
     /**
      * @brief Returns an object for ranged-for iteration on coordinates.
      * @tparam Vector type of vector to iterate through
@@ -1067,8 +1124,10 @@ namespace geo {
     template <typename Vector>
     auto iterateCoords(Vector const& v)
       { return util::span(vector_cbegin(v), vector_cend(v)); }
+    //@}
 
 
+    //@{
     /**
      * @brief Returns a vector of type `Dest` with the same content as a `Src`.
      * @tparam Dest target vector type
@@ -1081,8 +1140,10 @@ namespace geo {
      */
     template <typename Dest, typename Source>
     Dest convertTo(Source const& v);
+    //@}
 
 
+    //@{
     /**
      * @brief Returns a vector of type `Dest` with the same content as a `Src`.
      * @tparam Dest target vector type
@@ -1100,8 +1161,10 @@ namespace geo {
      */
     template <typename Dest, typename Source>
     std::vector<Dest> convertCollTo(std::vector<Source> const& coll);
+    //@}
 
 
+    //@{
     /**
      * @brief Returns a new vector applying a predicate to each component.
      * @tparam Vector type of the vector in input (and output)
@@ -1521,9 +1584,6 @@ namespace geo {
 
 
   } // namespace vect
-
-  /// @}
-  // END Geometry group --------------------------------------------------------
 
 } // namespace geo
 
