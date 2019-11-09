@@ -8,6 +8,15 @@ cet_test( geo_vectors_utils_test
   USE_BOOST_UNIT
   )
 
+cet_test( geo_vectors_parse_test
+  LIBRARIES
+    larcorealg_CoreUtils
+    ${ROOT_CORE}
+    ${ROOT_PHYSICS}
+    ${ROOT_GENVECTOR}
+  USE_BOOST_UNIT
+  )
+
 # test libraries
 cet_make_library( LIBRARY_NAME GeometryTestLib
                   SOURCE
