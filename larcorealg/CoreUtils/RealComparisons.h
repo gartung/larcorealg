@@ -239,6 +239,54 @@ namespace lar {
       template <typename VectA, typename VectB>
       constexpr bool nonEqual(VectA const& a, VectB const& b) const
         { return !equal(a, b); }
+      
+      
+      /**
+       * @brief Returns whether the specified vectors are orthogonal.
+       * @return whether `a` and `b` are orthogonal
+       * 
+       * The implementation requires that `b` needs to have a projection on
+       * `a` direction no larger than the tolerance.
+       * Note that the verse is not considered and two antiparallel vectors
+       * are also considered parallel here.
+       * 
+       * The type `A` must support `Unit()` and `A::Dot(B)`.
+       */
+      template <typename VectA, typename VectB>
+      constexpr bool orthogonal(VectA const& a, VectB const& b) const
+        { return zero(a.Unit().Dot(b)); }
+      
+      /**
+       * @brief Returns whether the specified vectors are parallel.
+       * @return whether `a` and `b` are parallel (or antiparallel)
+       * 
+       * The implementation requires that `b` needs to have a orthogonal
+       * component respect to `a` with modulus no larger than the tolerance.
+       * Note that the verse is not considered and two antiparallel vectors
+       * are also considered parallel here.
+       * 
+       * The type `A` must support `Unit()` and `A::Cross(B)`.
+       */
+      template <typename VectA, typename VectB>
+      constexpr bool parallel(VectA const& a, VectB const& b) const
+        { return zero(a.Unit().Cross(b)); }
+      
+      /**
+       * @brief Returns whether specified vectors have contrasting directions.
+       * @return whether `a` and `b` angle is larger than right angle
+       * 
+       * Two vector are "opposite" (in the loose terms of this method) if they
+       * make an angle larger than the right angle:
+       * (@f$ \vec{a}\cdot\vec{b} < 0 @f$).
+       * 
+       * The type `A` must support `A::Dot(B)`.
+       */
+      template <typename VectA, typename VectB>
+      constexpr bool opposite(VectA const& a, VectB const& b) const
+        { return strictlyNegative(a.Dot(b)); }
+      
+      
+      
 
         private:
       Comp2D_t comparer;
@@ -247,14 +295,14 @@ namespace lar {
 
 
     //--------------------------------------------------------------------------
-    /// Creates a `Vector3DComparison` from a `RealComparisons` object.
+    /// Creates a `Vector3DComparison` from a threshold.
     template <typename RealType>
-    auto makeVector3DComparison(RealType threshold)
+    constexpr auto makeVector3DComparison(RealType threshold)
       { return Vector3DComparison<RealType>(threshold); }
 
     /// Creates a `Vector3DComparison` from a `RealComparisons` object.
     template <typename RealType>
-    auto makeVector3DComparison
+    constexpr auto makeVector3DComparison
       (lar::util::RealComparisons<RealType> const& comp)
       { return Vector3DComparison<RealType>(comp); }
 
