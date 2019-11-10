@@ -380,6 +380,19 @@ namespace geo {
     /// Get name of opdet geometry element
     std::string  OpDetGeoName()                                 const { return fOpDetGeoName; }
 
+    /**
+     * @brief Returns an object for iterating through all optical detectors.
+     * @see `IterateTPCs()`
+     *
+     * The returned value can be used in a range-for loop like:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * for (geo::OpDetGeo const& opDet: cryo.IterateOpDets()) { ... }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * The resulting sequence exposes the optical detectors within the cryostat
+     * in their ID order, from `0` to `NOpDet() - 1`.
+     */
+    inline decltype(auto) IterateOpDets() const;
+    
     /// @}
     // END Optical detector access ---------------------------------------------
 
@@ -499,6 +512,15 @@ static_assert(!std::is_copy_constructible_v<geo::CryostatGeo>);
 static_assert(!std::is_copy_assignable_v<geo::CryostatGeo>);
 static_assert( std::is_move_constructible_v<geo::CryostatGeo>);
 static_assert( std::is_move_assignable_v<geo::CryostatGeo>);
+
+
+//------------------------------------------------------------------------------
+//--- Inline implementation
+//------------------------------------------------------------------------------
+decltype(auto) geo::CryostatGeo::IterateOpDets() const {
+  // so far, the storage is simple enough that we can return it directly
+  return fOpDets;
+} // geo::CryostatGeo::IterateOpDets()
 
 
 //------------------------------------------------------------------------------
