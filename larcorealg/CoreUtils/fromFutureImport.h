@@ -11,6 +11,8 @@
 #define LARCOREALG_COREUTILS_FROMFUTUREIMPORT_H
 
 // C/C++ standard libraries
+#include <string_view>
+#include <string>
 #include <utility> // std::forward()
 #include <system_error> // std::errc
 
@@ -85,6 +87,87 @@ namespace util::pre_std {
   // --- END -- charconv -------------------------------------------------------
   
 } // namespace pre_std
+
+
+// -----------------------------------------------------------------------------
+/**
+ * @defgroup NonStandards Features excluded from C++ standards
+ * @brief Features expected not to be provided by C++ standards, which should
+ *        have been.
+ */
+
+
+/**
+ * @brief Namespace implementing some simple features that haven't made it into
+ *        C++ standards and possibly never will.
+ *
+ * @addtogroup NonStandards
+ */ 
+namespace util::not_std {}
+
+/**
+ * @brief Operations with `std::string_view`.
+ * 
+ * String and string view concatenation
+ * -------------------------------------
+ * 
+ * For some reason (an hypothesis at
+ * https://stackoverflow.com/questions/44636549) concatenation between
+ * `std::string` and `std::string_view` is not supported in C++ standard (C++17
+ * at least). However, `std::string::operator += ()`, `std::string::append()`,
+ * `std::string::assign()`, `std::string::insert()`, ... are able to use
+ * anything with iterator range interface, including a `std::string_view`.
+ * 
+ * An example:
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+ * void checkLength(std::string_view const& s, std::size_t const maxLength) {
+ *   using namespace std::string_literals;
+ *   using namespace util::not_std::string_view_ops;
+ *   
+ *   if (s.length() <= maxLength) return;
+ *   
+ *   throw std::logic_error(
+ *     "String '"s + s + "' is "
+ *     + std::to_string(s.length()) + " characters long!"
+ *     );
+ *   
+ * } // void checkLength()
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * The concatenation is enabled by using the `util::not_std::string_view_ops`
+ * namespace. This is a case where we don't have control on what to pass to
+ * an interface (`std::logic_error` requires a `std::string`).
+ * 
+ */
+namespace util::not_std::string_view_ops {
+  
+  /// Returns a new string containing the concatenation of `a` and `b`.
+  template <typename CharT, typename Traits, typename Allocator>
+  auto operator+ (
+    std::basic_string<CharT, Traits, Allocator> const& a,
+    std::basic_string_view<CharT, Traits> const& b
+    )
+    -> std::basic_string<CharT, Traits, Allocator>
+  {
+    std::basic_string<CharT, Traits, Allocator> ab;
+    ab.reserve(a.size() + b.size()); // allocation of memory, once
+    return ab.assign(a).append(b);
+  }
+  
+  /// Returns a new string containing the concatenation of `a` and `b`.
+  template <typename CharT, typename Traits, typename Allocator>
+  auto operator+ (
+    std::basic_string_view<CharT, Traits> const& a,
+    std::basic_string<CharT, Traits, Allocator> const& b
+    )
+    -> std::basic_string<CharT, Traits, Allocator>
+  {
+    std::basic_string<CharT, Traits, Allocator> ab;
+    ab.reserve(a.size() + b.size()); // allocation of memory, once
+    return ab.assign(a).append(b);
+  }
+  
+  
+} // namespace util::not_std::string_view_ops
 
 
 // -----------------------------------------------------------------------------

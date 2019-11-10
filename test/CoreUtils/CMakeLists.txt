@@ -13,6 +13,10 @@ cet_test(UncopiableAndUnmovableClass_test
   USE_BOOST_UNIT
   )
 
+cet_test(fromFutureImport_test
+  USE_BOOST_UNIT
+  )
+
 
 cet_test( ProviderPack_test USE_BOOST_UNIT )
 cet_test( RealComparisons_test USE_BOOST_UNIT )
