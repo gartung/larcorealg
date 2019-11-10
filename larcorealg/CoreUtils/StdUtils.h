@@ -10,7 +10,8 @@
 
 // C/C++ standard libraries
 #include <string> // std::to_string()
-#include <iterator> // std::begin(), std::end(), ...
+#include <algorithm> // std::equal()
+#include <iterator> // std::begin(), std::end(), std::next()...
 
 namespace util {
   
@@ -94,11 +95,70 @@ namespace util {
   
   // --- END --- Containers and iterators --------------------------------------
   
+  
+  
+  // --- BEGIN --- String operations -------------------------------------------
+  /**
+   * @brief Returns whether the string `s` starts with the string `prefix`.
+   * @tparam String string type for the string to be checked
+   * @tparam Prefix string type for the prefix
+   * @param s string to be checked
+   * @param prefix prefix to be sought
+   * @return whether `s` starts exactly with `prefix`
+   * 
+   * Requirements:
+   *  * `String` and `Prefix` types must support forward iterators
+   *  * the character types in `String` and in `Prefix` must be comparable
+   */
+  template <typename String, typename Prefix>
+  bool starts_with(String const& s, Prefix const& prefix);
+  
+  /**
+   * @brief Returns whether the string `s` ends with the string `suffix`.
+   * @tparam String string type for the string to be checked
+   * @tparam Suffix string type for the suffix
+   * @param s string to be checked
+   * @param suffix suffix to be sought
+   * @return whether `s` ends exactly with `suffix`
+   * 
+   * Requirements:
+   *  * `String` and `Suffix` types must support forward iterators
+   *  * the character types in `String` and in `Suffix` must be comparable
+   */
+  template <typename String, typename Suffix>
+  bool ends_with(String const& s, Suffix const& suffix);
+  
   /// @}
+  // --- END --- String operations ---------------------------------------------
   
   
 } // namespace util
 
+
+// -----------------------------------------------------------------------------
+// ---  template implementation
+// -----------------------------------------------------------------------------
+template <typename String, typename Prefix>
+bool util::starts_with(String const& s, Prefix const& prefix) {
+  return std::equal(
+    util::begin(s), std::next(util::begin(s), prefix.length()),
+    util::begin(prefix), util::end(prefix)
+    );
+} // util::starts_with()
+
+
+// -----------------------------------------------------------------------------
+template <typename String, typename Suffix>
+bool util::ends_with(String const& s, Suffix const& suffix)
+{
+  return (s.length() >= suffix.length()) && std::equal(
+    std::next(util::begin(s), s.length() - suffix.length()), util::end(s),
+    util::begin(suffix), util::end(suffix)
+    );
+} // util::ends_with()
+
+
+// -----------------------------------------------------------------------------
 
 #endif // LARCOREALG_COREUTILS_STDUTILS_H
 
