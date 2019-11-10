@@ -12,7 +12,7 @@
 
 // LArSoft libraries
 #include "larcorealg/Geometry/geo_vectors_utils.h"
-#include "larcorealg/CoreUtils/fromFutureImport.h" // util::pre_std::from_chars
+#include "larcorealg/CoreUtils/fromFutureImport.h" // pre_std, non_std
 #include "larcorealg/CoreUtils/StdUtils.h" // util::begin(), util::end()
 
 // C/C++ standard libraries
@@ -142,46 +142,6 @@ namespace geo::vect::parse {
 // -----------------------------------------------------------------------------
 // --- template implementation
 // -----------------------------------------------------------------------------
-namespace geo::vect::parse::details {
-  // we don't want to "pollute" the global namespace with some useful things
-  // overlooked by C++
-  
-  template <typename CharT, typename Traits, typename Allocator>
-  auto operator+ (
-    std::basic_string<CharT, Traits, Allocator> const& a,
-    std::basic_string_view<CharT, Traits> const& b
-    )
-    -> std::basic_string<CharT, Traits, Allocator>
-  {
-    std::basic_string<CharT, Traits, Allocator> ab;
-    ab.reserve(a.size() + b.size()); // allocation of memory, once
-    return ab.assign(a).append(b.begin(), b.end());
-  }
-  
-  template <typename CharT, typename Traits, typename Allocator>
-  auto operator+ (
-    std::basic_string_view<CharT, Traits> const& a,
-    std::basic_string<CharT, Traits, Allocator> const& b
-    )
-    -> std::basic_string<CharT, Traits, Allocator>
-  {
-    std::basic_string<CharT, Traits, Allocator> ab;
-    ab.reserve(a.size() + b.size()); // allocation of memory, once
-    return ab.assign(a.begin(), a.end()).append(b);
-  }
-  
-  template <typename CharT, typename Traits, typename Allocator>
-  auto operator+= (
-    std::basic_string<CharT, Traits, Allocator> const& a,
-    std::basic_string_view<CharT, Traits> const& b
-    )
-    -> std::basic_string<CharT, Traits, Allocator>&
-    { return a.append(b.begin(), b.end()); }
-  
-} // namespace geo::vect::parse::details
-
-
-// -----------------------------------------------------------------------------
 // --- VectorParser
 // -----------------------------------------------------------------------------
 template <std::size_t Dim>
@@ -206,7 +166,14 @@ template <typename Vector, typename String>
 Vector geo::vect::parse::VectorParser<Dim>::parse(String const& s) const {
 
   using namespace std::string_literals;
-  using namespace details;
+  /*
+   * It turns out that we are under `geo::vect` namespace, and in here there is
+   * already an unrelated `operator+` free function defined; that is enough to
+   * hide the operator+ found in a used namespace; to force the `operator+` I
+   * need in scope, I need to explicitly declare that I use it, because
+   * `using namespace util::not_std::string_view_ops` is not enough:
+   */
+  using util::not_std::string_view_ops::operator+; // concatenation
 
   using Vector_t = Vector;
   using Coord_t = geo::vect::coordinate_t<Vector_t>;
@@ -221,7 +188,7 @@ Vector geo::vect::parse::VectorParser<Dim>::parse(String const& s) const {
   if (!std::regex_match(util::begin(s), util::end(s), match, fRegEx)) {
     throw std::runtime_error("VectorParser::parse(): "s
       + " input '" + s + "' does not match dim=" + util::to_string(dimension())
-      + " vector pattern '" + fPattern + "'\n"
+      + " vector pattern '" + fPattern + "'"
       );
   }
   
@@ -234,7 +201,7 @@ Vector geo::vect::parse::VectorParser<Dim>::parse(String const& s) const {
     throw std::runtime_error("VectorParser::parse(): "s
       + "input '" + s + "' opens with '" + match[indexOfOpen()].str()
       + "' but closes with '" + match[indexOfClose()].str()
-      + "' (expected: '" + CloseOpts()[iOpen] + "')\n"
+      + "' (expected: '" + CloseOpts()[iOpen] + "')"
       );
   }
   
@@ -248,7 +215,7 @@ Vector geo::vect::parse::VectorParser<Dim>::parse(String const& s) const {
       if (match[sepIndex] == sep) continue;
         throw std::runtime_error("VectorParser::parse(): "s
           + " input '" + s + "' sports inconsistent separators ('"
-          + match[sepIndex].str() + "' and '" + sep + "')\n"
+          + match[sepIndex].str() + "' and '" + sep + "')"
           );
     } // for
   } // if dimension > 2
@@ -273,14 +240,13 @@ Vector geo::vect::parse::VectorParser<Dim>::parse(String const& s) const {
       auto err = std::make_error_condition(res.ec);
       throw std::runtime_error("VectorParser::parse(): "s
         + " can't parse coordinate #" + util::to_string(iCoord) + " of input '"
-        + s + "' ('" + valueStr + "'): " + err.message() + "\n"
+        + s + "' ('" + valueStr + "'): " + err.message() + ""
         );
     }
     
     geo::vect::coord(v, iCoord) = coordValue;
     
   } // for
-  
   return v;
 } // geo::vect::parse::VectorParser<>::parse()
 

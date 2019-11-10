@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef LARCOREOBJ_SIMPLETYPESANDCONSTANTS_GEO_VECTORS_UTILS_H
-#define LARCOREOBJ_SIMPLETYPESANDCONSTANTS_GEO_VECTORS_UTILS_H
+#ifndef LARCOREALG_GEOMETRY_GEO_VECTORS_UTILS_H
+#define LARCOREALG_GEOMETRY_GEO_VECTORS_UTILS_H
 
 // LArSoft libraries
 #include "larcorealg/CoreUtils/span.h"
@@ -2206,4 +2206,4 @@ inline auto geo::vect::middlePoint(BeginIter begin, EndIter end) {
 //------------------------------------------------------------------------------
 
 
-#endif // LARCOREOBJ_SIMPLETYPESANDCONSTANTS_GEO_VECTORS_UTILS_H
+#endif // LARCOREALG_GEOMETRY_GEO_VECTORS_UTILS_H
