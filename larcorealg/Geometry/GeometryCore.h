@@ -60,6 +60,7 @@
 #include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
 #include "larcorealg/Geometry/BoxBoundedGeo.h"
 #include "larcorealg/Geometry/GeometryBuilder.h"
+#include "larcorealg/Geometry/ReadoutDataContainers.h" // readout::ROPDataContainer
 #include "larcorealg/Geometry/GeometryDataContainers.h" // geo::TPCDataContainer
 #include "larcorealg/Geometry/GeoElementTraits.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect namespace
@@ -5514,6 +5515,49 @@ namespace geo {
     unsigned int MaxTPCsets() const;
 
 
+    /**
+     * @brief Returns a container with one entry per TPC set.
+     * @tparam T type of data in the container
+     * @return a container with one default-constructed `T` per TPC set
+     * @see `readout::TPCsetDataContainer`
+     *
+     * The working assumption is that all cryostats have the same number of
+     * TPC sets. It is always guaranteed that all existing TPC sets have an
+     * entry in the container, although if the previous working assumption is
+     * not satisfied there will be entries in the containers which are not
+     * associated to a valid TPC set.
+     *
+     * The interface of the container is detailed in the documentation of the
+     * container itself, `readout::TPCsetDataContainer`. Example of usage:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * auto const* geom = lar::providerFrom<geo::GeometryCore>();
+     * auto tracksPerTPCset
+     *   = geom->makeTPCsetData<std::vector<recob::Track const*>>();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     */
+    template <typename T>
+    readout::TPCsetDataContainer<T> makeTPCsetData() const
+      { return { Ncryostats(), MaxTPCsets() }; }
+
+    /**
+     * @brief Returns a container with one entry per TPC set.
+     * @tparam T type of data in the container
+     * @param defValue the initial value of all elements in the container
+     * @return a container with a value `defValue` per each TPC set
+     * @see `readout::TPCsetDataContainer`
+     *
+     * This function operates as `makeTPCsetData() const`, except that it copies
+     * the specified value into all the entries of the container. Example:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * auto const* geom = lar::providerFrom<geo::GeometryCore>();
+     * auto nTracksPerTPCset = geom->makeTPCsetData(0U);
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     */
+    template <typename T>
+    readout::TPCsetDataContainer<T> makeTPCsetData(T const& defValue) const
+      { return { Ncryostats(), MaxTPCsets(), defValue }; }
+
+
     //
     // access
     //
@@ -5716,6 +5760,50 @@ namespace geo {
 
     /// Returns the largest number of ROPs a TPC set in the detector has.
     unsigned int MaxROPs() const;
+
+
+    /**
+     * @brief Returns a container with one entry per readout plane.
+     * @tparam T type of data in the container
+     * @return a container with one default-constructed `T` per readout plane
+     * @see `readout::ROPDataContainer`
+     *
+     * The working assumption is that all cryostats have the same number of
+     * TPC sets, and all TPC sets have the same number of readout planes.
+     * It is always guaranteed that all existing readout planes have an entry
+     * in the container, although if the previous working assumption is not
+     * satisfied there will be entries in the container which are not
+     * associated to a valid readout plane.
+     *
+     * The interface of the container is detailed in the documentation of the
+     * container itself, `readout::ROPDataContainer`. Example of usage:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * auto const* geom = lar::providerFrom<geo::GeometryCore>();
+     * auto hitsPerROP
+     *   = geom->makeROPdata<std::vector<recob::Hit const*>>();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     */
+    template <typename T>
+    readout::ROPDataContainer<T> makeROPdata() const
+      { return { Ncryostats(), MaxTPCsets(), MaxROPs() }; }
+
+    /**
+     * @brief Returns a container with one entry per readout plane.
+     * @tparam T type of data in the container
+     * @param defValue the initial value of all elements in the container
+     * @return a container with one default-constructed `T` per readout plane
+     * @see `readout::ROPDataContainer`
+     *
+     * This function operates as `makeROPdata() const`, except that copies
+     * the specified value into all the entries of the container. Example:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+     * auto const* geom = lar::providerFrom<geo::GeometryCore>();
+     * auto nHitsPerROP = geom->makeROPdata(0U);
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     */
+    template <typename T>
+    readout::ROPDataContainer<T> makeROPdata(T const& defValue) const
+      { return { Ncryostats(), MaxTPCsets(), MaxROPs(), defValue }; }
 
 
     //

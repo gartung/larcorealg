@@ -1,18 +1,16 @@
 /**
- * @file   geometrydatacontainers_test.cxx
- * @brief  Unit test for GeometryDataContainers.h library.
- * @author Gianluca Petrillo (petrillo@fnal.gov)
- * @date   January 2nd, 2018
+ * @file   readoutdatacontainers_test.cc
+ * @brief  Unit test for `ReadoutDataContainers.h` library.
+ * @author Gianluca Petrillo (petrillo@slac.stanford.edu)
+ * @date   September 7, 2019
  *
  *
  */
 
 // LArSoft libraries
-#include "larcorealg/Geometry/GeometryDataContainers.h"
+#include "larcorealg/Geometry/ReadoutDataContainers.h"
 #include "larcorealg/CoreUtils/counter.h"
-#include "larcorealg/CoreUtils/DebugUtils.h" // lar::debug::static_assert_on()
-#include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
-
+#include "larcoreobj/SimpleTypesAndConstants/readout_types.h"
 
 // Boost libraries
 #include "cetlib/quiet_unit_test.hpp" // BOOST_AUTO_TEST_CASE()
@@ -34,29 +32,24 @@ struct Summer {
 }; // struct Summer
 
 //------------------------------------------------------------------------------
-void TPCDataContainerTest(
-  geo::TPCDataContainer<int> data, // copy here is intentional
-  std::size_t const NCryostats, std::size_t const NTPCs
+void TPCsetDataContainerTest(
+  readout::TPCsetDataContainer<int> data, // copy is intentional
+  std::size_t const NCryostats,
+  std::size_t const NTPCsets
 ) {
   
-  std::size_t const N = NCryostats * NTPCs;
+  std::size_t const N = NCryostats * NTPCsets;
   
-  static_assert(data.dimensions() == 2U);
-  BOOST_CHECK_EQUAL(data.dimSize<0U>(), NCryostats);
-  BOOST_CHECK_EQUAL(data.dimSize<1U>(), NTPCs);
-  BOOST_CHECK_EQUAL(data.dimSize<2U>(), 0U);
-  BOOST_CHECK_EQUAL(data.dimSize<3U>(), 0U);
-
   BOOST_CHECK(!data.empty());
   BOOST_CHECK_EQUAL(data.size(), N);
   BOOST_CHECK_GE(data.capacity(), N);
   
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      BOOST_CHECK_EQUAL((data[{ c, t }]), 0);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      BOOST_CHECK_EQUAL((data[{ c, s }]), 0);
   
-  BOOST_CHECK_EQUAL(data.firstID(), geo::TPCID(0, 0));
-  BOOST_CHECK_EQUAL(data.lastID(), geo::TPCID(1, 2));
+  BOOST_CHECK_EQUAL(data.firstID(), readout::TPCsetID(0, 0));
+  BOOST_CHECK_EQUAL(data.lastID(), readout::TPCsetID(1, 2));
   
   
   std::size_t expected_index = 0U;
@@ -65,7 +58,7 @@ void TPCDataContainerTest(
   for (auto& value: data) {
     static_assert(std::is_same_v<decltype(value), decltype(data)::reference>);
     
-    geo::TPCID const expected_ID = data.mapper().ID(expected_index);
+    readout::TPCsetID const expected_ID = data.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(value, data[expected_ID]);
     
     ++expected_index;
@@ -75,49 +68,48 @@ void TPCDataContainerTest(
   // ID/data pair R/W iteration test
   expected_index = 0U;
   for (auto&& [ ID, value ]: data.items()) {
-    static_assert(std::is_same_v<decltype(ID), geo::TPCID>);
+    static_assert(std::is_same_v<decltype(ID), readout::TPCsetID>);
     static_assert(std::is_same_v<decltype(value), decltype(data)::reference>);
     
-    geo::TPCID const expected_ID = data.mapper().ID(expected_index);
+    readout::TPCsetID const expected_ID = data.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(ID, expected_ID);
     BOOST_CHECK_EQUAL(value, data[expected_ID]);
     
     ++expected_index;
   } // for
   BOOST_CHECK_EQUAL(data.size(), expected_index);
-  
-  
-  BOOST_CHECK( data.hasTPC({ 0,  0}));
-  BOOST_CHECK( data.hasTPC({ 0,  1}));
-  BOOST_CHECK( data.hasTPC({ 0,  2}));
-  BOOST_CHECK(!data.hasTPC({ 0,  3}));
-  BOOST_CHECK(!data.hasTPC({ 0,  4}));
-  BOOST_CHECK( data.hasTPC({ 1,  0}));
-  BOOST_CHECK( data.hasTPC({ 1,  1}));
-  BOOST_CHECK( data.hasTPC({ 1,  2}));
-  BOOST_CHECK(!data.hasTPC({ 1,  3}));
-  BOOST_CHECK(!data.hasTPC({ 1,  4}));
-  BOOST_CHECK(!data.hasTPC({ 2,  0}));
-  BOOST_CHECK(!data.hasTPC({ 2,  1}));
-  BOOST_CHECK(!data.hasTPC({ 2,  2}));
-  BOOST_CHECK(!data.hasTPC({ 2,  3}));
-  BOOST_CHECK(!data.hasTPC({ 2,  4}));
 
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 0,  0}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 0,  1}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 0,  2}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 0,  3}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 0,  4}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 1,  0}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 1,  1}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 1,  2}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 1,  3}));
-  BOOST_CHECK( data.hasCryostat(geo::TPCID{ 1,  4}));
-  BOOST_CHECK(!data.hasCryostat(geo::TPCID{ 2,  0}));
-  BOOST_CHECK(!data.hasCryostat(geo::TPCID{ 2,  1}));
-  BOOST_CHECK(!data.hasCryostat(geo::TPCID{ 2,  2}));
-  BOOST_CHECK(!data.hasCryostat(geo::TPCID{ 2,  3}));
-  BOOST_CHECK(!data.hasCryostat(geo::TPCID{ 2,  4}));
+  BOOST_CHECK( data.hasTPCset({ 0,  0}));
+  BOOST_CHECK( data.hasTPCset({ 0,  1}));
+  BOOST_CHECK( data.hasTPCset({ 0,  2}));
+  BOOST_CHECK(!data.hasTPCset({ 0,  3}));
+  BOOST_CHECK(!data.hasTPCset({ 0,  4}));
+  BOOST_CHECK( data.hasTPCset({ 1,  0}));
+  BOOST_CHECK( data.hasTPCset({ 1,  1}));
+  BOOST_CHECK( data.hasTPCset({ 1,  2}));
+  BOOST_CHECK(!data.hasTPCset({ 1,  3}));
+  BOOST_CHECK(!data.hasTPCset({ 1,  4}));
+  BOOST_CHECK(!data.hasTPCset({ 2,  0}));
+  BOOST_CHECK(!data.hasTPCset({ 2,  1}));
+  BOOST_CHECK(!data.hasTPCset({ 2,  2}));
+  BOOST_CHECK(!data.hasTPCset({ 2,  3}));
+  BOOST_CHECK(!data.hasTPCset({ 2,  4}));
+
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 0,  0}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 0,  1}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 0,  2}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 0,  3}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 0,  4}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 1,  0}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 1,  1}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 1,  2}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 1,  3}));
+  BOOST_CHECK( data.hasCryostat(readout::TPCsetID{ 1,  4}));
+  BOOST_CHECK(!data.hasCryostat(readout::TPCsetID{ 2,  0}));
+  BOOST_CHECK(!data.hasCryostat(readout::TPCsetID{ 2,  1}));
+  BOOST_CHECK(!data.hasCryostat(readout::TPCsetID{ 2,  2}));
+  BOOST_CHECK(!data.hasCryostat(readout::TPCsetID{ 2,  3}));
+  BOOST_CHECK(!data.hasCryostat(readout::TPCsetID{ 2,  4}));
 
   data[{0, 0}] = 4;
   BOOST_CHECK_EQUAL((data[{0, 0}]), 4);
@@ -190,14 +182,6 @@ void TPCDataContainerTest(
   
   auto const& constData = data;
 
-  BOOST_CHECK_EQUAL(constData.size(), N);
-  
-  static_assert(std::decay_t<decltype(constData)>::dimensions() == 2U);
-  BOOST_CHECK_EQUAL(constData.dimSize<0U>(), NCryostats);
-  BOOST_CHECK_EQUAL(constData.dimSize<1U>(), NTPCs);
-  BOOST_CHECK_EQUAL(constData.dimSize<2U>(), 0U);
-  BOOST_CHECK_EQUAL(constData.dimSize<3U>(), 0U);
-
   BOOST_CHECK_EQUAL
     (std::addressof(constData.first()), std::addressof(data.first()));
   BOOST_CHECK_EQUAL
@@ -225,8 +209,8 @@ void TPCDataContainerTest(
   BOOST_CHECK_THROW(constData.at({2, 2}), std::out_of_range);
   BOOST_CHECK_THROW(constData.at({2, 3}), std::out_of_range);
   BOOST_CHECK_THROW(constData.at({2, 4}), std::out_of_range);
-  
-  
+
+
   auto const cb = constData.begin();
   auto const ce = constData.end();
   BOOST_CHECK_EQUAL(ce - cb, N);
@@ -238,7 +222,7 @@ void TPCDataContainerTest(
       <decltype(value), std::decay_t<decltype(constData)>::const_reference>
       );
     
-    geo::TPCID const expected_ID = constData.mapper().ID(expected_index);
+    readout::TPCsetID const expected_ID = constData.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(value, constData[expected_ID]);
     
     ++expected_index;
@@ -248,12 +232,12 @@ void TPCDataContainerTest(
   // ID/data pair read-only iteration test
   expected_index = 0U;
   for (auto&& [ ID, value ]: constData.items()) {
-    static_assert(std::is_same_v<decltype(ID), geo::TPCID>);
+    static_assert(std::is_same_v<decltype(ID), readout::TPCsetID>);
     static_assert(std::is_same_v
       <decltype(value), std::decay_t<decltype(constData)>::const_reference>
       );
     
-    geo::TPCID const expected_ID = constData.mapper().ID(expected_index);
+    readout::TPCsetID const expected_ID = constData.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(ID, expected_ID);
     BOOST_CHECK_EQUAL(value, constData[expected_ID]);
     
@@ -264,13 +248,13 @@ void TPCDataContainerTest(
   
   data.fill(14);
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      BOOST_CHECK_EQUAL((data[{ c, t }]), 14);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      BOOST_CHECK_EQUAL((data[{ c, s }]), 14);
   
   data.apply([](int& v){ v *= 2; });
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      BOOST_CHECK_EQUAL((data[{ c, t }]), 28);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      BOOST_CHECK_EQUAL((data[{ c, s }]), 28);
   
   Summer<int> summer;
   static_assert(std::is_same_v<decltype(data.apply(summer)), Summer<int>&>);
@@ -291,42 +275,36 @@ void TPCDataContainerTest(
   
   data.reset();
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      BOOST_CHECK_EQUAL((data[{ c, t }]), 0);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      BOOST_CHECK_EQUAL((data[{ c, s }]), 0);
   
   data.clear();
   BOOST_CHECK(data.empty());
   
-} // TPCDataContainerTest()
+} // TPCsetDataContainerTest()
 
 
 //------------------------------------------------------------------------------
-void PlaneDataContainerTest(
-  geo::PlaneDataContainer<int> data, // copy here is intentional
+void ROPDataContainerTest(
+  readout::ROPDataContainer<int> data, // copy is intentional
   std::size_t const NCryostats,
-  std::size_t const NTPCs,
-  std::size_t const NPlanes
+  std::size_t const NTPCsets,
+  std::size_t const NROPs
 ) {
 
-  std::size_t const N = NCryostats * NTPCs * NPlanes;
-  
-  static_assert(data.dimensions() == 3U);
-  BOOST_CHECK_EQUAL(data.dimSize<0U>(), NCryostats);
-  BOOST_CHECK_EQUAL(data.dimSize<1U>(), NTPCs);
-  BOOST_CHECK_EQUAL(data.dimSize<2U>(), NPlanes);
-  BOOST_CHECK_EQUAL(data.dimSize<3U>(), 0U);
+  std::size_t const N = NCryostats * NTPCsets * NROPs;
 
   BOOST_CHECK(!data.empty());
   BOOST_CHECK_EQUAL(data.size(), N);
   BOOST_CHECK_GE(data.capacity(), N);
 
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      for (auto p: util::counter<unsigned int>(NPlanes)) 
-        BOOST_CHECK_EQUAL((data[{ c, t, p }]), 0);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      for (auto r: util::counter<unsigned int>(NROPs)) 
+        BOOST_CHECK_EQUAL((data[{ c, s, r }]), 0);
   
-  BOOST_CHECK_EQUAL(data.firstID(), geo::PlaneID(0, 0, 0));
-  BOOST_CHECK_EQUAL(data.lastID(), geo::PlaneID(1, 2, 1));
+  BOOST_CHECK_EQUAL(data.firstID(), readout::ROPID(0, 0, 0));
+  BOOST_CHECK_EQUAL(data.lastID(), readout::ROPID(1, 2, 1));
   
   
   std::size_t expected_index = 0U;
@@ -335,7 +313,7 @@ void PlaneDataContainerTest(
   for (auto& value: data) {
     static_assert(std::is_same_v<decltype(value), decltype(data)::reference>);
     
-    geo::PlaneID const expected_ID = data.mapper().ID(expected_index);
+    readout::ROPID const expected_ID = data.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(value, data[expected_ID]);
     
     ++expected_index;
@@ -345,10 +323,10 @@ void PlaneDataContainerTest(
   // ID/data pair R/W iteration test
   expected_index = 0U;
   for (auto&& [ ID, value ]: data.items()) {
-    static_assert(std::is_same_v<decltype(ID), geo::PlaneID>);
+    static_assert(std::is_same_v<decltype(ID), readout::ROPID>);
     static_assert(std::is_same_v<decltype(value), decltype(data)::reference>);
     
-    geo::PlaneID const expected_ID = data.mapper().ID(expected_index);
+    readout::ROPID const expected_ID = data.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(ID, expected_ID);
     BOOST_CHECK_EQUAL(value, data[expected_ID]);
     
@@ -356,143 +334,144 @@ void PlaneDataContainerTest(
   } // for
   BOOST_CHECK_EQUAL(data.size(), expected_index);
 
-  BOOST_CHECK( data.hasPlane({ 0, 0, 0}));
-  BOOST_CHECK( data.hasPlane({ 0, 0, 1}));
-  BOOST_CHECK(!data.hasPlane({ 0, 0, 2}));
-  BOOST_CHECK( data.hasPlane({ 0, 1, 0}));
-  BOOST_CHECK( data.hasPlane({ 0, 1, 1}));
-  BOOST_CHECK(!data.hasPlane({ 0, 1, 2}));
-  BOOST_CHECK( data.hasPlane({ 0, 2, 0}));
-  BOOST_CHECK( data.hasPlane({ 0, 2, 1}));
-  BOOST_CHECK(!data.hasPlane({ 0, 2, 2}));
-  BOOST_CHECK(!data.hasPlane({ 0, 3, 0}));
-  BOOST_CHECK(!data.hasPlane({ 0, 3, 1}));
-  BOOST_CHECK(!data.hasPlane({ 0, 3, 2}));
-  BOOST_CHECK(!data.hasPlane({ 0, 4, 0}));
-  BOOST_CHECK(!data.hasPlane({ 0, 4, 1}));
-  BOOST_CHECK(!data.hasPlane({ 0, 4, 2}));
-  BOOST_CHECK( data.hasPlane({ 1, 0, 0}));
-  BOOST_CHECK( data.hasPlane({ 1, 0, 1}));
-  BOOST_CHECK(!data.hasPlane({ 1, 0, 2}));
-  BOOST_CHECK( data.hasPlane({ 1, 1, 0}));
-  BOOST_CHECK( data.hasPlane({ 1, 1, 1}));
-  BOOST_CHECK(!data.hasPlane({ 1, 1, 2}));
-  BOOST_CHECK( data.hasPlane({ 1, 2, 0}));
-  BOOST_CHECK( data.hasPlane({ 1, 2, 1}));
-  BOOST_CHECK(!data.hasPlane({ 1, 2, 2}));
-  BOOST_CHECK(!data.hasPlane({ 1, 3, 0}));
-  BOOST_CHECK(!data.hasPlane({ 1, 3, 1}));
-  BOOST_CHECK(!data.hasPlane({ 1, 3, 2}));
-  BOOST_CHECK(!data.hasPlane({ 1, 4, 0}));
-  BOOST_CHECK(!data.hasPlane({ 1, 4, 1}));
-  BOOST_CHECK(!data.hasPlane({ 1, 4, 2}));
-  BOOST_CHECK(!data.hasPlane({ 2, 0, 0}));
-  BOOST_CHECK(!data.hasPlane({ 2, 0, 1}));
-  BOOST_CHECK(!data.hasPlane({ 2, 0, 2}));
-  BOOST_CHECK(!data.hasPlane({ 2, 1, 0}));
-  BOOST_CHECK(!data.hasPlane({ 2, 1, 1}));
-  BOOST_CHECK(!data.hasPlane({ 2, 1, 2}));
-  BOOST_CHECK(!data.hasPlane({ 2, 2, 0}));
-  BOOST_CHECK(!data.hasPlane({ 2, 2, 1}));
-  BOOST_CHECK(!data.hasPlane({ 2, 2, 2}));
-  BOOST_CHECK(!data.hasPlane({ 2, 3, 0}));
-  BOOST_CHECK(!data.hasPlane({ 2, 3, 1}));
-  BOOST_CHECK(!data.hasPlane({ 2, 3, 2}));
-  BOOST_CHECK(!data.hasPlane({ 2, 4, 0}));
-  BOOST_CHECK(!data.hasPlane({ 2, 4, 1}));
-  BOOST_CHECK(!data.hasPlane({ 2, 4, 2}));
 
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 0, 0}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 0, 1}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 0, 2}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 1, 0}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 1, 1}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 1, 2}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 2, 0}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 2, 1}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 0, 2, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 0, 3, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 0, 3, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 0, 3, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 0, 4, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 0, 4, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 0, 4, 2}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 0, 0}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 0, 1}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 0, 2}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 1, 0}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 1, 1}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 1, 2}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 2, 0}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 2, 1}));
-  BOOST_CHECK( data.hasTPC(geo::PlaneID{ 1, 2, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 1, 3, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 1, 3, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 1, 3, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 1, 4, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 1, 4, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 1, 4, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 0, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 0, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 0, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 1, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 1, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 1, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 2, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 2, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 2, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 3, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 3, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 3, 2}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 4, 0}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 4, 1}));
-  BOOST_CHECK(!data.hasTPC(geo::PlaneID{ 2, 4, 2}));
+  BOOST_CHECK( data.hasROP({ 0, 0, 0}));
+  BOOST_CHECK( data.hasROP({ 0, 0, 1}));
+  BOOST_CHECK(!data.hasROP({ 0, 0, 2}));
+  BOOST_CHECK( data.hasROP({ 0, 1, 0}));
+  BOOST_CHECK( data.hasROP({ 0, 1, 1}));
+  BOOST_CHECK(!data.hasROP({ 0, 1, 2}));
+  BOOST_CHECK( data.hasROP({ 0, 2, 0}));
+  BOOST_CHECK( data.hasROP({ 0, 2, 1}));
+  BOOST_CHECK(!data.hasROP({ 0, 2, 2}));
+  BOOST_CHECK(!data.hasROP({ 0, 3, 0}));
+  BOOST_CHECK(!data.hasROP({ 0, 3, 1}));
+  BOOST_CHECK(!data.hasROP({ 0, 3, 2}));
+  BOOST_CHECK(!data.hasROP({ 0, 4, 0}));
+  BOOST_CHECK(!data.hasROP({ 0, 4, 1}));
+  BOOST_CHECK(!data.hasROP({ 0, 4, 2}));
+  BOOST_CHECK( data.hasROP({ 1, 0, 0}));
+  BOOST_CHECK( data.hasROP({ 1, 0, 1}));
+  BOOST_CHECK(!data.hasROP({ 1, 0, 2}));
+  BOOST_CHECK( data.hasROP({ 1, 1, 0}));
+  BOOST_CHECK( data.hasROP({ 1, 1, 1}));
+  BOOST_CHECK(!data.hasROP({ 1, 1, 2}));
+  BOOST_CHECK( data.hasROP({ 1, 2, 0}));
+  BOOST_CHECK( data.hasROP({ 1, 2, 1}));
+  BOOST_CHECK(!data.hasROP({ 1, 2, 2}));
+  BOOST_CHECK(!data.hasROP({ 1, 3, 0}));
+  BOOST_CHECK(!data.hasROP({ 1, 3, 1}));
+  BOOST_CHECK(!data.hasROP({ 1, 3, 2}));
+  BOOST_CHECK(!data.hasROP({ 1, 4, 0}));
+  BOOST_CHECK(!data.hasROP({ 1, 4, 1}));
+  BOOST_CHECK(!data.hasROP({ 1, 4, 2}));
+  BOOST_CHECK(!data.hasROP({ 2, 0, 0}));
+  BOOST_CHECK(!data.hasROP({ 2, 0, 1}));
+  BOOST_CHECK(!data.hasROP({ 2, 0, 2}));
+  BOOST_CHECK(!data.hasROP({ 2, 1, 0}));
+  BOOST_CHECK(!data.hasROP({ 2, 1, 1}));
+  BOOST_CHECK(!data.hasROP({ 2, 1, 2}));
+  BOOST_CHECK(!data.hasROP({ 2, 2, 0}));
+  BOOST_CHECK(!data.hasROP({ 2, 2, 1}));
+  BOOST_CHECK(!data.hasROP({ 2, 2, 2}));
+  BOOST_CHECK(!data.hasROP({ 2, 3, 0}));
+  BOOST_CHECK(!data.hasROP({ 2, 3, 1}));
+  BOOST_CHECK(!data.hasROP({ 2, 3, 2}));
+  BOOST_CHECK(!data.hasROP({ 2, 4, 0}));
+  BOOST_CHECK(!data.hasROP({ 2, 4, 1}));
+  BOOST_CHECK(!data.hasROP({ 2, 4, 2}));
 
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 0, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 0, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 0, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 1, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 1, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 1, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 2, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 2, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 2, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 3, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 3, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 3, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 4, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 4, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 0, 4, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 0, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 0, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 0, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 1, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 1, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 1, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 2, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 2, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 2, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 3, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 3, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 3, 2}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 4, 0}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 4, 1}));
-  BOOST_CHECK( data.hasCryostat(geo::PlaneID{ 1, 4, 2}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 0, 0}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 0, 1}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 0, 2}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 1, 0}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 1, 1}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 1, 2}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 2, 0}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 2, 1}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 2, 2}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 3, 0}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 3, 1}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 3, 2}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 4, 0}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 4, 1}));
-  BOOST_CHECK(!data.hasCryostat(geo::PlaneID{ 2, 4, 2}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 0, 0}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 0, 1}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 0, 2}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 1, 0}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 1, 1}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 1, 2}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 2, 0}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 2, 1}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 0, 2, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 0, 3, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 0, 3, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 0, 3, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 0, 4, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 0, 4, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 0, 4, 2}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 0, 0}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 0, 1}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 0, 2}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 1, 0}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 1, 1}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 1, 2}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 2, 0}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 2, 1}));
+  BOOST_CHECK( data.hasTPCset(readout::ROPID{ 1, 2, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 1, 3, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 1, 3, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 1, 3, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 1, 4, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 1, 4, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 1, 4, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 0, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 0, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 0, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 1, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 1, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 1, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 2, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 2, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 2, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 3, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 3, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 3, 2}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 4, 0}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 4, 1}));
+  BOOST_CHECK(!data.hasTPCset(readout::ROPID{ 2, 4, 2}));
+
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 0, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 0, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 0, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 1, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 1, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 1, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 2, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 2, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 2, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 3, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 3, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 3, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 4, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 4, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 0, 4, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 0, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 0, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 0, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 1, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 1, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 1, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 2, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 2, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 2, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 3, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 3, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 3, 2}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 4, 0}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 4, 1}));
+  BOOST_CHECK( data.hasCryostat(readout::ROPID{ 1, 4, 2}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 0, 0}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 0, 1}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 0, 2}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 1, 0}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 1, 1}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 1, 2}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 2, 0}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 2, 1}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 2, 2}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 3, 0}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 3, 1}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 3, 2}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 4, 0}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 4, 1}));
+  BOOST_CHECK(!data.hasCryostat(readout::ROPID{ 2, 4, 2}));
 
 
   data[{0, 0, 0}] = 4;
@@ -669,12 +648,6 @@ void PlaneDataContainerTest(
 
   auto const& constData = data;
 
-  static_assert(data.dimensions() == 3U);
-  BOOST_CHECK_EQUAL(data.dimSize<0U>(), NCryostats);
-  BOOST_CHECK_EQUAL(data.dimSize<1U>(), NTPCs);
-  BOOST_CHECK_EQUAL(data.dimSize<2U>(), NPlanes);
-  BOOST_CHECK_EQUAL(data.dimSize<3U>(), 0U);
-
   BOOST_CHECK_EQUAL
     (std::addressof(constData.first()), std::addressof(data.first()));
   BOOST_CHECK_EQUAL
@@ -748,7 +721,7 @@ void PlaneDataContainerTest(
       <decltype(value), std::decay_t<decltype(constData)>::const_reference>
       );
     
-    geo::PlaneID const expected_ID = constData.mapper().ID(expected_index);
+    readout::ROPID const expected_ID = constData.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(value, constData[expected_ID]);
     
     ++expected_index;
@@ -758,31 +731,31 @@ void PlaneDataContainerTest(
   // ID/data pair read-only iteration test
   expected_index = 0U;
   for (auto&& [ ID, value ]: constData.items()) {
-    static_assert(std::is_same_v<decltype(ID), geo::PlaneID>);
+    static_assert(std::is_same_v<decltype(ID), readout::ROPID>);
     static_assert(std::is_same_v
       <decltype(value), std::decay_t<decltype(constData)>::const_reference>
       );
     
-    geo::PlaneID const expected_ID = constData.mapper().ID(expected_index);
+    readout::ROPID const expected_ID = constData.mapper().ID(expected_index);
     BOOST_CHECK_EQUAL(ID, expected_ID);
     BOOST_CHECK_EQUAL(value, constData[expected_ID]);
     
     ++expected_index;
   } // for
   BOOST_CHECK_EQUAL(constData.size(), expected_index);
-  
-  
+
+
   data.fill(14);
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      for (auto p: util::counter<unsigned int>(NPlanes)) 
-        BOOST_CHECK_EQUAL((data[{ c, t, p }]), 14);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      for (auto r: util::counter<unsigned int>(NROPs)) 
+        BOOST_CHECK_EQUAL((data[{ c, s, r }]), 14);
   
   data.apply([](int& v){ v *= 2; });
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      for (auto p: util::counter<unsigned int>(NPlanes)) 
-        BOOST_CHECK_EQUAL((data[{ c, t, p }]), 28);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      for (auto r: util::counter<unsigned int>(NROPs)) 
+        BOOST_CHECK_EQUAL((data[{ c, s, r }]), 28);
   
   Summer<int> summer;
   static_assert(std::is_same_v<decltype(data.apply(summer)), Summer<int>&>);
@@ -803,62 +776,64 @@ void PlaneDataContainerTest(
   
   data.reset();
   for (auto c: util::counter<unsigned int>(NCryostats)) 
-    for (auto t: util::counter<unsigned int>(NTPCs)) 
-      for (auto p: util::counter<unsigned int>(NPlanes)) 
-        BOOST_CHECK_EQUAL((data[{ c, t, p }]), 0);
+    for (auto s: util::counter<unsigned short int>(NTPCsets)) 
+      for (auto r: util::counter<unsigned int>(NROPs)) 
+        BOOST_CHECK_EQUAL((data[{ c, s, r }]), 0);
   
   data.clear();
   BOOST_CHECK(data.empty());
   
-} // PlaneDataContainerTest()
+  
+} // ROPDataContainerTest()
 
 
 //------------------------------------------------------------------------------
-BOOST_AUTO_TEST_CASE(TPCDataContainerTestCase) {
+BOOST_AUTO_TEST_CASE(TPCsetDataContainerTestCase) {
   
   constexpr std::size_t NCryostats = 2U;
-  constexpr std::size_t NTPCs      = 3U;
+  constexpr std::size_t NTPCsets   = 3U;
   
   //
   // size constructor
   //
-  geo::TPCDataContainer<int> data1(NCryostats, NTPCs);
-  TPCDataContainerTest(data1, NCryostats, NTPCs);
+  readout::TPCsetDataContainer<int> data1(NCryostats, NTPCsets);
+  TPCsetDataContainerTest(data1, NCryostats, NTPCsets);
   
   //
   // default constructor + resize
   //
-  geo::TPCDataContainer<int> data2;
+  readout::TPCsetDataContainer<int> data2;
   BOOST_CHECK(data2.empty());
   
   data2.resizeAs(data1);
-  TPCDataContainerTest(data2, NCryostats, NTPCs);
+  TPCsetDataContainerTest(data2, NCryostats, NTPCsets);
   
-} // TPCDataContainerTestCase
+} // TPCsetDataContainerTestCase
+
 
 //------------------------------------------------------------------------------
-BOOST_AUTO_TEST_CASE(PlaneDataContainerTestCase) {
+BOOST_AUTO_TEST_CASE(ROPDataContainerTestCase) {
   
   constexpr std::size_t NCryostats = 2U;
-  constexpr std::size_t NTPCs      = 3U;
-  constexpr std::size_t NPlanes    = 2U;
+  constexpr std::size_t NTPCsets   = 3U;
+  constexpr std::size_t NROPs      = 2U;
   
   //
   // size constructor
   //
-  geo::PlaneDataContainer<int> data1(NCryostats, NTPCs, NPlanes);
-  PlaneDataContainerTest(data1, NCryostats, NTPCs, NPlanes);
+  readout::ROPDataContainer<int> data1(NCryostats, NTPCsets, NROPs);
+  ROPDataContainerTest(data1, NCryostats, NTPCsets, NROPs);
   
   //
   // default constructor + resize
   //
-  geo::PlaneDataContainer<int> data2;
+  readout::ROPDataContainer<int> data2;
   BOOST_CHECK(data2.empty());
   
   data2.resizeAs(data1);
-  PlaneDataContainerTest(data2, NCryostats, NTPCs, NPlanes);
+  ROPDataContainerTest(data2, NCryostats, NTPCsets, NROPs);
   
-} // PlaneDataContainerTestCase
+} // ROPDataContainerTestCase
 
 
 //------------------------------------------------------------------------------
