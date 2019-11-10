@@ -1,10 +1,10 @@
 /**
  * @file    larcorealg/Geometry/PixelPlane/PixelPlaneGeo.h
- * @brief   Representation of a readout plane with pixels as sensitive elements.
+ * @brief   Readout plane for a pixel detector.
  * @author  Gianluca Petrillo (petrillo@slac.stanford.edu)
- * @date    October 23, 2019
+ * @date    November 5, 2019
  * @see     `larcorealg/Geometry/PixelPlane/PixelPlaneGeo.cxx`
- * @ingroup Geometry
+ * @ingroup GeometryPixel
  */
 
 #ifndef LARCOREALG_GEOMETRY_PIXELPLANE_PIXELPLANEGEO_H
@@ -18,14 +18,10 @@
 
 
 // -----------------------------------------------------------------------------
-namespace geo {
-  class PixelPlaneGeo;
-} // namespace geo
-
+namespace geo { class PixelPlaneGeo; }
 
 /**
- * @brief Geometry information for a single pixel plane.
- * @ingroup Geometry
+ * @brief Geometry description for a pixel readout plane.
  * 
  * This class implements the `geo:PlaneGeo` interface via
  * `geo::PixelPlaneGeoBase` base class, which should be referred to for any
@@ -45,8 +41,10 @@ namespace geo {
  * 
  * The pixel geometry information needed by the algorithm is obtained from the
  * GDML/ROOT description of the plane geometry.
- * The details are documented in `ExtractPixelGeometry()` method.
- * 
+ * First, direct information is sought as metadata in the geometry description
+ * (see `geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata()`), then the
+ * rest of the information is filled from pixel volume information in the same
+ * geometry (see `geo::PixelPlaneGeoBase::ExtractPixelGeometry()`).
  * 
  */
 class geo::PixelPlaneGeo: public geo::PixelPlaneGeoBase {
@@ -72,29 +70,7 @@ class geo::PixelPlaneGeo: public geo::PixelPlaneGeoBase {
     );
   
   
-    private:
-  
-  // --- BEGIN --- Initialization procedures -----------------------------------
-  
-  /**
-   * @brief Extracts in some way the pixel information.
-   * @param pixelNamePattern pattern used to recognize pixel nodes
-   * @return the pixel geometry information as complete as possible
-   * 
-   * This method produces information about the placement and geometry of the
-   * pixels on the plane, to be taken by
-   * `geo::PixelPlaneGeoBase::InitializePixelGeometry()` and turned into actual
-   * plane set up.
-   * 
-   * @todo Document the extraction algorithm, expectations and abilities.
-   */
-  RectPixelGeometry_t ExtractPixelGeometry
-    (std::regex const& pixelNamePattern) const;
-  
-  // --- END --- Initialization procedures -------------------------------------
-  
-  
-}; // class PixelPlaneGeo
+}; // class geo::PixelPlaneGeo
 
 
 //------------------------------------------------------------------------------

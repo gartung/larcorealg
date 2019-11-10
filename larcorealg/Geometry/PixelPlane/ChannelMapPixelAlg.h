@@ -691,11 +691,11 @@ auto geo::ChannelMapPixelAlg::ChannelDataContainer<T>::find
 {
   assert(!empty() || fData.empty());
   if (channel >= endChannel()) return nullptr;
-  auto const iDatum = std::lower_bound(
+  auto const iDatum = std::upper_bound(
     fData.begin(), fData.end(), channel, typename ChannelAndData_t::Comparer{}
     );
-  assert(iDatum != fData.end());
-  return &*iDatum;
+  assert(iDatum != fData.begin());
+  return &*(std::prev(iDatum));
 } // geo::ChannelMapPixelAlg::ChannelDataContainer<T>::find() const
 
 

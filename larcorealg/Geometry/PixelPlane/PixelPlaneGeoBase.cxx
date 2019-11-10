@@ -1,936 +1,263 @@
 /**
  * @file    larcorealg/Geometry/PixelPlane/PixelPlaneGeoBase.cxx
- * @brief   Representation of a readout plane with pixels as sensitive elements.
+ * @brief   Base class for readout plane with pixels as sensitive elements.
  * @author  Gianluca Petrillo (petrillo@slac.stanford.edu)
  * @date    October 23, 2019
  * @see     `larcorealg/Geometry/PixelPlane/PixelPlaneGeoBase.h`
- * @ingroup Geometry
+ * @ingroup GeometryPixel
  */
 
 // class header
 #include "larcorealg/Geometry/PixelPlane/PixelPlaneGeoBase.h"
 
 // LArSoft includes
-#include "larcorealg/Geometry/Exceptions.h" // geo::InvalidWireError
-#include "larcorealg/Geometry/SimpleGeo.h" // lar::util::simple_geo::Rectangle
-#include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect::rounded01()
-#include "larcorealg/CoreUtils/RealComparisons.h" // makeVector3DComparison()
+#include "larcorealg/Geometry/GeoMetadataParser.h"
+#include "larcorealg/Geometry/GeoNodePath.h"
+#include "larcorealg/Geometry/LocalTransformation.h"
+#include "larcorealg/Geometry/geo_vectors_utils.h" // geo::vect::middlePoint()..
 #include "larcorealg/CoreUtils/enumerate.h"
 #include "larcorealg/CoreUtils/zip.h"
-#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h" // geo::Zaxis()
+#include "larcorealg/CoreUtils/counter.h"
+#include "larcorealg/CoreUtils/RealComparisons.h"
+#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
 
-// Framework includes
+// support libraries
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "cetlib_except/exception.h"
 
+// ROOT libraries
+#include "TGeoVolume.h"
+#include "TGeoNode.h"
+#include "TGeoExtension.h"
+#include "TMap.h"
+
 // C/C++ standard library
-#include <sstream> // std::ostringstream
-#include <utility> // std::move()
-#include <algorithm> // std::clamp(), std::swap()
+#include <vector>
 #include <array>
+#include <algorithm> // std::swap()
+#include <regex>
+#include <optional>
 #include <limits> // std::numeric_limits<>
-#include <cmath> // std::cos(), std::abs(), ...
+#include <cmath> // std::round()
 #include <cassert>
 
 
 // -----------------------------------------------------------------------------
 namespace {
   
-  /*
+  // ---------------------------------------------------------------------------
+  class PixelCenterFinder {
+    
+    using Path_t = geo::GeoNodePath; ///< Type of node path.
+    
+    std::regex const fPattern; ///< The pattern to recognize a pixel volume.
+    unsigned int fMaxDepth; ///< Do not descend below this deepness.
+    
+    /// Fills `centers` descending into `path`.
+    template <typename Point>
+    void fillPixelCenters(std::vector<Point>& centers, Path_t& path) const;
+    
+      public:
+    
+    /// Constructor: initializes the regular expression to recognize a pixel.
+    PixelCenterFinder
+      (std::regex const& namePattern, unsigned int maxDepth = 10U)
+      : fPattern(namePattern), fMaxDepth(maxDepth) {}
+    
+    /// Returns whether the current node of the `path` is a pixel.
+    bool isPixel(TGeoNode const& node) const
+      { return std::regex_match(node.GetName(), fPattern); }
+    
+    /// Returns a list of points starting with the specified node.
+    template <typename Point = geo::Point_t>
+    std::vector<Point> findPixelCenters(TGeoNode const& startNode) const;
+    
+  }; // class PixelCenterFinder
+  
+  // ---------------------------------------------------------------------------
+  template <typename MetaDataObj>
+  class GeoMetadataCollector {
+      public:
+    using Metadata_t = MetaDataObj;
+    using MetadataPtr_t = Metadata_t const*;
+    using MetadataColl_t = std::vector<MetadataPtr_t>;
+    
+    MetadataColl_t collectFrom(TGeoNode const& node) const
+      { MetadataColl_t coll; collectMetadata(coll, node); return coll; }
+    MetadataColl_t operator() (TGeoNode const& node) const
+      { return collectFrom(node); }
+    
+    MetadataColl_t collectFrom(TGeoVolume const& node) const
+      { MetadataColl_t coll; collectMetadata(coll, node); return coll; }
+    MetadataColl_t operator() (TGeoVolume const& volume) const
+      { return collectFrom(volume); }
+    
+      private:
+    
+    void collectMetadata
+      (MetadataColl_t& metadata, TGeoVolume const& startVolume) const
+      {
+        TMap const* nodeMetadata = getMetadata(startVolume);
+        if (nodeMetadata) metadata.push_back(nodeMetadata);
+        
+        for (auto iNode: util::counter(startVolume.GetNdaughters())) {
+          TGeoNode const* node = startVolume.GetNode(iNode);
+          if (node) collectMetadata(metadata, *node);
+        }
+      } // collectMetadata(TGeoVolume)
+
+    void collectMetadata
+      (MetadataColl_t& metadata, TGeoNode const& startNode) const
+      {
+        TMap const* nodeMetadata = getMetadata(startNode);
+        if (nodeMetadata) metadata.push_back(nodeMetadata);
+        TGeoVolume const* volume = startNode.GetVolume();
+        if (volume) collectMetadata(metadata, *volume);
+      } // collectMetadata(TGeoNode)
+    
+    template <typename NodeOrVolume>
+    static MetadataPtr_t getMetadata(NodeOrVolume const& node)
+      {
+        //
+        // we expect the node/volume to have a user extension of type 
+        // TGeoRCExtension which holds a TMap. That's what we're after.
+        //
+        auto pExt = dynamic_cast<TGeoRCExtension const*>(node.GetUserExtension());
+        return pExt? dynamic_cast<TMap const*>(pExt->GetUserObject()): nullptr;
+      } // getMetadata()
+
+  }; // class GeoMetadataCollector<>
+  
+  
   // ---------------------------------------------------------------------------
   template <typename T>
-  bool closeToUnity(T const value, T const tol = 1e-5) {
-    return std::abs(value - T{ 1 }) <= tol;
-  } // closeToUnity()
-  */
-  
-  // ---------------------------------------------------------------------------
-  /// Returns whether the vector `v` is not null.
-  template <typename V, typename T = double>
-  bool isNull(V const& v, T const tol = 1e-5) { return v.Mag2() <= (tol*tol); }
-  
-  
-  // ---------------------------------------------------------------------------
-  /// Returns whether `a` and `b` are orthogonal.
-  template <typename VA, typename VB, typename T = double>
-  bool areOrthogonal(VA const& a, VB const& b, T const tol = 1e-5) {
-    return std::abs(a.Dot(b)) <= tol;
-  } // areOrthogonal()
-  
-  
-  // ---------------------------------------------------------------------------
-  /// Returns whether `a` and `b` have the same direction (may be opposite).
-  template <typename VA, typename VB, typename T = double>
-  bool areParallel(VA const& a, VB const& b, T const tol = 1e-5) {
-    return isNull(a.Cross(b), tol);
-  } // areParallel()
-  
-  
-  // ---------------------------------------------------------------------------
-  /// Returns whether `b` projection on `a` is negative
-  /// (@f$ \vec{a}\cdot\vec{b} < 0 @f$).
-  template <typename VA, typename VB, typename T = double>
-  bool areOpposite(VA const& a, VB const& b, T const tol = 1e-5) {
-    return a.Dot(b) < -tol;
-  } // areOpposite()
-  
-  
+  bool sameOptional(std::optional<T> const& a, std::optional<T> const& b)
+    { return a? (a.value() == b.value()): !b; }
+
+
   // ---------------------------------------------------------------------------
   
 } // local namespace
 
 
+
+// -----------------------------------------------------------------------------
+template <typename Point = geo::Point_t>
+std::vector<Point> PixelCenterFinder::findPixelCenters
+  (TGeoNode const& node) const
+{
+  std::vector<Point> centers;
+  Path_t path { &node };
+  fillPixelCenters(centers, path);
+  return centers;
+} // PixelCenterFinder::findPixelCenters()
+
+
+// -----------------------------------------------------------------------------
+template <typename Point>
+void PixelCenterFinder::fillPixelCenters
+  (std::vector<Point>& centers, Path_t& path) const
+{
+  //
+  // if this is a target object, we are set
+  //
+  if (isPixel(path.current())) {
+    centers.push_back(
+      geo::LocalTransformation
+        (path.currentTransformation<geo::TransformationMatrix>())
+        .LocalToWorld(geo::origin<Point>())
+      );
+    return;
+  }
+
+  //
+  // descend into the next layer down, concatenate the results and return them
+  //
+  if (path.depth() >= fMaxDepth) return;
+
+  TGeoVolume const& volume = *(path.current().GetVolume());
+  for (auto i: util::counter<int>(volume.GetNdaughters())) {
+    path.append(*(volume.GetNode(i)));
+    fillPixelCenters(centers, path);
+    path.pop();
+  } // for
+  
+} // PixelCenterFinder::fillPixelCenters()
+
+
+// -----------------------------------------------------------------------------
+// --- geo::PixelPlaneGeoBase::RectPixelGeometry_t
+// -----------------------------------------------------------------------------
+bool geo::PixelPlaneGeoBase::RectPixelGeometry_t::AxisInfo_t::isComplete() const
+{
+  return dir && length && nPixels && pitch;
+} // geo::PixelPlaneGeoBase::RectPixelGeometry_t::AxisInfo_t::isComplete()
+
+
+// -----------------------------------------------------------------------------
+void geo::PixelPlaneGeoBase::RectPixelGeometry_t::AxisInfo_t::clear() {
+  dir.reset();
+  length.reset();
+  nPixels.reset();
+  pitch.reset();
+} // geo::PixelPlaneGeoBase::RectPixelGeometry_t::AxisInfo_t::clear()
+
+
+// -----------------------------------------------------------------------------
+bool geo::PixelPlaneGeoBase::RectPixelGeometry_t::isComplete() const {
+  
+  for (auto const& side: sides) if (!side.isComplete()) return false;
+  return center.has_value();
+  
+} // geo::PixelPlaneGeoBase::RectPixelGeometry_t::isComplete()
+
+
+// -----------------------------------------------------------------------------
+bool geo::PixelPlaneGeoBase::RectPixelGeometry_t::checkAxes() const {
+  /*
+   * If both axis directions are not set, their content must be the same.
+   */
+  if (sides[0U].dir || sides[1U].dir) return true;
+  
+  // neither direction is set: content of the two axes must match
+  return sameOptional(sides[0U].length, sides[1U].length)
+    && sameOptional(sides[0U].nPixels, sides[1U].nPixels)
+    && sameOptional(sides[0U].pitch, sides[1U].pitch)
+    ;
+  
+} // geo::PixelPlaneGeoBase::RectPixelGeometry_t::checkAxes()
+
+
 // -----------------------------------------------------------------------------
 // --- geo::PixelPlaneGeoBase
 // -----------------------------------------------------------------------------
-std::string geo::PixelPlaneGeoBase::PixelInfo(
-  PixelCoordID_t const coords,
-  std::string indent /* = "" */, unsigned int verbosity /* = 1U */
-  ) const
-{
-  std::ostringstream sstr;
-  PrintPixelInfo(sstr, coords, indent, verbosity);
-  return sstr.str();
-} // geo::PixelPlaneGeoBase::PixelInfo()
+#if 0
+std::regex const geo::PixelPlaneGeoBase::DefaultPixelPattern {
+  ".*pixel.*",
+  std::regex::basic | std::regex::icase | std::regex::optimize
+  };
 
 
 // -----------------------------------------------------------------------------
-// ---  interface implementation: anode plane
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doThetaZ() const {
-  return fThetaZ;
-} // geo::PixelPlaneGeoBase::doThetaZ()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doPhiZ() const {
-  return fPhiZ;
-} // geo::PixelPlaneGeoBase::doPhiZ()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doSinPhiZ() const {
-  // if these need to be cached... can do
-  return std::sin(fPhiZ);
-} // geo::PixelPlaneGeoBase::doSinPhiZ()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doCosPhiZ() const {
-  // if these need to be cached... can do
-  return std::cos(fPhiZ);
-} // geo::PixelPlaneGeoBase::doCosPhiZ()
-
-
-// -----------------------------------------------------------------------------
-geo::WireGeo geo::PixelPlaneGeoBase::doWire(unsigned int iWire) const {
-  return getWire(iWire);
-} // geo::PixelPlaneGeoBase::doWire()
-
-
-// -----------------------------------------------------------------------------
-unsigned int geo::PixelPlaneGeoBase::doNwires() const {
-  
-  return getNsensElem();
-  
-} // geo::PixelPlaneGeoBase::doNwires()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWirePitch() const
-  { return getSensElemPitch(geo::pixel::ixWireC); }
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::doWireIDincreasesWithZ() const {
-  assert(getSensElemDir(geo::pixel::ixWireC).Dot(geo::Zaxis()) > 0.0);
-  return true; // pretty much by the definition of the wire ID's
-} // geo::PixelPlaneGeoBase::doWireIDincreasesWithZ()
-
-
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::doGetIncreasingWireDirection() const
-  { return getSensElemDir(geo::pixel::ixWireC); }
-
-
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::doGetWireDirection() const
-  { return getSensElemDir(geo::pixel::ixWireD); }
-
-
-// -----------------------------------------------------------------------------
-geo::WireID geo::PixelPlaneGeoBase::doNearestWireID
-  (geo::Point_t const& pos) const
-{
-  
-  using namespace geo::pixel;
-  
-  PixelCoordID_t nearest = coordsOf(getPlaneCoordinates(pos));
-  if (isPixelOnPlane(nearest)) return { ID(), indexOf(nearest) };
-  
-  // of, something went bad, and we have to implement a crazy protocol.
-  PixelCoordID_t const onSpot = nearest;
-  
-  nearest.main()
-    = std::clamp<PixelCoordIndex_t>(nearest.main(), 0, getNsensElem(ixMain));
-  nearest.secondary() =
-    std::clamp<PixelCoordIndex_t>(nearest.secondary(), 0, getNsensElem(ixSec));
-  
-  PixelIndex_t const nearestIndex = indexOf(nearest);
-  throw InvalidWireError("Geometry", ID(), nearestIndex, InvalidPixelIndex)
-    << "Nearest pixel for position " << pos << " in plane " << std::string(ID())
-    << " is approx number #" << nearestIndex << " ("
-    << nearest.main() << "; " << nearest.secondary() << "), capped from ("
-    << onSpot.main() << "; " << onSpot.secondary()  << ")\n";
-  
-} // geo::PixelPlaneGeoBase::doNearestWireID()
-
-
-// -----------------------------------------------------------------------------
-geo::WireGeo geo::PixelPlaneGeoBase::doNearestWire
-  (geo::Point_t const& pos) const
-{
-  
-  return getWire(geo::PixelPlaneGeoBase::doNearestWireID(pos).Wire);
-  
-} // geo::PixelPlaneGeoBase::doNearestWire()
-
-
-// -----------------------------------------------------------------------------
-geo::WireID geo::PixelPlaneGeoBase::doClosestWireID
-  (geo::WireID::WireID_t) const
-{
-  //
-  // The problem is that a `geo::WireID` which is invalid does not correspond to
-  // a well defined non-existing pixel, because the mapping 2D pixel coordinate
-  // to wire number is defined only in the validity range and this definition
-  // can't be univocally extended beyond it (well, it can, but it requires
-  // conventions that are not satisfactory).
-  // 
-  // Ok, what now? The calling code might be rewritten to use concepts better
-  // suited for a 2D plane. Chances are that this feature that code requires
-  // needs to be implemented and the `geo::PlaneGeo` interface extended.
-  // Open a ticket!
-  //
-  
-  NotImplemented("This concept is not appropriate to pixel planes.");
-  
-} // geo::PixelPlaneGeoBase::doClosestWireID()
-
-
-// -----------------------------------------------------------------------------
-lar::util::simple_geo::Volume<> geo::PixelPlaneGeoBase::doCoverage() const {
-  
-  using namespace geo::pixel;
-  
-  std::array<double, 3U> A, B;
-  geo::vect::fillCoords(A,
-    fCenter
-      - getNsensElem(ixMain) * getSensElemHalfStepDir(ixMain)
-      - getNsensElem(ixSec) * getSensElemHalfStepDir(ixSec)
-    );
-  geo::vect::fillCoords(B,
-    fCenter
-      + getNsensElem(ixMain) * getSensElemHalfStepDir(ixMain)
-      + getNsensElem(ixSec) * getSensElemHalfStepDir(ixSec)
-    );
-  
-  // not sure whether it is a problem if the two points are not sorted...
-  for (auto&& [ a, b ]: util::zip(A, B))
-    if (a > b) std::swap(a, b);
-  
-  return { A.data(), B.data() };
-} // geo::PixelPlaneGeoBase::WirePlaneGeo::doCoverage()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doPlaneCoordinateFrom
-  (geo::Point_t const& point, geo::WireGeo const& refPixel) const
-{
-  return getPlaneCoordinateFrom(point, refPixel, geo::pixel::ixWireC);
-} // geo::PixelPlaneGeoBase::doPlaneCoordinateFrom()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doPlaneCoordinate
-  (geo::Point_t const& point) const
-{
-  return getPlaneCoordinate(point, geo::pixel::ixWireC);
-} // geo::PixelPlaneGeoBase::doPlaneCoordinate()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireCoordinate
-  (geo::Point_t const& point) const
-{
-  return getWireCoordinate(point, geo::pixel::ixWireC);
-} // geo::PixelPlaneGeoBase::doWireCoordinate()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::doDecomposePoint(geo::Point_t const& point) const
-  -> WireDecomposedVector_t
-{
-  return fDecompPixel.DecomposePoint(point);
-} // geo::PixelPlaneGeoBase::doDecomposePoint()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doProjectionReferencePoint() const {
-  return fDecompPixel.ReferencePoint();
-} // geo::PixelPlaneGeoBase::doProjectionReferencePoint()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::doProjection(geo::Point_t const& point) const
-  -> WireCoordProjection_t
-{
-  return getPlaneCoordinates(point);
-} // geo::PixelPlaneGeoBase::doProjection()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::doProjection(geo::Vector_t const& v) const
-  -> WireCoordProjection_t
-{
-  return fDecompPixel.ProjectVectorOnPlane(v);
-} // geo::PixelPlaneGeoBase::doProjection()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doComposePoint
-  (WireDecomposedVector_t const& decomp) const
-{
-  return fDecompPixel.ComposePoint(decomp); 
-} // geo::PixelPlaneGeoBase::doComposePoint(WireDecomposedVector_t)
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doComposePoint
-  (double distance, WireCoordProjection_t const& proj) const
-{
-  return fDecompPixel.ComposePoint(distance, proj); 
-} // geo::PixelPlaneGeoBase::doComposePoint(double, WireCoordProjection_t)
-
-
-// -----------------------------------------------------------------------------
-std::string geo::PixelPlaneGeoBase::doPlaneInfo
-  (std::string indent /* = "" */, unsigned int verbosity /* = 1U */) const
-{
-  std::ostringstream out;
-  PrintPixelPlaneInfo(out, indent, verbosity);
-  return out.str();
-} // geo::PixelPlaneGeoBase::doPlaneInfo()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::doUpdateAfterSorting
-  (geo::BoxBoundedGeo const& /* TPCbox */)
-{
-  
-  UpdateDecompPixel();
-  
-  UpdatePixelDirs();
-  
-  UpdatePlaneCenter();
-  
-  UpdateAngles();
-  
-  UpdateActiveArea();
-  
-} // geo::PixelPlaneGeoBase::doUpdateAfterSorting()
-
-
-// -----------------------------------------------------------------------------
-// --- Polymorphic implementation: wire abstraction
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireRMax(WireLocator const&) const {
-  using namespace geo::pixel;
-  return std::max(getSensElemPitch(ixMain), getSensElemPitch(ixSec)) / 2.0;
-} // geo::PixelPlaneGeoBase::doWireRMax()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireRMin(WireLocator const&) const {
-  using namespace geo::pixel;
-  return std::min(getSensElemPitch(ixMain), getSensElemPitch(ixSec)) / 2.0;
-} // geo::PixelPlaneGeoBase::doWireRMin()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireHalfL(WireLocator const& wloc) const {
-  return getPixelHalfL(wloc);
-} // geo::PixelPlaneGeoBase::doWireHalfL()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::doWireFillCenterXYZ
-  (WireLocator const& wloc, double* xyz, double localz /* = 0.0 */) const
-{
-  geo::vect::fillCoords(xyz, doWireGetPositionFromCenter(wloc, localz));
-} // geo::PixelPlaneGeoBase::doWireFillCenterXYZ()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::doWireFillStartXYZ
-  (WireLocator const& wloc, double* xyz) const
-{
-  geo::vect::fillCoords(xyz, doWireGetStart(wloc));
-} // geo::PixelPlaneGeoBase::doWireFillStartXYZ()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::doWireFillEndXYZ
-  (WireLocator const& wloc, double* xyz) const
-{
-  geo::vect::fillCoords(xyz, doWireGetEnd(wloc));
-} // geo::PixelPlaneGeoBase::doWireFillEndXYZ()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doWireGetPositionFromCenter
-  (WireLocator const& wloc, double localz) const
-{
-  return
-    doWireGetPositionFromCenterUnbounded(wloc, std::clamp(localz, -1.0, +1.0));
-} // geo::PixelPlaneGeoBase::doWireGetPositionFromCenter()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doWireGetPositionFromCenterUnbounded
-  (WireLocator const& wloc, double localz) const
-{
-  return getSensElemCenter(coordsOf(wloc))
-    + localz * getSensElemHalfStepDir(geo::pixel::ixWireD);
-} // geo::PixelPlaneGeoBase::doWireGetPositionFromCenterUnbounded()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doWireGetCenter
-  (WireLocator const& wloc) const
-{
-  return getSensElemCenter(coordsOf(wloc));
-} // geo::PixelPlaneGeoBase::doWireGetCenter()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doWireGetStart
-  (WireLocator const& wloc) const
-{
-  using namespace geo::pixel;
-  return getSensElemCenter(coordsOf(wloc))
-    - getSensElemHalfStepDir(ixWireC)
-    - getSensElemHalfStepDir(ixWireD)
-    ;
-} // geo::PixelPlaneGeoBase::doWireGetStart()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::doWireGetEnd(WireLocator const& wloc) const
-{
-  using namespace geo::pixel;
-  return getSensElemCenter(coordsOf(wloc))
-    + getSensElemHalfStepDir(ixWireC)
-    + getSensElemHalfStepDir(ixWireD)
-    ;
-} // geo::PixelPlaneGeoBase::doWireGetEnd()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireLength(WireLocator const& wloc) const {
-  return 2.0 * getSensElemPitch(geo::pixel::ixWireD);
-} // geo::PixelPlaneGeoBase::doWireLength()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireThetaZ(WireLocator const&) const {
-  return ThetaZ();
-} // geo::PixelPlaneGeoBase::doWireThetaZ()
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::doWireIsParallelTo
-  (WireLocator const&, geo::WireGeo const& wire) const
-{
-  return areParallel
-    (getSensElemDir(geo::pixel::ixWireD), wire.Direction<geo::Vector_t>());
-} // geo::PixelPlaneGeoBase::doWireIsParallelTo()
-
-
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::doWireDirection
-  (WireLocator const&) const
-{
-  return getSensElemDir(geo::pixel::ixWireD);
-} // geo::PixelPlaneGeoBase::doWireDirection()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireDistanceFrom
-  (WireLocator const& wloc, geo::WireGeo const& wire) const
-{
-  // can't use getSecPlaneCoordinate() because it uses pixel #0 reference
-  return fDecompPixel.VectorSecondaryComponent
-    (getSensElemCenter(coordsOf(wloc)) - wire.GetCenter<geo::Point_t>());
-} // geo::PixelPlaneGeoBase::doWireDistanceFrom()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doWireComputeZatY0
-  (WireLocator const& wloc) const
-{
-  
-  //
-  // the prescription of this method is complicate...
-  // but given that the main direction (the one we extrapolate on) is aligned
-  // with depth direction and that the width and secondary directions coincide,
-  // this pretty much turns into the width coordinate of the center of the
-  // pixel.
-  // We could push the assumption further and reduce all to a shift...
-  // not bothering to, though.
-  //
-  
-  return fDecompFrame.PointMainComponent(getSensElemCenter(coordsOf(wloc)));
-  
-} // geo::PixelPlaneGeoBase::doWireComputeZatY0()
-
-
-// -----------------------------------------------------------------------------
-std::string geo::PixelPlaneGeoBase::doWireInfo(
-  WireLocator const& wloc,
-  std::string indent /* = "" */, unsigned int verbosity /* = 1 */
-  ) const
-{
-  return PixelInfo(coordsOf(wloc), indent, verbosity);
-} // geo::PixelPlaneGeoBase::doWireInfo()
-
-
-// -----------------------------------------------------------------------------
-// --- Plane coordinate and ID conversions
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::indexAt(WireCoordProjection_t const& point) const
-  -> PixelIndex_t
-{
-  return indexOf(coordsOf(point));
-} // geo::PixelPlaneGeoBase::indexAt()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::coordsOf(WireCoordProjection_t const& point) const
-  -> PixelCoordID_t
-{
-  using namespace geo::pixel;
-  return { roundCoord(point.X(), ixMain), roundCoord(point.Y(), ixSec) };
-} // geo::PixelPlaneGeoBase::coordsOf(WireCoordProjection_t)
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::coordsOf(WireLocator const& wloc) const
-  -> PixelCoordID_t
-{
-  return coordsOf(wireToPixelIndex(wloc));
-} // geo::PixelPlaneGeoBase::coordsOf(WireLocator)
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::coordsOf(PixelIndex_t const index) const
-  -> PixelCoordID_t
-{
-  //
-  // indexOf():
-  //   coords.secondary() * getNsensElem(ixMain) + coords.main()
-  //   
-  
-  using geo::pixel::ixMain;
-  
-  return {
-    static_cast<PixelCoordIndex_t>(index % getNsensElem(ixMain)), // main
-    static_cast<PixelCoordIndex_t>(index / getNsensElem(ixMain))  // secondary
-    };
-} // geo::PixelPlaneGeoBase::coordsOf()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::roundCoord
-  (double coord, DirIndex_t const dir) const -> PixelCoordIndex_t
-{
-  return roundPixelCoord(pixelCoord(coord, dir));
-} // geo::PixelPlaneGeoBase::roundCoord()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::pixelCoord
-  (double coord, DirIndex_t const dir) const
-{
-  assert(isDirIndex(dir));
-  return coord / getSensElemPitch(dir);
-} // geo::PixelPlaneGeoBase::pixelCoord()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::roundPixelCoord(double const coord) const
-  -> PixelCoordIndex_t
-{
-  return static_cast<PixelCoordIndex_t>(coord + 0.5);
-} // geo::PixelPlaneGeoBase::roundPixelCoord()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::indexOf(PixelCoordID_t const& coords) const
-  -> PixelIndex_t
-{
-  using geo::pixel::ixMain;
-  return coords.secondary() * getNsensElem(ixMain) + coords.main();
-} // geo::PixelPlaneGeoBase::indexOf()
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isOnPlane
-  (WireCoordProjection_t const& point) const
-{
-  using namespace geo::pixel;
-  return isOnPlane(point.X(), ixMain) && isOnPlane(point.Y(), ixSec);
-} // geo::PixelPlaneGeoBase::isOnPlane(WireCoordProjection_t)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isOnPlane
-  (double const coord, DirIndex_t const dir) const
-{
-  // yeah, strictly speaking it should be `<` instead of `<=`. Judge me.
-  double const shiftedCoord = coord + getSensElemPitch(dir) / 2.0;
-  return (shiftedCoord >= 0.0) && (shiftedCoord <= getSensElemDirSize(dir));
-} // geo::PixelPlaneGeoBase::isOnPlane(double)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isPixelOnPlane(PixelCoords_t const& coords) const {
-  using namespace geo::pixel;
-  return isPixelOnPlane(coords.main(), ixMain)
-    && isPixelOnPlane(coords.secondary(), ixSec);
-} // bool geo::PixelPlaneGeoBase::isOnPlane(PixelCoords_t)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isPixelOnPlane
-  (PixelCoordID_t const& coords) const
-{
-  using namespace geo::pixel;
-  return isPixelOnPlane(coords.main(), ixMain)
-    && isPixelOnPlane(coords.secondary(), ixSec);
-} // geo::PixelPlaneGeoBase::isOnPlane(PixelCoordID_t)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isPixelOnPlane
-  (double const coord, DirIndex_t const dir) const
-{
-  double const shiftedCoord = 0.5 + coord;
-  return (shiftedCoord >= 0.0)
-    && (shiftedCoord < static_cast<double>(getNsensElem(dir)));
-} // geo::PixelPlaneGeoBase::isPixelOnPlane(double)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isPixelOnPlane
-  (PixelCoordIndex_t const coord, DirIndex_t const dir) const
-{
-  return
-    (coord >= 0) && (coord < static_cast<PixelCoordIndex_t>(getNsensElem(dir)));
-} // geo::PixelPlaneGeoBase::isPixelOnPlane(PixelCoordIndex_t)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isPixelOnPlane(PixelIndex_t const index) const {
-  return index < getNsensElem();
-} // geo::PixelPlaneGeoBase::isOnPlane(PixelIndex_t)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isWireIDvalid(geo::WireID const& wireid) const {
-  return isWireIDvalid(wireid.Wire);
-} // geo::PixelPlaneGeoBase::isWireIDvalid(WireID)
-
-
-// -----------------------------------------------------------------------------
-bool geo::PixelPlaneGeoBase::isWireIDvalid
-  (geo::WireID::WireID_t const wire) const
-{
-  return (wire >= 0) && (wire < getNsensElem());
-} // geo::PixelPlaneGeoBase::isWireIDvalid(WireID_t)
-
-
-// -----------------------------------------------------------------------------
-// --- Candidate extensions to `geo::PlaneGeo` interface
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::doSensElemDir(DirIndex_t const dir) const
-  { return getSensElemDir(dir); }
-
-
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::doSensElemMainDir() const
-  { return getSensElemDir(geo::pixel::ixMain); }
-
-
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::doSensElemSecondaryDir() const
-  { return getSensElemDir(geo::pixel::ixSec); }
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doSensElemDirSize(DirIndex_t const dir) const
-  { return getSensElemDirSize(dir); }
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doSensElemMainDirSize() const
-  { return getSensElemDirSize(geo::pixel::ixMain); }
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doSensElemSecondaryDirSize() const
-  { return getSensElemDirSize(geo::pixel::ixSec); }
-
-
-// -----------------------------------------------------------------------------
-unsigned int geo::PixelPlaneGeoBase::doNsensElem(DirIndex_t const dir) const
-  { return getNsensElem(dir); }
-
-
-// -----------------------------------------------------------------------------
-unsigned int geo::PixelPlaneGeoBase::doNsensElemMain() const
-  { return getNsensElem(geo::pixel::ixMain); }
-
-
-// -----------------------------------------------------------------------------
-unsigned int geo::PixelPlaneGeoBase::doNsensElemSecondary() const
-  { return getNsensElem(geo::pixel::ixSec); }
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doSensElemPitch(DirIndex_t const dir) const
-  { return getSensElemPitch(dir); }
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doSensElemPitchMain() const
-  { return getSensElemPitch(geo::pixel::ixMain); }
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::doSensElemPitchSecondary() const
-  { return getSensElemPitch(geo::pixel::ixSec); }
-
-
-// -----------------------------------------------------------------------------
-geo::WireGeo geo::PixelPlaneGeoBase::getWire(PixelIndex_t const iWire) const {
-  return { *this, { ID(), static_cast<geo::WireID::WireID_t>(iWire) } };
-} // geo::PixelPlaneGeoBase::getWire()
-
-
-// -----------------------------------------------------------------------------
-// --- Implementation of the candidate interface extensions
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::getSensElemDir
-  (DirIndex_t const dir) const
-{
-  assert(isDirIndex(dir));
-  switch (dir) {
-    case geo::pixel::ixMain: return fDecompPixel.MainDir();
-    case geo::pixel::ixSec:  return fDecompPixel.SecondaryDir();
-    default:     return {};
-  } // switch
-} // geo::PixelPlaneGeoBase::getSensElemDir()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getSensElemDirSize(DirIndex_t const dir) const {
-  //
-  // this code assumes that the main direction matches the frame width direction
-  // and the secondary direction msatches the frame depth direction
-  //
-  assert(isDirIndex(dir));
-  switch (dir) {
-    case geo::pixel::ixMain:
-      assert(areParallel(DepthDir<geo::Vector_t>(), getSensElemDir(dir)));
-      return fFrameSize.Depth();
-    case geo::pixel::ixSec:
-      assert(areParallel(WidthDir<geo::Vector_t>(), getSensElemDir(dir)));
-      return fFrameSize.Width();
-    default:
-      return 0;
-  } // switch
-} // geo::PixelPlaneGeoBase::getSensElemDirSize()
-
-
-// -----------------------------------------------------------------------------
-geo::Vector_t geo::PixelPlaneGeoBase::getSensElemHalfStepDir
-  (DirIndex_t const dir) const
-{
-  assert(isDirIndex(dir));
-  return fPixelDirs[dir];
-} // geo::PixelPlaneGeoBase::getSensElemHalfStepDir()
-
-
-// -----------------------------------------------------------------------------
-unsigned int geo::PixelPlaneGeoBase::getNsensElem(DirIndex_t const dir) const {
-  assert(isDirIndex(dir));
-  return fNPixels[dir];
-} // geo::PixelPlaneGeoBase::getNsensElem(DirIndex_t)
-
-
-// -----------------------------------------------------------------------------
-unsigned int geo::PixelPlaneGeoBase::getNsensElem() const {
-  using namespace geo::pixel;
-  return getNsensElem(ixMain) * getNsensElem(ixSec);
-} // geo::PixelPlaneGeoBase::getNsensElem()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getSensElemPitch(DirIndex_t const dir) const {
-  assert(isDirIndex(dir));
-  return fPitches[dir];
-} // geo::PixelPlaneGeoBase::getSensElemPitch()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getPlaneCoordinateFrom
-  (geo::Point_t const& point, geo::WireGeo const& ref, DirIndex_t const dir)
-  const
-{
-  return getPlaneCoordinate(point - ref.GetCenter<geo::Vector_t>(), dir);
-} // geo::PixelPlaneGeoBase::getPlaneCoordinateFrom()
-
-
-// -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::getPlaneCoordinates
-  (geo::Point_t const& point) const -> WireCoordProjection_t
-{
-  return fDecompPixel.ProjectPointOnPlane(point);
-} // geo::PixelPlaneGeoBase::getPlaneCoordinates()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getPlaneCoordinate
-  (geo::Point_t const& point, DirIndex_t const dir) const
-{
-  // this is just a dispatcher since the function methods are different
-  assert(isDirIndex(dir));
-  switch (dir) {
-    case geo::pixel::ixMain:
-      return getMainPlaneCoordinate(point);
-    case geo::pixel::ixSec:
-      return getSecPlaneCoordinate(point);
-    default: // we claimed it's undefined behavior, but actually it secretly is:
-      return std::numeric_limits<double>::signaling_NaN();
-  } // switch
-  
-} // geo::PixelPlaneGeoBase::getPlaneCoordinate()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getMainPlaneCoordinate
-  (geo::Point_t const& point) const
-{
-  return fDecompPixel.PointMainComponent(point);
-} // geo::PixelPlaneGeoBase::getMainPlaneCoordinateFrom()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getSecPlaneCoordinate
-  (geo::Point_t const& point) const
-{
-  return fDecompPixel.PointSecondaryComponent(point);
-} // geo::PixelPlaneGeoBase::getSecPlaneCoordinate()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getWireCoordinate
-  (geo::Point_t const& point, DirIndex_t const dir) const
-{
-  // no rounding, no shifting; pixel #0 is covering coordinates from -0.5 to 0.5
-  // in pitch units
-  return getPlaneCoordinate(point, dir) / getSensElemPitch(dir);
-} // geo::PixelPlaneGeoBase::getWireCoordinate()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::getSensElemCenter
-  (PixelCoordID_t const& coords) const
-{
-  using namespace geo::pixel;
-  return firstPixelCenter()
-    + getSensElemHalfStepDir(ixMain) * (2.0 * coords[ixMain])
-    + getSensElemHalfStepDir(ixSec) * (2.0 * coords[ixSec])
-    ;
-} // geo::PixelPlaneGeoBase::getSensElemCenter()
-
-
-// -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::getPixelHalfL(WireLocator const&) const {
-  return getSensElemPitch(geo::pixel::ixWireD) / 2.0;
-} // geo::PixelPlaneGeoBase::getPixelHalfL()
-
-
-// -----------------------------------------------------------------------------
-// --- initialization customization for derived classes
-// -----------------------------------------------------------------------------
-geo::PixelPlaneGeoBase::PixelPlaneGeoBase(
-  TGeoNode const& node,
-  geo::TransformationMatrix&& trans
-  )
-  : geo::PlaneGeo(node, std::move(trans))
-  , fDecompPixel()
-  , fThetaZ(0.0)
-  , fPhiZ(0.0)
-{
-
-  /*
-   * NOTE this is part of the pixel plane initialization procedure documented
-   *      in `geo::PixelPlaneGeoBase` class. If changing *what* is being
-   *      initialized or its *order*, please also update that documentation at
-   *      the top of `geo::PixelPlaneGeoBase` class Doxygen documentation (in
-   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeoBase.h`, section
-   *      "Initialization steps").
-   */
-  
-  /*
-   * REMINDER: do not rely on virtual methods from derived classes here, as
-   *           they might not be available yet (the derived class constructor
-   *           hasn't been run yet at this point)
-   */
-  
-  fNPixels.fill(0);
-  fPitches.fill(0.0);
-  fPixelDirs.fill({});
-  
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Plane extends " << Width() << " cm in " << WidthDir<geo::Vector_t>()
-    << " and " << Depth() << " cm in " << DepthDir<geo::Vector_t>();
-  
-  SetView(geo::k3D); // view is this simple
-  
-} // geo::PixelPlaneGeoBase::PixelPlaneGeoBase()
-
-
+#endif // 0
 // -----------------------------------------------------------------------------
 void geo::PixelPlaneGeoBase::InitializePixelGeometry
   (RectPixelGeometry_t const& pixelGeometry)
 {
   
   /*
-   * Produces the origin, pitch, number and direction of the pixels and grid.
-   * This is a elaboration of the raw information from the geometry.
-   * This information is obtained here from `extractPixelGeometry()`.
+   * Assigns the origin, pitch, number and direction of the pixels and grid.
+   * This is a elaboration of the raw information from the geometry, passed
+   * via `pixelGeometry` argument.
    * 
-   * The origin and directions are only partially respected.
+   * The center and directions from `pixelGeometry` are only partially
+   * respected.
    * The directions are used to associate the pitches to the right axis, but
-   * the axis are imposed to be the ones of the plane frame.
-   * The origin vector is supposed to be one of the four corners of the plane,
-   * the one from which the two input axes depart.
-   * But as these axes may be swapped, the origin also can be modified
-   * accordingly; it is anyway guaranteed to be at one of the four corners
-   * of the pixelated area.
+   * the axes are imposed to be the ones of the plane frame.
+   * The center vector is supposed to point to the center of the pixelated area.
+   * The origin will be moved from there to the center of the first pixel,
+   * which is going to be located at one of the four corners of the pixelated
+   * area.
    * 
    * Requires:
    *  * local-world transformations be available
@@ -940,10 +267,10 @@ void geo::PixelPlaneGeoBase::InitializePixelGeometry
   
   /*
    * NOTE this is part of the pixel plane initialization procedure documented
-   *      in `geo::PixelPlaneGeoBase` class. If changing *what* is being
+   *      in `geo::PixelPlaneGeoInterface` class. If changing *what* is being
    *      initialized or its *order*, please also update that documentation at
-   *      the top of `geo::PixelPlaneGeoBase` class Doxygen documentation (in
-   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeoBase.h`, section
+   *      the top of `geo::PixelPlaneGeoInterface` class Doxygen documentation (in
+   *      `larcorealg/Geometry/PixelPlane/PixelPlaneGeoInterface.h`, section
    *      "Initialization steps").
    */
   
@@ -954,14 +281,18 @@ void geo::PixelPlaneGeoBase::InitializePixelGeometry
    *           yet)
    */
   
-  assert(!isNull(fDecompFrame.MainDir()));
-  assert(!isNull(fDecompFrame.SecondaryDir()));
+  constexpr lar::util::RealComparisons cmp(1e-2); // 0.1 mm tolerance
+  constexpr auto vcmp = lar::util::makeVector3DComparison(cmp);
+  
+  assert(vcmp.nonZero(fDecompFrame.MainDir()));
+  assert(vcmp.nonZero(fDecompFrame.SecondaryDir()));
   
   using namespace geo::pixel;
   
-  MF_LOG_TRACE("PixelPlaneGeoBase")
+  MF_LOG_TRACE("PixelPlaneGeoInterface")
+    << "PixelPlaneGeoInterface::InitializePixelGeometry(): "
     << "Information received from plane geometry:"
-    << DumpPixelGeometry(pixelGeometry);
+    << "\n" << pixelGeometry;
   
   
   //
@@ -978,25 +309,26 @@ void geo::PixelPlaneGeoBase::InitializePixelGeometry
   
   std::array<ExtendedAxisInfo_t, NCoords> axes;
   for (auto&& [ side, axis ]: util::zip(pixelGeometry.sides, axes)) {
-    if (isNull(side.dir)) { // ideally, norm should be 1
-      throw cet::exception("PixelPlaneGeoBase")
-        << "Specification of pixel plane axis was received " << side.dir
+    if (!side.dir || vcmp.zero(side.dir.value())) { // ideally, norm should be 1
+      throw cet::exception("PixelPlaneGeoInterface")
+        << "Specification of pixel plane axis was received as "
+        << side.dir.value()
         << ".\n";
     }
-    axis = { side, toWorldCoords(side.dir) };
+    axis = { side, toWorldCoords(side.dir.value()) };
   } // for
   
   //
-  // make sure that the data on ixSec is aligned with WidthDir()`:
+  // make sure that the data on `ixSec` is aligned with `WidthDir()`:
   //
-  if (areParallel(axes[ixSec].axisDir, WidthDir())) {
+  if (vcmp.parallel(axes[ixSec].axisDir, WidthDir())) {
     // all good already
   }
-  else if (areParallel(axes[ixSec].axisDir, DepthDir())) {
+  else if (vcmp.parallel(axes[ixSec].axisDir, DepthDir())) {
     std::swap(axes[ixSec], axes[ixMain]);
   }
   else {
-    throw cet::exception("PixelPlaneGeoBase")
+    throw cet::exception("PixelPlaneGeoInterface")
       << "InitializePixelGeometry(): pixel axis system { "
       << axes[ixMain].axisDir << " x " << axes[ixSec].axisDir
       << " } is misaligned with the plane frame system { "
@@ -1004,25 +336,120 @@ void geo::PixelPlaneGeoBase::InitializePixelGeometry
       "\n";
   }
   
-#if 1
-  //
-  // copy the information into `fPitches` and `fNPixels`, and set the directions
-  // (indices follow `ixMain` and `ixSec`)
-  //
-  for (auto&& [ axisInfo, pitch, nPixels ]
-    : util::zip(axes, fPitches, fNPixels ))
-  {
-    pitch = axisInfo.basicInfo.pitch.value();
-    nPixels = static_cast<unsigned int>(axisInfo.basicInfo.length.value() / pitch);
-  } // for
-  
   fDecompPixel.SetMainDir
     (geo::vect::rounded01(axes[ixMain].axisDir.Unit(), 1e-5));
   fDecompPixel.SetSecondaryDir
     (geo::vect::rounded01(axes[ixSec].axisDir.Unit(), 1e-5));
   
   //
-  // 2. now set the position of the pixel plane;
+  // 2. set the pixel geometry on each axis
+  //
+  
+  for (auto&& [ iAxis, axisInfo, pitch, nPixels ]
+    : util::enumerate(axes, fPitches, fNPixels ))
+  {
+    // purpose of each loop is to set a value for `pitch` and `nPixels`
+    
+    DirIndex_t const ixDir { iAxis };
+    RectPixelGeometry_t::AxisInfo_t const& rawInfo = axisInfo.basicInfo;
+    
+    //
+    // We have as input side length, number of pixels and wire pitch:
+    // we may be underconstrained or overconstrained here...
+    // In case of overconstraining, we trust number of pixels, side length and
+    // pitch in decreasing order.
+    //
+    if (rawInfo.nPixels) { // if given number of pixels...
+      nPixels = rawInfo.nPixels.value();
+      if (nPixels == 0U) {
+        throw cet::exception("PixelPlaneGeoInterface")
+          << "Number of pixel is provided for "
+          << getDirectionName(ixDir) << " axis[" << rawInfo.dir.value()
+          << "], and it is provided wrong! (" << nPixels << ")\n"
+          << pixelGeometry << "\n"
+          ;
+      } // if number of pixels is 0
+      
+      if (rawInfo.length) { // if given number of pixels, total length...
+        pitch = rawInfo.length.value() / nPixels; // should we round here?
+        if (rawInfo.pitch) { // if given pixels, total length and pitch
+          // just check for consistency, but eventually use the provided value
+          if (
+            lar::util::RealComparisons(1e-2) // 10 um tolerance
+              .nonEqual(pitch, rawInfo.pitch.value())
+            )
+          {
+            MF_LOG_WARNING("Geometry") << "Information from raw geometry for "
+              << getDirectionName(ixDir) << " [" << rawInfo.dir.value()
+              << "] pixel axis is inconsistent, yielding a pitch of " << pitch
+              << " cm (retained) while expecting it to be "
+              << rawInfo.pitch.value() << " cm.\nFull geometry information:\n"
+              << pixelGeometry << "\n";
+          } // if inconsistency detected
+          pitch = rawInfo.pitch.value();
+        } // if overconstrained
+      } // if
+      else if (rawInfo.pitch) { // if given number of pixels and pitch
+        // well, since we do not save total length anyway we are pretty much set
+        pitch = rawInfo.pitch.value();
+      }
+      else { // we are given only pixel number!
+        // should we supply with the direction size here instead?
+        throw cet::exception("PixelPlaneGeoInterface")
+          << "We are not given enough information on "
+          << getDirectionName(ixDir) << " axis[" << rawInfo.dir.value()
+          << "]: only the number of pixels!\n"
+          << pixelGeometry << "\n"
+          ;
+      } // if ... else
+      
+    }
+    else if (rawInfo.length && rawInfo.pitch) { // if given length and pitch
+      
+      pitch = rawInfo.pitch.value();
+      
+      // we *truncate* so that the specified length is not exceeded
+      // (with some tolerance)
+      
+      nPixels
+        = static_cast<unsigned int>(std::round(rawInfo.length.value() / pitch));
+      double const length = nPixels * pitch;
+      if (cmp.strictlyGreater(length, rawInfo.length.value())) {
+        --nPixels;
+      }
+      assert(cmp.nonGreater(nPixels * pitch, rawInfo.length.value()));
+    }
+    else {
+      throw cet::exception("PixelPlaneGeoInterface")
+        << "We are not given enough information on "
+        << getDirectionName(ixDir) << " axis [" << rawInfo.dir.value() << "]:\n"
+        << pixelGeometry << "\n"
+        ;
+    }
+    
+    // final sanity checks
+    if ((nPixels == 0U) || cmp.nonPositive(pitch)) {
+      throw cet::exception("PixelPlaneGeoInterface")
+        << "Failure in pixel geometry determination algorithm for "
+        << getDirectionName(ixDir) << " axis [" << rawInfo.dir.value()
+        << "] yielded "
+        << nPixels << " pixels with " << pitch << " cm pitch. Geometry info:\n"
+        << pixelGeometry << "\n";
+    }
+    
+    MF_LOG_TRACE("Geometry")
+      << "PixelPlaneGeoInterface::InitializePixelGeometry(): "
+      << getDirectionName(ixDir) << " grid axis: "
+      << getSensElemDir(ixDir) << " axis covering "
+      << getSensElemDirSize(ixDir) << " cm with "
+      << getNsensElem(ixDir) << " pixels of side "
+      << getSensElemPitch(ixDir) << " cm each"
+      ;
+    
+  } // for
+  
+  //
+  // 3. now set the position of the pixel plane;
   //    that is driven by the origin of the pixel decomposition frame,
   //    which corresponds to the position of the first pixel:
   //    that is what we are pursuing now.
@@ -1032,347 +459,506 @@ void geo::PixelPlaneGeoBase::InitializePixelGeometry
   //    note that `fromCenterToFirstPixel()` requires some of the quantities
   //    just set (pretty much all of them, in fact)
   //
-  LocalPoint_t const center = pixelGeometry.center
-    ? pixelGeometry.center.value(): geo::origin<LocalPoint_t>();
+  LocalPoint_t const center
+    = pixelGeometry.center.value_or(geo::origin<LocalPoint_t>());
   fDecompPixel.SetReferencePoint
     (fromCenterToFirstPixel(toWorldCoords(center)));
-
-#endif // 0
   
-  MF_LOG_TRACE("PixelPlaneGeoBase") << "Directions set to:"
+  MF_LOG_TRACE("PixelPlaneGeoInterface")
+    << "geo::PixelPlaneGeoInterface::InitializePixelGeometry():"
+      " directions set to:"
     << "\n * main: " << fDecompPixel.MainDir() << " after geometry dir "
       << axes[ixMain].axisDir << " with " << fNPixels[ixMain]
       << " pixels with " << fPitches[ixMain] << " cm pitch"
-    << "\n * secondary: " << fDecompPixel.SecondaryDir() << " after geometry dir "
-      << axes[ixSec].axisDir << " with " << fNPixels[ixSec]
-      << " pixels with " << fPitches[ixSec] << " cm pitch"
+    << "\n * secondary: " << fDecompPixel.SecondaryDir()
+      << " after geometry dir " << axes[ixSec].axisDir << " with "
+      << fNPixels[ixSec] << " pixels with " << fPitches[ixSec] << " cm pitch"
     << "\n * origin: " << fDecompPixel.ReferencePoint()
       << " (center of pixelized area: " << toWorldCoords(center)
       << ")"
     ;
   
   
-} // geo::PixelPlaneGeoBase::InitializePixelGeometry()
+} // geo::PixelPlaneGeoInterface::InitializePixelGeometry()
 
 
 // -----------------------------------------------------------------------------
-// --- implementation details (private methods)
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::UpdateDecompPixel() {
+auto geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata(
+  TGeoNode const& startNode,
+  RectPixelGeometry_t const& startValues /* = {} */
+  )
+  -> RectPixelGeometry_t
+{
+  using namespace std::string_literals;
   
-  //
-  // requires:
-  //  * width and depth directions (including their verse)
-  //  * old pixel #0 origin, and old pixel frame directions and pitches
-  //
-  assert(!isNull(WidthDir<geo::Vector_t>()));
-  assert(!isNull(DepthDir<geo::Vector_t>()));
-  assert(!isNull(fDecompPixel.MainDir()));
-  assert(!isNull(fDecompPixel.SecondaryDir()));
+  static constexpr std::array<const char*, RectPixelGeometry_t::NSides> SideTags
+    = { "A", "B" };
   
-  // we recover the center of the plane, which is going to be the same
-  // after the redefinition of the axes; this is undoing a previous step
-  // from the center of the plane, which we don't have available here,
-  // to the first pixel which is the origin of the 
-  geo::Point_t const pixelPlaneCenter
-    = fromFirstPixelToCenter(fDecompPixel.ReferencePoint());
+  std::vector<TMap const*> metadataColl
+    = GeoMetadataCollector<TMap>().collectFrom(startNode);
   
-  //
-  // direction measured by the secondary coordinate; it is the width direction
-  //
-  fDecompPixel.SetSecondaryDir
-    (geo::vect::rounded01(WidthDir<geo::Vector_t>(), 1e-4));
+  MF_LOG_TRACE("geo::PixelPlaneGeoBase")
+    << "ReadPixelGeometryFromMetadata(): collected " << metadataColl.size()
+    << " metadata sets from node [" << startNode.GetName() << "]";
   
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Pixel frame secondary dir set to: " << fDecompPixel.SecondaryDir()
-    << " (width: " << WidthDir<geo::Vector_t>() << ")";
+  RectPixelGeometry_t info = startValues;
+  for (TMap const* metadata: metadataColl) {
+    
+    geo::GeoMetadataParser const fetcher(*metadata);
+    
+    for (auto&& [ side, sideTag ]: util::zip(info.sides, SideTags)) {
+      
+      // prefixed keys become something like "pixelAdirection" etc.
+      auto prefix
+        = [sideTag](std::string const& key){ return "pixel"s + sideTag + key; };
+      
+      //
+      // "pixelDdirection"
+      //
+      if (!side.dir) {
+        side.dir = fetcher.getVector<LocalVector_t>(prefix("direction"));
+        if (side.dir) {
+          MF_LOG_TRACE("geo::PixelPlaneGeoBase")
+            << "ReadPixelGeometryFromMetadata(): found side " << sideTag
+            << " direction: " << side.dir.value();
+        } // dir
+      } // if we haven't this information yet
+      
+      //
+      // "pixelDpitch"
+      //
+      if (!side.pitch) {
+        side.pitch = fetcher.getValue(prefix("pitch"), "m");
+        if (side.pitch) {
+          side.pitch.value() *= 100.0; // [m] => [cm]
+          MF_LOG_TRACE("geo::PixelPlaneGeoBase")
+            << "ReadPixelGeometryFromMetadata(): found side " << sideTag
+            << " pitch: " << (side.pitch.value() * 10.0) << " mm";
+        } // pitch
+      } // if we haven't this information yet
+      
+      //
+      // "pixelDnumber"
+      //
+      if (!side.nPixels) {
+        side.nPixels = fetcher.getValue<unsigned int>(prefix("number"));
+        if (side.nPixels) {
+          MF_LOG_TRACE("geo::PixelPlaneGeoBase")
+            << "ReadPixelGeometryFromMetadata(): found side " << sideTag
+            << " pixels: " << side.nPixels.value();
+        } // nPixels
+      } // if we haven't this information yet
+      
+      //
+      // "pixelDsideLength"
+      //
+      if (!side.length) {
+        side.length = fetcher.getValue(prefix("sideLength"), "m");
+        if (side.length) {
+          side.length.value() *= 100.0; // [m] => [cm]
+          MF_LOG_TRACE("geo::PixelPlaneGeoBase")
+            << "ReadPixelGeometryFromMetadata(): found side " << sideTag
+            << " length: " << side.length.value() << " cm";
+        } // length
+      } // if we haven't this information yet
+      
+    } // for sides
+    
+    //
+    // "pixelActiveCenter"
+    //
+    if (!info.center) {
+      info.center = fetcher.getVector<LocalPoint_t>("pixelActiveCenter", "m");
+      if (info.center) {
+        info.center.value() *= 100.0; // [m] => [cm]
+        MF_LOG_TRACE("geo::PixelPlaneGeoBase")
+          << "ReadPixelGeometryFromMetadata(): found pixel plane center: "
+          << info.center.value() << " cm";
+      } // center
+    } // if we haven't this information yet
+    
+    
+  } // for metadata objects
   
-  //
-  // get the axis perpendicular to it on the wire plane
-  // (verse is already set to have the base as positive as the frame base is)
-  //
-  fDecompPixel.SetMainDir
-    (geo::vect::rounded01(-DepthDir<geo::Vector_t>(), 1e-4));
-  
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Pixel frame main dir set to: " << fDecompPixel.MainDir()
-    << " (depth: " << DepthDir<geo::Vector_t>() << ")";
-  //
-  // check that the resulting normal matches the plane one
-  //
-  assert(lar::util::makeVector3DComparison(1e-5)
-    .equal(fDecompPixel.NormalDir(), GetNormalDirection<geo::Vector_t>()));
-  
-  //
-  // set the new center; it will may lie on a different corner of the plane
-  //
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Pixel area center moved: " << fDecompPixel.ReferencePoint()
-    << " => " << pixelPlaneCenter << "...";
-  
-  fDecompPixel.SetReferencePoint(fromCenterToFirstPixel(pixelPlaneCenter));
-  
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Pixel area center moved: ... " << pixelPlaneCenter
-    << " => " << fDecompPixel.ReferencePoint();
-  
-} // geo::PixelPlaneGeoBase::UpdateDecompPixel()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::UpdatePixelDirs() {
-  //
-  // requirements:
-  // * "wire" frame direction definitions completely finalized
-  // * pitch sizes
-  //
-  using namespace geo::pixel;
-  
-  assert(!isNull(getSensElemDir(ixMain)));
-  
-  fPixelDirs = {
-    getSensElemDir(ixMain) * (getSensElemPitch(ixMain) / 2.0),
-    getSensElemDir(ixSec) * (getSensElemPitch(ixSec) / 2.0)
-    };
-  
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Pixel steps set to: " << fPixelDirs[ixMain] << " (main), "
-    << fPixelDirs[ixSec] << " (secondary)";
-  
-} // geo::PixelPlaneGeoBase::UpdatePixelDirs()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::UpdatePlaneCenter() {
-  //
-  // update the center of the plane and the center of the frame base
-  //
-  
-  //
-  // The center of the sensitive plane is defined as the center of the plane
-  // box, translated to the plane the sensitive elements lie on.
-  // This assumes that the thickness direction of the box is aligned with
-  // the drift direction, so that the translated point is still in the middle
-  // of width and depth dimensions.
-  // It is possible to remove that assumption by translating the center of the
-  // box along the thickness direction enough to bring it to the target plane.
-  // The math is just a bit less straightforward, so we don't bother yet.
-  //
-  // Requirements:
-  //  * the pixel decomposition frame must be set up (at least its origin and
-  //    normal direction)
-  //
-
-  fCenter = GetBoxCenter<geo::Point_t>();
-
-  DriftPoint(fCenter, fDecompPixel.PointNormalComponent(fCenter));
-  
-  geo::vect::round0(fCenter, 1e-7); // round dimensions less than 1 nm to 0
-  
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Pixel frame origin: " << fDecompPixel.ReferencePoint()
-    << " => " << fCenter
-    << " (box: " << GetBoxCenter<geo::Point_t>() << ")";
-  
-  fDecompFrame.SetReferencePoint(fCenter); // equivalent to GetCenter() now
-
-} // geo::PixelPlaneGeoBase::UpdatePlaneCenter()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::UpdateAngles() {
-  
-  //
-  // computes the angles out of the pixel frame directions
-  // requires: pixel frame directions
-  //
-  
-  fThetaZ = std::acos(GetWireDirection<geo::Vector_t>().Dot(geo::Zaxis()));
-  fPhiZ
-    = std::acos(GetIncreasingWireDirection<geo::Vector_t>().Dot(geo::Zaxis()));
-  
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Angles set to: thetaZ=" << fThetaZ << " rad, phiZ=" << fPhiZ << " rad";
-  
-} // geo::PixelPlaneGeoBase::UpdateAngles()
-
-
-// -----------------------------------------------------------------------------
-void geo::PixelPlaneGeoBase::UpdateActiveArea() {
-  
-  //
-  // The active area is defined in the width/depth space which include
-  // approximatively all pixels; if pixels are aligned with width and depth
-  // (which they are), the active area is *exactly* the area of the pixels.
   // 
-  // Requires: number of pixels and pitch in both directions
+  // parameter check: do not allow information without its direction
+  // 
+  for (auto&& [ side, sideTag ]: util::zip(info.sides, SideTags)) {
+    if ((side.pitch || side.nPixels || side.length) && !side.dir) {
+      throw cet::exception("geo::PixelPlaneGeoBase")
+        << "Metadata is incomplete on side " << sideTag
+        << ", which misses its direction:\n" << info << "\n";
+    } // if has info
+  } // for sides
+  
+  return info;
+} // geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata()
+
+
+// -----------------------------------------------------------------------------
+auto geo::PixelPlaneGeoBase::ExtractPixelGeometry(
+  TGeoNode const& startNode, std::regex const& pixelNamePattern,
+  RectPixelGeometry_t const& startValues /* = {} */
+  )
+  -> RectPixelGeometry_t
+{
+  
+  /*
+   * We assume that pixels are accommodated into a grid lying on a geometric
+   * 2D plane which is "parallel" to the wire plane object, that is, the normal
+   * of the former and the normal of `geo::PlaneGeo`s frame base match.
+   * We also assume pixels not to have gaps in between, and to be evenly spaced
+   * in each of the two grid axes, although the spacing may be different between
+   * the two axes.
+   * 
+   * Goals are:
+   *  * identify the two axes
+   *  * determine the number of pixels on each axis
+   *  * determine the extension of the grid on each axis
+   *  * determine the center of the grid
+   * 
+   * 1. collect all pixel centers in the local plane frame
+   * 2. identify the four corners
+   * 3. identify the axes; for each axis:
+   * 3.1. identify the number of pixels
+   * 3.2. find the pixel pitch
+   * 3.3. quantify the extent of the plane
+   * 4. determine the center of the pixel grid
+   * 
+   * Requirements:
+   *  * local-to-world transformation already defined
+   *  * GDML/ROOT plane volume and descendants available
+   *  * frame base already defined: `Width()` `Depth()`, and `WidthDir()` and
+   *    `DepthDir()` (their verse is not relevant)
+   * 
+   */
+  
+  constexpr std::size_t NAxes = 2U;
+  
+  constexpr auto vcmp = lar::util::makeVector3DComparison(1e-4); // 1 um tol.
+  
+  if (!startValues.checkAxes()) {
+    throw cet::exception("geo::PixelPlaneGeoBase")
+      << "ExtractPixelGeometry(): start values are not consistent.\n"
+      << startValues << "\n";
+  }
+  
+  // shortcut: if we already have all the information, we won't change it anyway
+  if (startValues.isComplete()) return startValues;
+  
+  // to extract any of the information, we do need the complete set of pixels
+  // (actually, at least the four corners, but then the pitch and number of
+  //  pixel should better be already there)
+  
+  //
+  // 1. collect all pixel centers in the local plane frame
+  //
+  // We descend into subvolumes.
   //
   
-  using namespace geo::pixel;
-  double const halfWidth = getSensElemPitch(ixMain)
-    * (static_cast<double>(getNsensElem(ixMain)) / 2.0);
-  double const halfDepth = getSensElemPitch(ixSec)
-    * (static_cast<double>(getNsensElem(ixSec)) / 2.0);
-  fActiveArea = { { -halfWidth, halfWidth  }, { -halfDepth, halfDepth } };
+  std::vector<LocalPoint_t> const centers
+    = findPixelCenters(startNode, pixelNamePattern);
+  if (centers.size() < 4U) {
+    throw cet::exception("geo::PixelPlaneGeoBase")
+      << "Only " << centers.size() << " pixels found under node '"
+      << startNode.GetName() << "' (at least 4 are required)\n";
+  } // if
+  
+  //
+  // 2. identify the four corners
+  //
+  
+  std::array<LocalPoint_t, 4U> const corners = findCorners(centers);
+  
+  //
+  // 3. identify the axes
+  //
+  // These axes do not need to have to do with the plane frame base axes.
+  //
+  
+  LocalPoint_t const& refPoint = corners[0U];
+  std::array<LocalVector_t, NAxes> const localAxes = { // rounding: 10 um
+    geo::vect::rounded01(corners[1U] - refPoint, 1e-3),
+    geo::vect::rounded01(corners[3U] - refPoint, 1e-3)
+  };
+  
+  
+  unsigned int TotalPixels = 1U;
+  bool bNpixelAutodetection = true;
+  // we deal with starting values of axes separately later:
+  RectPixelGeometry_t info = startValues;
+  for (auto& axisInfo: info.sides) axisInfo.clear();
+  
+  // C++17 note: the tuple { axis, axisInfo } is constant, but the elements
+  // are not necessarily so.
+  for (auto const& [ axis, axisInfo ]: util::zip(localAxes, info.sides)) {
+    
+    LocalVector_t const axisDir = axis.Unit();
+    
+    // if we have start values,
+    // we need to figure out which are the ones for this axis
+    for (auto const& startInfo: startValues.sides) {
+      //
+      // if this startInfo has a direction that is ours, or if it has none and
+      // therefore it's some default, then we use it;
+      // also, if this startInfo has a direction that is ours, we are done
+      //
+      
+      if (startInfo.dir) { // we have info to consider
+        
+        // this is not information for our axis: ignore it
+        if (!vcmp.parallel(startInfo.dir.value(), axisDir)) continue;
+        
+        // full direction match here, we are good to go
+        axisInfo = startInfo;
+        break;
+        
+      }
+      
+      // this looks like default info: good for us, pending better luck
+      axisInfo = startInfo; // we keep looking for a match though
+    } // for
+    
+    // if we ended up with some default info, direction is not set and we do now
+    if (!axisInfo.dir) axisInfo.dir = axisDir;
+    
+    //
+    // 4. identify the number of pixels
+    //
+    
+    if (axisInfo.nPixels) {
+      bNpixelAutodetection = false;
+    }
+    else {
+      std::vector<LocalPoint_t> const pointsOnAxis
+        = findPointsOnAxis(refPoint, axisDir, centers, 0.01); // tenth of mm
+      
+      if (pointsOnAxis.size() < 2U) {
+        throw cet::exception("geo::PixelPlaneGeoBase")
+          << "Found only " << pointsOnAxis.size()
+          << " on direction " << axis << " (we require at least 2)\n"
+          ;
+      } // if
+      
+      axisInfo.nPixels = pointsOnAxis.size();
+      
+    } // if extract number of pixels
+    unsigned int const nPixels = axisInfo.nPixels.value();
+    
+    TotalPixels *= nPixels;
+    
+    // 
+    // 3.2. find the pixel pitch
+    // 
+    
+    if (!axisInfo.pitch) {
+      // all rounding issues are left unchecked so far...
+      axisInfo.pitch = axis.R() / (nPixels - 1U);
+    }
+    
+    // 
+    // 3.3. quantify the extent of the plane
+    // 
+    // We use the corner-to-corner size, plus one pitch.
+    // Maybe round?
+    // 
+    
+    if (!axisInfo.length) {
+      // we leave the axis length untouched at this time
+    //  axisInfo.length = axisInfo.pitch.value() * nPixels;
+    }
+    
+  } // for axes
+  
+  if (TotalPixels != centers.size()) {
+    if (bNpixelAutodetection) {
+      throw cet::exception("geo::PixelPlaneGeoBase")
+        << "Logic error: deduced " << info.sides[0U].nPixels.value() << "x"
+        << info.sides[1U].nPixels.value() << " = " << TotalPixels
+        << " pixels (" << centers.size() << " expected)\n";
+    }
+    else {
+      //
+      // This warning means that we have found a number of pixel volumes
+      // in the geometry description different from what the number of pixels
+      // we thing by now to be on the plane. This may be fine if the number
+      // of pixel was given as input instead of us figuring it out of the
+      // pixel volumes. For example, if the geometry contains the minimal number
+      // of pixel volumes (one per corner) and then specifies how many pixels
+      // there are via metadata, the `TotalPixels` we find is `4` but the real
+      // number is from the metadata.
+      //
+      MF_LOG_DEBUG("geo::PixelPlaneGeoBase")
+        << "We deduced " << info.sides[0U].nPixels.value() << "x"
+        << info.sides[1U].nPixels.value() << " = " << TotalPixels
+        << " pixels but expected " << centers.size() << " from initial requests"
+        ;
+    } // see if we care...
+  } // if pixels are not as many as expected
+  
+  // 
+  // 4. determine the center of the pixel grid
+  // 
+  // This is easily achieved by averaging the four corners.
+  //
+  if (!info.center) {
+    info.center = geo::vect::middlePoint(corners.begin(), corners.end());
+  }
+  
+  return info;
+  
+} // geo::PixelPlaneGeoBase::ExtractPixelGeometry()
 
-  MF_LOG_TRACE("PixelPlaneGeoBase")
-    << "Active area set to:"
-    << "\n - width: "
-      << fActiveArea.width.lower << " -- " << fActiveArea.width.upper
-    << "\n - depth: "
-      << fActiveArea.depth.lower << " -- " << fActiveArea.depth.upper
+
+// -----------------------------------------------------------------------------
+auto geo::PixelPlaneGeoBase::findPixelCenters
+  (TGeoNode const& startNode, std::regex const& pixelNamePattern)
+  -> std::vector<LocalPoint_t>
+{
+  PixelCenterFinder pixelFinder(pixelNamePattern);
+  
+  std::vector<LocalPoint_t> centers
+    = pixelFinder.findPixelCenters<LocalPoint_t>(startNode);
+  
+  MF_LOG_TRACE("geo::PixelPlaneGeoBase")
+    << "Found " << centers.size() << " pixel volumes in '"
+    << startNode.GetName() << "'"
     ;
   
-} // geo::PixelPlaneGeoBase::UpdateActiveArea()
+  return centers;
+} // geo::PixelPlaneGeoBase::findPixelCenters()
 
 
 // -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::firstPixelCenter() const {
-  return fDecompPixel.ReferencePoint();
-} // geo::PixelPlaneGeoBase::firstPixelCenter()
-
-
-// -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::fromCenterToFirstPixel
-  (geo::Point_t const& pixelPlaneCenter) const
+auto geo::PixelPlaneGeoBase::findCorners
+  (std::vector<LocalPoint_t> const& points)
+  -> std::array<LocalPoint_t, 4U>
 {
+  // 
+  // returned points are in clockwise order
+  // 
   
-  /*
-   * Converts the center of the sensitive area of the plane (`pixelPlaneCenter`)
-   * into the center of the first pixel.
-   * Requires:
-   *  * number of pixels
-   *  * directions of the two axes of the pixel plane
-   *  * pitch of the pixels
-   * 
-   */
-  using namespace geo::pixel;
+  lar::util::RealComparisons cmp(1e-4); // this is 1 um
   
-  assert(getNsensElem(ixMain) > 0);
-  assert(getNsensElem(ixSec) > 0);
-  assert(getSensElemPitch(ixMain) > 0.0);
-  assert(getSensElemPitch(ixSec) > 0.0);
-  assert(!isNull(getSensElemDir(ixMain)));
-  assert(!isNull(getSensElemDir(ixSec)));
+  assert(points.size() >= 3);
+  geo::AffinePlaneBase<LocalVector_t, LocalPoint_t> const decompBase = makeBase(
+    points.front(),
+    points[1U] - points.front(),
+    points.back() - points.front()
+    );
+  if (cmp.nonPositive(decompBase.NormalDir().Mag2())) {
+    throw cet::exception("geo::PixelPlaneGeoBase")
+      << "Logic error: could not make a base out of points #0 "
+      << points.front() << ", #1 " << points[1U] << " and #"
+      << (points.size() - 1U) << " " << points.front() << "\n";
+  } // if
   
-  geo::Point_t center = pixelPlaneCenter;
+  using limits = std::numeric_limits<double>;
+  struct RecordPoint_t {
+    double m = 0.0;
+    double s = 0.0;
+    LocalPoint_t point;
+  }; // struct RecordPoint_t
   
-  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir) {
-    center += getSensElemDir(dir) * (
-      (1.0 - static_cast<double>(getNsensElem(dir)))
-      * getSensElemPitch(dir) / 2.0
-      );
+  // we need four extremes, and we also need to decide what to do when multiple
+  // points have the same extreme in one coordinate; and we have to choose that
+  // so that all four corners are found; only two ways available... we pick one:
+  RecordPoint_t max_m{ limits::lowest(), limits::max   () }; // max m (or min s)
+  RecordPoint_t max_s{ limits::lowest(), limits::lowest() }; // max s (or max m)
+  RecordPoint_t min_m{ limits::max   (), limits::lowest() }; // min m (or max s)
+  RecordPoint_t min_s{ limits::max   (), limits::max   () }; // min s (or min m)
+  
+  for (LocalPoint_t const& point: points) {
+    
+    double const m = decompBase.MainDir().Dot(decompBase.ToVector(point));
+    double const s = decompBase.SecondaryDir().Dot(decompBase.ToVector(point));
+    
+    // rounded comparisons matter only in the main extreme coordinate;
+    // if that coordinate is close to the extreme and the other one is close
+    // too, then the two points are matching within errors
+    // (which we might decide to check against)
+    
+    // max m (or min s)
+    if (
+      cmp.strictlyGreater(m, max_m.m)
+      || (cmp.equal(m, max_m.m) && (s < max_m.s))
+      )
+    {
+      max_m = { m, s, point };
+    }
+    
+    // max s (or max m)
+    if (
+      cmp.strictlyGreater(s, max_s.s)
+      || (cmp.equal(s, max_s.s) && (m > max_s.m))
+      )
+    {
+      max_s = { m, s, point };
+    }
+    
+    // min m (or max s)
+    if (
+      cmp.strictlySmaller(m, min_m.m)
+      || (cmp.equal(m, min_m.m) && (s > min_m.s))
+      )
+    {
+      min_m = { m, s, point };
+    }
+    
+    // min s (or min m)
+    if (
+      cmp.strictlySmaller(s, min_s.s)
+      || (cmp.equal(s, min_s.s) && (m < min_s.m))
+      )
+    {
+      min_s = { m, s, point };
+    }
+    
   } // for
   
-  return center;
-} // geo::PixelPlaneGeoBase::fromCenterToFirstPixel()
+  return { max_m.point, max_s.point, min_m.point, min_s.point };
+} // geo::PixelPlaneGeoBase::findCorners()
 
 
 // -----------------------------------------------------------------------------
-geo::Point_t geo::PixelPlaneGeoBase::fromFirstPixelToCenter
-  (geo::Point_t const& pixelCenter) const
+auto geo::PixelPlaneGeoBase::findPointsOnAxis(
+  LocalPoint_t const& ref, LocalVector_t const& axis,
+  std::vector<LocalPoint_t> const& points,
+  double const tol /* = 0.01 */
+  )
+  -> std::vector<LocalPoint_t>
 {
+  lar::util::RealComparisons cmp(tol*tol); // will compare with squares
+  assert(cmp.equal(axis.Mag2(), 1.0));
   
-  /*
-   * Converts the center of the sensitive area of the plane (`pixelPlaneCenter`)
-   * into the center of the first pixel.
-   * Requires:
-   *  * number of pixels
-   *  * directions of the two axes of the pixel plane
-   *  * pitch of the pixels
-   * 
-   */
-  using namespace geo::pixel;
-  
-  assert(getNsensElem(ixMain) > 0);
-  assert(getNsensElem(ixSec) > 0);
-  assert(getSensElemPitch(ixMain) > 0.0);
-  assert(getSensElemPitch(ixSec) > 0.0);
-  assert(!isNull(getSensElemDir(ixMain)));
-  assert(!isNull(getSensElemDir(ixSec)));
-  
-  geo::Point_t center = pixelCenter;
-  
-  for (DirIndex_t dir = 0; dir < geo::pixel::NCoords; ++dir) {
-    center -= getSensElemDir(dir) * (
-      (1.0 - static_cast<double>(getNsensElem(dir)))
-      * getSensElemPitch(dir) / 2.0
-      );
+  std::vector<LocalPoint_t> onAxis;
+  for (LocalPoint_t const& point: points) {
+    
+    if (cmp.strictlyPositive((point - ref).Cross(axis).Mag2()))
+      continue; // transverse component too large
+    
+    onAxis.push_back(point);
   } // for
   
-  return center;
-} // geo::PixelPlaneGeoBase::fromFirstPixelToCenter()
+  return onAxis;
+} // geo::PixelPlaneGeoBase::findPointsOnAxis()
 
 
 // -----------------------------------------------------------------------------
-double geo::PixelPlaneGeoBase::extractPlaneThickness() const {
-  
-  //
-  // finding the plane thickness at this point is hard because we have not
-  // stored its value in any form and we have forgotten which rotation turned
-  // the original box, that we still know, into the final one;
-  // so we are going a bit heuristic here:
-  // 1) we can get (at a cost) the size of the three sides, but we don't know
-  //    which one is which.
-  // 2) we remove all the ones we know... the one left must be the thickness.
-  //
-  
-  // behold the plane coordinate box in world coordinates.
-  geo::BoxBoundedGeo const& box = BoundingBox();
-  
-  std::array<double, 3U> sizes = { box.SizeX(), box.SizeY(), box.SizeZ() };
-  
-  for (double size: { Width(), Depth() }) {
-    for (double& boxSize: sizes) {
-      if (std::abs(boxSize - size) > 1e-4) continue;
-      boxSize = 0.0; // found it: remove it from the list
-      break;
-    } // for (inner)
-  } // for (outer)
-  
-  // return the survivor
-  for (double boxSize: sizes) if (boxSize != 0.0) return boxSize;
-  return 0.0; // huh?
-} // geo::PixelPlaneGeoBase::extractPlaneThickness()
-
-
-// -----------------------------------------------------------------------------
-std::string geo::PixelPlaneGeoBase::DumpPixelGeometry
-  (RectPixelGeometry_t const& info)
+auto geo::PixelPlaneGeoBase::makeBase
+  (LocalPoint_t const& o, LocalVector_t const& a, LocalVector_t const& b)
+  -> geo::AffinePlaneBase<LocalVector_t, LocalPoint_t>
 {
-  std::ostringstream log;
   
-  log << "\n * center of the pixelized area: ";
-  if (info.center) log << info.center.value();
-  else             log << "n/a";
+  LocalVector_t const n = a.Cross(b);
   
-  log << "\n * sides:";
-  for (auto const& side: info.sides) {
-    
-    log << "\n    - direction " << side.dir.Unit() << ": ";
-    
-    if (side.nPixels) log << side.nPixels.value() << "x";
-    
-    if (side.pitch) log << side.pitch.value() << "-cm pixels";
-    else            log << "pixels of unspecified size";
-    
-    log << " covering";
-    if (side.length) log << " " << side.length.value() << " cm";
-    else             log << " an unspecified length";
-  } // for
-  return log.str();
-} // geo::PixelPlaneGeoBase::DumpPixelGeometry()
-
-
-// -----------------------------------------------------------------------------
-std::string geo::PixelPlaneGeoBase::getDirectionName(DirIndex_t const dir) {
-  using namespace std::string_literals;
-  switch (dir) {
-    case geo::pixel::ixMain: return "main"s;
-    case geo::pixel::ixSec:  return "secondary"s;
-    default:                 return "invalid"s;
-  } // switch
-} // geo::PixelPlaneGeoBase::getDirectionName()
+  LocalPoint_t const origin = o;
+  LocalVector_t const main = a;
+  LocalVector_t const sec = n.Cross(a);
+  
+  return { origin, main.Unit(), sec.Unit() };
+  
+} // geo::PixelPlaneGeoBase::makeBase()
 
 
 // -----------------------------------------------------------------------------

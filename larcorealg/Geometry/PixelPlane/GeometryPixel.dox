@@ -1,0 +1,38 @@
+/**
+ * @defgroup GeometryPixel Support for readout planes based on pixels
+ * @brief Support for geometry of readout planes based on pixels.
+ *
+ * Readout planes based on pixels need a customized implementation of the
+ * `geo::PlaneGeo` interface.
+ * 
+ * LArSoft provides a base class for this type of customization.
+ * In addition, the `Geometry` service needs to be informed that it needs to
+ * use it: a geometry builder customization is also needed.
+ * Finally, as usual, specific channel mapping and sorting algorithms may be
+ * needed, which are dealt with in the standard LArSoft framework, via
+ * specific implementations and, for interface with _art_, with _art_ tools.
+ * 
+ * LArSoft provides the basis for a pixel-aware implementation of the
+ * `geo::PlaneGeo` interface, and a base class to ease the customization of this
+ * implementation:
+ * * `geo::PixelPlaneGeoInterface` implements `geo::PlaneGeo` interface
+ *   for a readout plane with rectangular pixels laid on a simple orthogonal
+ *   grid, and with no separation between them; this class is not functional
+ *   by itself because it lacks the initial setup of the pixel geometry;
+ * * `geo::PixelPlaneGeoBase` derives from `geo::PixelPlaneGeoInterface` but
+ *   only provides algorithms to support the set up of the pixel geometry,
+ *   without choosing which algorithm to employ; it is provided as the base
+ *   class for experiments to derive their own plane classes, and it is kept
+ *   separate from `geo::PixelPlaneGeoInterface` to maintain a border between
+ *   initialization and behaviour;
+ * * `geo::PixelPlaneGeo` is an implementation of `geo::PixelPlaneGeoInterface`
+ *   which employs a specific initialization pattern and can be used as is;
+ *   it also provides a good example of how to derive a plane class from
+ *   `geo::PixelPlaneGeoBase`. The `geo::GeometryBuilderSquarePixel` object
+ *   creates planes of this type.
+ * 
+ */
+
+
+
+

@@ -22,6 +22,7 @@
 #include "larcorealg/Geometry/AuxDetSensitiveGeo.h"
 #include "larcorealg/Geometry/geo.h"
 #include "larcorealg/Geometry/geo_vectors_utils.h"
+#include "larcorealg/TestUtils/StopWatch.h"
 #include "larcorealg/CoreUtils/RealComparisons.h"
 #include "larcorealg/CoreUtils/DumpUtils.h" // lar::dump::vector3D(), ...
 #include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
@@ -157,15 +158,29 @@ namespace geo{
       throw cet::exception("GeometryTestAlg")
         << "GeometryTestAlg not configured: no valid geometry provided.\n";
     }
-
+    
+    class TestHeader {
+      static std::string category() { return "GeometryTest"; }
+      
+      std::string const fTestName;
+      testing::StopWatch<> fTimer;
+      
+      auto header() const
+        { return mf::LogInfo(category()) << "[" << fTestName << "] "; }
+      
+        public:
+      
+      TestHeader(std::string const& testName, std::string const& message = "")
+        : fTestName(testName)
+        { header() << (message.empty()? ("starting " + testName): message); }
+      
+      ~TestHeader()
+        { header() << "test completed in " << fTimer.elapsed() << " s."; }
+      
+    }; // struct TestHeader
+    
+    
     unsigned int nErrors = 0; // currently unused
-
-    // change the printed version number when changing the "GeometryTest" output
-    //
-    // Version 1.1:
-    //   more TPC information when printing all geometry
-    //
-    mf::LogVerbatim("GeometryTest") << "GeometryTest version 1.1";
 
     mf::LogInfo("GeometryTestInfo")
       << "Running on detector: '" << geom->DetectorName() << "'";
@@ -175,14 +190,22 @@ namespace geo{
       << "\nGeometry file: " << geom->ROOTFile();
 
     try{
+      // change the printed version number when changing "GeometryTest" output
+      //
+      // Version 1.2:
+      //   more TPC information when printing all geometry
+      //
+      TestHeader AllTestsHeader("GeometryTest", "GeometryTest version 1.2");
+      
+      // -----------------------------------------------------------------------
       if (shouldRunTests("DetectorIntro")) {
-        MF_LOG_INFO("GeometryTest") << "detector introduction:";
+        TestHeader th("DetectorIntro", "detector introduction");
         printDetectorIntro();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("CheckOverlaps")) {
-        MF_LOG_INFO("GeometryTest") << "test for overlaps ...";
+        TestHeader th("CheckOverlaps", "test for overlaps ...");
         gGeoManager->CheckOverlaps(1e-5);
         gGeoManager->PrintOverlaps();
         if (!gGeoManager->GetListOfOverlaps()->IsEmpty()) {
@@ -191,11 +214,11 @@ namespace geo{
             << " overlaps found in geometry during overlap test!";
           ++nErrors;
         }
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("ThoroughCheck")) {
-        MF_LOG_INFO("GeometryTest") << "thorough geometry test ...";
+        TestHeader th("ThoroughCheck", "thorough geometry test ...");
         gGeoManager->CheckGeometryFull();
         if (!gGeoManager->GetListOfOverlaps()->IsEmpty()) {
           mf::LogError("GeometryTest")
@@ -203,147 +226,148 @@ namespace geo{
             << " overlaps found in geometry during thorough test!";
           ++nErrors;
         }
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("Cryostat")) {
-        MF_LOG_INFO("GeometryTest") << "test Cryostat methods ...";
+        TestHeader th("Cryostat", "test Cryostat methods ...");
         testCryostat();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("FindVolumes")) {
-        MF_LOG_INFO("GeometryTest") << "test FindAllVolumes method ...";
+        TestHeader th("FindVolumes", "test FindAllVolumes method ...");
         testFindVolumes();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("PlaneDirections")) {
-        MF_LOG_INFO("GeometryTest") << "test plane directions...";
+        TestHeader th("PlaneDirections", "test plane directions...");
         testPlaneDirections();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("WireOrientations")) {
-        MF_LOG_INFO("GeometryTest") << "test wire orientations...";
+        TestHeader th("WireOrientations", "test wire orientations...");
         testWireOrientations();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("ChannelToROP")) {
-        MF_LOG_INFO("GeometryTest") << "test channel to ROP and back ...";
+        TestHeader th("ChannelToROP", "test channel to ROP and back ...");
         testChannelToROP();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("ChannelToWire")) {
-        MF_LOG_INFO("GeometryTest") << "test channel to plane wire and back ...";
+        TestHeader th("ChannelToWire", "test channel to plane wire and back ...");
         testChannelToWire();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("FindPlaneCenters")) {
-        MF_LOG_INFO("GeometryTest") << "test find plane centers...";
+        TestHeader th("FindPlaneCenters", "test find plane centers...");
         testFindPlaneCenters();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("WireCoordFromPlane")) {
-        MF_LOG_INFO("GeometryTest") << "test PlaneGeo::WireCoordinate...";
+        TestHeader th("WireCoordFromPlane", "test PlaneGeo::WireCoordinate...");
         testWireCoordFromPlane();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("ParallelWires")) {
-        MF_LOG_INFO("GeometryTest") << "test wire parallelism...";
+        TestHeader th("ParallelWires", "test wire parallelism...");
         testParallelWires();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("PlanePointDecomposition")) {
-        MF_LOG_INFO("GeometryTest") << "test plane point decomposition...";
+        TestHeader th("PlanePointDecomposition", "test plane point decomposition...");
         testPlanePointDecomposition();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("PlaneProjections")) {
-        MF_LOG_INFO("GeometryTest") << "test PlaneGeo::PointProjection...";
+        TestHeader th("PlaneProjections", "test PlaneGeo::PointProjection...");
         testPlaneProjection();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("WireCoordAngle")) {
-        MF_LOG_INFO("GeometryTest") << "testWireCoordAngle...";
+        TestHeader th("PlaneProjections", "testWireCoordAngle...");
         testWireCoordAngle();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("Projection")) {
-        MF_LOG_INFO("GeometryTest") << "testProject...";
+        TestHeader th("Projection", "testProject...");
         testProject();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("WirePos")) {
-        MF_LOG_INFO("GeometryTest") << "testWirePos...";
+        TestHeader th("WirePos", "testWirePos...");
         // There is a contradiction here, and these must be tested differently
         // Testing based on detector ID should NOT become common practice
-        MF_LOG_INFO("GeometryTest") << "disabled.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("NearestWire")) {
-        MF_LOG_INFO("GeometryTest") << "testNearestWire...";
+        TestHeader th("NearestWire", "testNearestWire...");
         testNearestWire();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("WireIntersection")) {
-        MF_LOG_INFO("GeometryTest") << "testWireIntersection...";
+        TestHeader th("WireIntersection", "testWireIntersection...");
         testWireIntersection();
-        MF_LOG_INFO("GeometryTest") << "testWireIntersection complete";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("ThirdPlane")) {
-        MF_LOG_INFO("GeometryTest") << "testThirdPlane...";
+        TestHeader th("ThirdPlane", "testThirdPlane...");
         testThirdPlane();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("ThirdPlaneSlope")) {
-        MF_LOG_INFO("GeometryTest") << "testThirdPlaneSlope...";
+        TestHeader th("ThirdPlane", "testThirdPlaneSlope...");
         testThirdPlane_dTdW();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("WirePitch")) {
-        MF_LOG_INFO("GeometryTest") << "testWirePitch...";
+        TestHeader th("WirePitch", "testWirePitch...");
         testWirePitch();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("PlanePitch")) {
-        MF_LOG_INFO("GeometryTest") << "testPlanePitch...";
+        TestHeader th("PlanePitch", "testPlanePitch...");
         testPlanePitch();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("Stepping")) {
-        MF_LOG_INFO("GeometryTest") << "testStepping...";
+        TestHeader th("Stepping", "testStepping...");
         testStepping();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("FindAuxDet")) {
-        MF_LOG_INFO("GeometryTest") << "testFindAuxDet...";
+        TestHeader th("FindAuxDet", "testFindAuxDet...");
         testFindAuxDet();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
 
+      // -----------------------------------------------------------------------
       if (shouldRunTests("PrintWires")) {
-        MF_LOG_INFO("GeometryTest") << "printAllGeometry...";
+        TestHeader th("PrintWires", "printAllGeometry...");
         printAllGeometry();
-        MF_LOG_INFO("GeometryTest") << "complete.";
       }
+      
+      // -----------------------------------------------------------------------
     }
     catch (cet::exception &e) {
       mf::LogWarning("GeometryTest") << "exception caught: \n" << e;
@@ -381,14 +405,7 @@ namespace geo{
   //......................................................................
   void GeometryTestAlg::printDetectorIntro() const {
 
-    geo::WireGeo const& testWire = geom->Wire(geo::WireID(0, 0, 1, 10));
     mf::LogVerbatim log("GeometryTest");
-    log
-      <<   "Wire Rmax  "         << testWire.RMax()
-      << "\nWire length "        << 2.*testWire.HalfL()
-      << "\nWire Rmin  "         << testWire.RMin()
-      ;
-    
     if (fComputeMass) {
       log
         << "\nTotal mass "         << geom->TotalMass();
@@ -1062,22 +1079,31 @@ namespace geo{
     //
     // * tests that the coordinates are as expected (wire number times pitch)
     //
-
+    
+    lar::util::RealComparisons cmp(1e-4); // 1 um
+    
     unsigned int nErrors = 0;
     for (geo::PlaneGeo const& plane: geom->IteratePlanes()) {
 
-      auto const nWires = plane.Nwires();
       auto const wirePitch = plane.WirePitch();
 
       double const driftDistance = geom->TPC(plane.ID()).DriftDistance();
+      
+      // we assume the plane coordinate on the first wire is 0
+      auto const& refPoint = plane.FirstWire().GetCenter();
+      auto const& wireCoordDir = plane.GetIncreasingWireDirection();
+      bool const is3D = (plane.View() == k3D);
 
-      decltype(auto) planeNormal = plane.GetNormalDirection();
+      auto const& planeNormal = plane.GetNormalDirection();
 
-      for (geo::WireID::WireID_t wireNo = 0; wireNo < nWires; ++wireNo) {
+      for (geo::WireGeo const& wire: plane.IterateWires()) {
 
-        geo::WireGeo const& wire = plane.Wire(wireNo);
-
-        double const expected = wireNo * wirePitch;
+        geo::WireID const& wireid = wire.ID();
+        
+        double const expected = (wire.GetCenter() - refPoint).Dot(wireCoordDir);
+        if (!is3D) {
+          assert(cmp.equal(expected, wireid.Wire * wirePitch));
+        }
 
         // sample 7 points on wire
         constexpr int shifts = 3;
@@ -1099,11 +1125,11 @@ namespace geo{
 
             double const distance = plane.PlaneCoordinate(point);
 
-            if (std::abs(distance - expected) > 1e-4) {
+            if (cmp.nonEqual(distance, expected)) {
               mf::LogProblem("GeometryTestAlg") << "Point " << point
                 << "  (offset: " << iOfs << "x" << step << ", at " << iQuota
                 << "x" << jump << " from plane) is reported to be " << distance
-                << " cm far from wire " << plane.ID() << " W: " << wireNo
+                << " cm far from wire " << wireid
                 << " (" << expected << " expected)";
               ++nErrors;
             } // if unexpected
@@ -2089,12 +2115,11 @@ namespace geo{
   //......................................................................
   void GeometryTestAlg::testNearestWire()
   {
-    // Even if you comment it out, please leave the TStopWatch code
+    // Even if you comment it out, please leave the StopWatch code
     // in this code for additional testing. The NearestChannel routine
     // is the most frequently called in the simulation, so its execution time
     // is an important component of LArSoft's speed.
-    TStopwatch stopWatch;
-    stopWatch.Start();
+    testing::StopWatch stopWatch;
 
     bool bTestWireCoordinate = true;
 
@@ -2281,9 +2306,10 @@ namespace geo{
       } // for all wires in the plane
     } // end loop over planes
 
-    stopWatch.Stop();
+    stopWatch.stop();
     MF_LOG_DEBUG("GeoTestWireCoordinate") << "\tdone testing closest channel";
-    stopWatch.Print();
+    mf::LogVerbatim("GeoTestWireCoordinate")
+      << "Test completed in " << stopWatch.elapsed() << " s";
 
     // trigger an exception with NearestChannel
     mf::LogVerbatim("GeoTestWireCoordinate") << "\tattempt to cause an exception to be caught "
