@@ -18,6 +18,7 @@
 #include <TGeoNode.h>
 
 // C/C++ standard libraries
+#include <iosfwd> // std::ostream
 #include <vector>
 #include <array>
 #include <regex>
@@ -97,6 +98,9 @@ class geo::PixelPlaneGeoBase: public geo::PixelPlaneGeoInterface {
     void print(Stream&& out) const;
 
   }; // struct RectPixelGeometry_t
+  
+  friend std::ostream& operator<<
+    (std::ostream&, geo::PixelPlaneGeoBase::RectPixelGeometry_t const&);
   
   
   /**
@@ -340,10 +344,8 @@ class geo::PixelPlaneGeoBase: public geo::PixelPlaneGeoInterface {
 namespace geo {
   
   //----------------------------------------------------------------------------
-  template <typename Stream>
-  decltype(auto) operator<<
-    (Stream&& out, geo::PixelPlaneGeoBase::RectPixelGeometry_t const& info)
-    { info.print(out); return out; }
+  std::ostream& operator<<
+    (std::ostream& out, geo::PixelPlaneGeoBase::RectPixelGeometry_t const& info);
   
   //----------------------------------------------------------------------------
   

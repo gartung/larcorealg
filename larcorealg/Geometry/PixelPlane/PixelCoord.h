@@ -60,7 +60,9 @@ class geo::pixel::PixelCoordT {
   constexpr PixelCoordT() { fCoords.fill(Coord_t{ 0 }); }
   /// Constructor: sets the specified coordinates.
   constexpr PixelCoordT(Coord_t main, Coord_t second)
-    : fCoords({ main, second }) {}
+  // BUG the double brace syntax is required to work around clang bug 21629
+  //  : fCoords({ main, second }) {}
+    : fCoords({{ main, second }}) {}
   
   
   //@{

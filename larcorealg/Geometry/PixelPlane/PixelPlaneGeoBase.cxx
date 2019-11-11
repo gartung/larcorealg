@@ -32,6 +32,7 @@
 #include "TMap.h"
 
 // C/C++ standard library
+#include <ostream>
 #include <vector>
 #include <array>
 #include <algorithm> // std::swap()
@@ -142,7 +143,7 @@ namespace {
 
 
 // -----------------------------------------------------------------------------
-template <typename Point = geo::Point_t>
+template <typename Point /* = geo::Point_t */>
 std::vector<Point> PixelCenterFinder::findPixelCenters
   (TGeoNode const& node) const
 {
@@ -229,6 +230,12 @@ bool geo::PixelPlaneGeoBase::RectPixelGeometry_t::checkAxes() const {
 
 
 // -----------------------------------------------------------------------------
+std::ostream& geo::operator<<
+  (std::ostream& out, geo::PixelPlaneGeoBase::RectPixelGeometry_t const& info)
+  { info.print(out); return out; }
+
+
+// -----------------------------------------------------------------------------
 // --- geo::PixelPlaneGeoBase
 // -----------------------------------------------------------------------------
 #if 0
@@ -305,7 +312,7 @@ void geo::PixelPlaneGeoBase::InitializePixelGeometry
     geo::Vector_t axisDir; ///< Direction and size in the world frame.
   }; // struct ExtendedAxisInfo_t
   
-  static_assert(pixelGeometry.sides.size() == NCoords);
+  assert(pixelGeometry.sides.size() == NCoords);
   
   std::array<ExtendedAxisInfo_t, NCoords> axes;
   for (auto&& [ side, axis ]: util::zip(pixelGeometry.sides, axes)) {
@@ -491,8 +498,10 @@ auto geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata(
 {
   using namespace std::string_literals;
   
+  // BUG the double brace syntax is required to work around clang bug 21629
   static constexpr std::array<const char*, RectPixelGeometry_t::NSides> SideTags
-    = { "A", "B" };
+//    = { "A", "B" };
+    = {{ "A", "B" }};
   
   std::vector<TMap const*> metadataColl
     = GeoMetadataCollector<TMap>().collectFrom(startNode);
@@ -508,9 +517,25 @@ auto geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata(
     
     for (auto&& [ side, sideTag ]: util::zip(info.sides, SideTags)) {
       
+      /*
+       * Welcome to The Corner of Amazing C++.
+       * So the structure binding above does not introduce new variables,
+       * meaning that "side" and "sideTag" are not new variables.
+       * Also, lambdas can capture only variables. So, "sideTag" can't be
+       * captured! Which is something C++ people acknowledge to be undesirable.
+       * Well, we can create a new lambda-local variable, "sideTag", and assign
+       * to it as initialization value the one of the non-variable "sideTag".
+       * Then the latter is not captured, but its value is used for a different
+       * thing that is not exactly a capture but in the end looks very much like
+       * one. If C++ will ever solve this issue, we can just then capture
+       * "sideTag" directly and be happy with it.
+       * Note that GCC 7.3 bit it, although 8.0 seems to reject it, as does
+       * Clang 5.
+       */
       // prefixed keys become something like "pixelAdirection" etc.
       auto prefix
-        = [sideTag](std::string const& key){ return "pixel"s + sideTag + key; };
+        = [sideTag=sideTag](std::string const& key)
+        { return "pixel"s + sideTag + key; };
       
       //
       // "pixelDdirection"
@@ -677,10 +702,13 @@ auto geo::PixelPlaneGeoBase::ExtractPixelGeometry(
   //
   
   LocalPoint_t const& refPoint = corners[0U];
-  std::array<LocalVector_t, NAxes> const localAxes = { // rounding: 10 um
+  // BUG the double brace syntax is required to work around clang bug 21629
+//   std::array<LocalVector_t, NAxes> const localAxes = { // rounding: 10 um
+  std::array<LocalVector_t, NAxes> const localAxes = {{ // rounding: 10 um
     geo::vect::rounded01(corners[1U] - refPoint, 1e-3),
     geo::vect::rounded01(corners[3U] - refPoint, 1e-3)
-  };
+//   };
+  }};
   
   
   unsigned int TotalPixels = 1U;
@@ -916,7 +944,9 @@ auto geo::PixelPlaneGeoBase::findCorners
     
   } // for
   
-  return { max_m.point, max_s.point, min_m.point, min_s.point };
+  // BUG the double brace syntax is required to work around clang bug 21629
+//  return { max_m.point, max_s.point, min_m.point, min_s.point };
+  return {{ max_m.point, max_s.point, min_m.point, min_s.point }};
 } // geo::PixelPlaneGeoBase::findCorners()
 
 

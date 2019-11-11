@@ -619,7 +619,7 @@ bool geo::PixelPlaneGeoInterface::isWireIDvalid(geo::WireID const& wireid) const
 bool geo::PixelPlaneGeoInterface::isWireIDvalid
   (geo::WireID::WireID_t const wire) const
 {
-  return (wire >= 0) && (wire < getNsensElem());
+  return /* (wire >= 0) && */ (wire < getNsensElem());
 } // geo::PixelPlaneGeoInterface::isWireIDvalid(WireID_t)
 
 
@@ -896,7 +896,8 @@ geo::PixelPlaneGeoInterface::PixelPlaneGeoInterface(
 // -----------------------------------------------------------------------------
 void geo::PixelPlaneGeoInterface::UpdateDecompPixel() {
   
-  constexpr auto vcmp = lar::util::makeVector3DComparison(1e-4); // 1 um tol.
+  constexpr auto vcmp [[gnu::unused]] // used only in debug mode
+    = lar::util::makeVector3DComparison(1e-4); // 1 um tol.
   
   //
   // requires:
@@ -966,14 +967,18 @@ void geo::PixelPlaneGeoInterface::UpdatePixelDirs() {
   //
   using namespace geo::pixel;
   
-  constexpr auto vcmp = lar::util::makeVector3DComparison(1e-4); // 1 um tol.
+  constexpr auto vcmp [[gnu::unused]] // used only in debug mode
+   = lar::util::makeVector3DComparison(1e-4); // 1 um tol.
   
   assert(vcmp.nonZero(getSensElemDir(ixMain)));
   
-  fPixelDirs = {
+  // BUG the double brace syntax is required to work around clang bug 21629
+//  fPixelDirs = {
+  fPixelDirs = {{
     getSensElemDir(ixMain) * (getSensElemPitch(ixMain) / 2.0),
     getSensElemDir(ixSec) * (getSensElemPitch(ixSec) / 2.0)
-    };
+//    };
+    }};
   
   MF_LOG_TRACE("PixelPlaneGeoInterface")
     << "Pixel half steps set to: " << fPixelDirs[ixMain] << " (main), "
@@ -1088,7 +1093,8 @@ geo::Point_t geo::PixelPlaneGeoInterface::fromCenterToFirstPixel
    */
   using namespace geo::pixel;
   
-  constexpr auto vcmp = lar::util::makeVector3DComparison(1e-4);
+  constexpr auto vcmp [[gnu::unused]] // used only in debug mode
+    = lar::util::makeVector3DComparison(1e-4);
   
   assert(getNsensElem(ixMain) > 0);
   assert(getNsensElem(ixSec) > 0);
@@ -1126,7 +1132,8 @@ geo::Point_t geo::PixelPlaneGeoInterface::fromFirstPixelToCenter
    */
   using namespace geo::pixel;
   
-  constexpr auto vcmp = lar::util::makeVector3DComparison(1e-4);
+  constexpr auto vcmp [[gnu::unused]] // used only in debug mode
+    = lar::util::makeVector3DComparison(1e-4);
   
   assert(getNsensElem(ixMain) > 0);
   assert(getNsensElem(ixSec) > 0);
@@ -1164,7 +1171,9 @@ double geo::PixelPlaneGeoInterface::extractPlaneThickness() const {
   // behold the plane coordinate box in world coordinates.
   geo::BoxBoundedGeo const& box = BoundingBox();
   
-  std::array<double, 3U> sizes = { box.SizeX(), box.SizeY(), box.SizeZ() };
+  // BUG the double brace syntax is required to work around clang bug 21629
+//  std::array<double, 3U> sizes = { box.SizeX(), box.SizeY(), box.SizeZ() };
+  std::array<double, 3U> sizes = {{ box.SizeX(), box.SizeY(), box.SizeZ() }};
   
   for (double size: { Width(), Depth() }) {
     for (double& boxSize: sizes) {

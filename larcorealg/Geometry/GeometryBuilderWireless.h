@@ -44,7 +44,7 @@ namespace geo {
     /// @{
     
     /// Core implementation of `extractWires()`: no wires returned whatsoever.
-    virtual Wires_t doExtractWires(Path_t&) { return {}; }
+    virtual Wires_t doExtractWires(Path_t&) override { return {}; }
     
     /// @}
     // --- END Wire information ------------------------------------------------

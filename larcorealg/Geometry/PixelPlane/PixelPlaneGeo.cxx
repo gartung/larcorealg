@@ -12,6 +12,7 @@
 
 // C/C++ standard library
 #include <utility> // std::move()
+#include <optional> // implicit dependency
 
 
 // -----------------------------------------------------------------------------

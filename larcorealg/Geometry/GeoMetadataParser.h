@@ -359,7 +359,7 @@ T geo::GeoMetadataParser::unitFactor
 
 
 // -----------------------------------------------------------------------------
-template <typename T = double>
+template <typename T /* = double */>
 double geo::GeoMetadataParser::parseValue(std::string_view const& s) {
   
   T value = std::numeric_limits<T>::has_signaling_NaN

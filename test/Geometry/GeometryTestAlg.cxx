@@ -2119,7 +2119,7 @@ namespace geo{
     // in this code for additional testing. The NearestChannel routine
     // is the most frequently called in the simulation, so its execution time
     // is an important component of LArSoft's speed.
-    testing::StopWatch stopWatch;
+    testing::StopWatch stopWatch {};
 
     bool bTestWireCoordinate = true;
 

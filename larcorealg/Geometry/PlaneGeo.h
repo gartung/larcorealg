@@ -26,6 +26,7 @@
 #include "larcorealg/CoreUtils/UncopiableAndUnmovableClass.h"
 #include "larcorealg/CoreUtils/span.h"
 #include "larcorealg/CoreUtils/counter.h"
+#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h" // util ns
 
@@ -121,7 +122,7 @@ namespace geo {
    * although the derived classes might still change that frame.
    */
     
-  class PlaneGeo: private lar::PolymorphicUncopiableClass {
+  class PlaneGeo: protected lar::PolymorphicUncopiableClass {
     
       public:
     
@@ -217,9 +218,8 @@ namespace geo {
 
     /// Type for description of rectangles.
     using Rect = lar::util::simple_geo::Rectangle<double>;
-
-
-
+    
+    
     // --- BEGIN -- Plane properties -------------------------------------------
     /// @{
     /// @name Plane properties

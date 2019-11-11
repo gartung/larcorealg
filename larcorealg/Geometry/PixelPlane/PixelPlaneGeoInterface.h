@@ -1276,7 +1276,7 @@ void geo::PixelPlaneGeoInterface::PrintPixelInfo(
   if (verbosity-- <= 0) return; // 0
 
   //----------------------------------------------------------------------------
-  geo::WireGeo const wire = getWire({ indexOf(coords) });
+  geo::WireGeo const wire = getWire(WireLocator{ indexOf(coords) });
   
   out << " at " << wire.GetCenter<geo::Point_t>();
 

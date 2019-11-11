@@ -1236,7 +1236,7 @@ template <typename T, typename Mapper>
 geo::GeoIDdataContainer<T, Mapper>::GeoIDdataContainer
   (std::initializer_list<unsigned int> dims, value_type const& defValue)
   : fMapper(dims)
-  , fData(fMapper.computeSize(), defValue)
+  , fData(fMapper.size(), defValue)
 {
   assert(!fData.empty()); 
 }

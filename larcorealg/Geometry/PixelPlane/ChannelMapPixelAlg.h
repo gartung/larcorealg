@@ -715,7 +715,7 @@ auto geo::ChannelMapPixelAlg::ChannelDataContainer<T>::findData
   (raw::ChannelID_t channel) const -> Data_t const*
 {
   ChannelAndData_t const* channelAndData = find(channel);
-  return channelAndData? &(channelAndData.data()): nullptr;
+  return channelAndData? &(channelAndData->data()): nullptr;
 } // geo::ChannelMapPixelAlg::ChannelDataContainer<T>::findData() const
 
 
