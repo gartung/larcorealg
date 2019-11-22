@@ -199,10 +199,14 @@ class geo::PixelPlaneGeoBase: public geo::PixelPlaneGeoInterface {
    * class.
    * 
    */
-  static RectPixelGeometry_t ReadPixelGeometryFromMetadata(
-    TGeoNode const& startNode,
-    RectPixelGeometry_t const& startValues = RectPixelGeometry_t{}
-    );
+  static RectPixelGeometry_t ReadPixelGeometryFromMetadata
+    (TGeoNode const& startNode, RectPixelGeometry_t const& startValues);
+  
+  // this could not use default argument values (see LArSoft issue #23576)
+  static RectPixelGeometry_t ReadPixelGeometryFromMetadata
+    (TGeoNode const& startNode)
+    { return ReadPixelGeometryFromMetadata(startNode, {}); }
+  
   
   
   /**
@@ -242,8 +246,13 @@ class geo::PixelPlaneGeoBase: public geo::PixelPlaneGeoInterface {
    */
   static RectPixelGeometry_t ExtractPixelGeometry(
     TGeoNode const& startNode, std::regex const& pixelNamePattern,
-    RectPixelGeometry_t const& startValues = RectPixelGeometry_t{}
+    RectPixelGeometry_t const& startValues
     );
+  
+  // this could not use default argument values (see LArSoft issue #23576)
+  static RectPixelGeometry_t ExtractPixelGeometry
+    (TGeoNode const& startNode, std::regex const& pixelNamePattern)
+    { return ExtractPixelGeometry(startNode, pixelNamePattern, {}); }
   
   
   /**

@@ -490,10 +490,8 @@ void geo::PixelPlaneGeoBase::InitializePixelGeometry
 
 
 // -----------------------------------------------------------------------------
-auto geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata(
-  TGeoNode const& startNode,
-  RectPixelGeometry_t const& startValues /* = {} */
-  )
+auto geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata
+  (TGeoNode const& startNode, RectPixelGeometry_t const& startValues)
   -> RectPixelGeometry_t
 {
   using namespace std::string_literals;
@@ -623,7 +621,7 @@ auto geo::PixelPlaneGeoBase::ReadPixelGeometryFromMetadata(
 // -----------------------------------------------------------------------------
 auto geo::PixelPlaneGeoBase::ExtractPixelGeometry(
   TGeoNode const& startNode, std::regex const& pixelNamePattern,
-  RectPixelGeometry_t const& startValues /* = {} */
+  RectPixelGeometry_t const& startValues
   )
   -> RectPixelGeometry_t
 {
