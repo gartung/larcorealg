@@ -62,7 +62,16 @@ geo::GeometryBuilderStandard::GeometryBuilderStandard(Config const& config)
   , fOpDetPattern(config.opDetPattern()) // default flags
 {
   MF_LOG_DEBUG("GeometryBuilder")
-    << "Loading geometry builder: GeometryBuilderStandard";
+    << "Loading geometry builder: GeometryBuilderStandard"
+    << "\nGeometry element search patterns: "
+    << "\n - aux.det.: '" << config.auxDetPattern() << "'"
+    << "\n -   sens. : '" << config.auxDetSensPattern() << "'"
+    << "\n - cryostat: '" << config.cryostatPattern() << "'"
+    << "\n - op.det.:  '" << config.opDetPattern() << "'"
+    << "\n - TPC:      '" << config.TPCPattern() << "'"
+    << "\n - plane:    '" << config.planePattern() << "'"
+    << "\n - sens.el.: '" << config.sensElemPattern() << "'"
+    ;
 } // geo::GeometryBuilderStandard::GeometryBuilderStandard()
 
 
@@ -287,6 +296,10 @@ geo::GeometryBuilderStandard::doExtractGeometryObjects(
   using ObjColl_t = geo::GeometryBuilder::GeoPtrColl_t<ObjGeoIF>;
   
   ObjColl_t objs;
+  
+  // for debugging purposes, uncomment this line:
+//  MF_LOG_TRACE("GeometryBuilder")
+//    << "Looking for " << objName << " in " << std::string(path);
 
   //
   // if this is a target object, we are set
