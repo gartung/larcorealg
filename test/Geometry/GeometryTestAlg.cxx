@@ -2898,8 +2898,12 @@ namespace geo{
 
     for (geo::PlaneID::PlaneID_t iPlane = 0; iPlane < nPlanes; ++iPlane) {
       geo::PlaneID pid(tpcid, iPlane);
-      const double wA = geom->WireCoordinate(A[1], A[2], pid);
-      const double wB = geom->WireCoordinate(B[1], B[2], pid);
+//       const double wA = geom->WireCoordinate(A[1], A[2], pid);
+//       const double wB = geom->WireCoordinate(B[1], B[2], pid);
+      const double wA
+        = geom->WireCoordinate(geo::vect::makeFromCoords<geo::Point_t>(A), pid);
+      const double wB
+        = geom->WireCoordinate(geo::vect::makeFromCoords<geo::Point_t>(B), pid);
 
       slopes[iPlane]
         = std::make_pair(pid, ((B[0] - A[0]) * dT_over_dX) / (wB - wA));
