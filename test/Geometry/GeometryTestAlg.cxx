@@ -296,7 +296,7 @@ namespace geo{
 
       // -----------------------------------------------------------------------
       if (shouldRunTests("WireCoordAngle")) {
-        TestHeader th("PlaneProjections", "testWireCoordAngle...");
+        TestHeader th("WireCoordAngle", "testWireCoordAngle...");
         testWireCoordAngle();
       }
 
@@ -2789,8 +2789,7 @@ namespace geo{
       // pick a point in the very middle of the TPC:
       // BUG the double brace syntax is required to work around clang bug 21629
       // (https://bugs.llvm.org/show_bug.cgi?id=21629)
-      const std::array<double, 3> A
-        = {{ TPC.CenterX(), TPC.CenterY(), TPC.CenterZ() }};
+      auto const A = TPC.GetCenter<geo::Point_t>();
       // pick a radius half the way to the closest border
       const double radius
         = std::min({ TPC.HalfWidth(), TPC.HalfHeight(), TPC.Length()/2. }) / 2.;
@@ -2812,11 +2811,8 @@ namespace geo{
         // with some arbitrary and fixed dx offset
         // BUG the double brace syntax is required to work around clang bug 21629
         // (https://bugs.llvm.org/show_bug.cgi?id=21629)
-        std::array<double, 3> B = {{
-          A[0] + dX,
-          A[1] + radius * std::sin(angle),
-          A[2] + radius * std::cos(angle)
-          }};
+        geo::Point_t const B = A
+          + geo::Vector_t{ dX, radius * std::sin(angle), radius * std::cos(angle) };
 
         // get the expectation; this function assumes a drift velocity of
         // 1 mm per tick by default; for the test, it does not matter
@@ -2849,7 +2845,7 @@ namespace geo{
 
   std::vector<std::pair<geo::PlaneID, double>>
   GeometryTestAlg::ExpectedPlane_dTdW(
-    std::array<double, 3> const& A, std::array<double, 3> const& B,
+    geo::Point_t const& A, geo::Point_t const& B,
     const double driftVelocity /* = 0.1 */
     ) const
   {
@@ -2858,21 +2854,19 @@ namespace geo{
     // - slope of the projection of AB from the plane, in dt/dw units
 
     // find which TPC we are taking about
-    geo::TPCID tpcid = geom->FindTPCAtPosition(A.data());
+    geo::TPCID const tpcid = geom->FindTPCAtPosition(A);
 
     if (!tpcid.isValid) {
       throw cet::exception("GeometryTestAlg")
-        << "ExpectedPlane_dTdW(): can't find any TPC containing point A ("
-        << A[0] << "; " << A[1] << "; " << A[2] << ")";
+        << "ExpectedPlane_dTdW(): can't find any TPC containing point A " << A;
     }
 
-    if (geom->FindTPCAtPosition(B.data()) != tpcid) {
+    if (geom->FindTPCAtPosition(B) != tpcid) {
       throw cet::exception("GeometryTestAlg")
-        << "ExpectedPlane_dTdW(): point A ("
-        << A[0] << "; " << A[1] << "; " << A[2] << ") is in "
+        << "ExpectedPlane_dTdW(): point A " << A << " is in "
         << std::string(tpcid)
-        << " while point B (" << B[0] << "; " << B[1] << "; " << B[2]
-        << ") is in " << std::string(geom->FindTPCAtPosition(B.data()));
+        << " while point B " << B << " is in "
+        << std::string(geom->FindTPCAtPosition(B));
     }
 
     geo::TPCGeo const& TPC = geom->TPC(tpcid);
@@ -2898,15 +2892,11 @@ namespace geo{
 
     for (geo::PlaneID::PlaneID_t iPlane = 0; iPlane < nPlanes; ++iPlane) {
       geo::PlaneID pid(tpcid, iPlane);
-//       const double wA = geom->WireCoordinate(A[1], A[2], pid);
-//       const double wB = geom->WireCoordinate(B[1], B[2], pid);
-      const double wA
-        = geom->WireCoordinate(geo::vect::makeFromCoords<geo::Point_t>(A), pid);
-      const double wB
-        = geom->WireCoordinate(geo::vect::makeFromCoords<geo::Point_t>(B), pid);
+      const double wA = geom->WireCoordinate(A, pid);
+      const double wB = geom->WireCoordinate(B, pid);
 
       slopes[iPlane]
-        = std::make_pair(pid, ((B[0] - A[0]) * dT_over_dX) / (wB - wA));
+        = std::make_pair(pid, ((B.X() - A.X()) * dT_over_dX) / (wB - wA));
 
     } // for iPlane
 

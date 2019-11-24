@@ -13,6 +13,7 @@
 
 // LArSoft includes
 #include "larcorealg/TestUtils/NameSelector.h"
+#include "larcoreobj/SimpleTypesAndConstants/geo_vectors.h"
 
 // ROOT
 #include "TVector3.h"
@@ -46,7 +47,7 @@ namespace geo {
    * Configuration parameters
    * =========================
    *
-   * - **DisableWireBoundaryCheck** (boolean, default: false): the exceptions
+   `ceptions
    *   thrown when checking wire boundaries are not fatal
    * - **ExpectedWirePitches** (list of reals, default: empty):
    *   if specified, marks the expected uniform wire pitch, one entry for each
@@ -225,7 +226,7 @@ namespace geo {
 
     /// Returns dT/dW expected from the specified segment A-to-B
     std::vector<std::pair<geo::PlaneID, double>> ExpectedPlane_dTdW(
-      std::array<double, 3> const& A, std::array<double, 3> const& B,
+      geo::Point_t const& A, geo::Point_t const& B,
       const double driftVelocity = -0.1
       ) const;
 
