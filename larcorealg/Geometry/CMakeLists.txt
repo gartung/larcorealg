@@ -6,14 +6,13 @@ cet_make(
           ${FHICLCPP}
           cetlib
           cetlib_except
-          ${ROOT_CORE}
-          ${ROOT_PHYSICS}
-          ${ROOT_GEOM}
-          ${ROOT_GENVECTOR}
-        )
+          ROOT::Core
+          ROOT::Physics
+          ROOT::Geom
+          ROOT::GenVector
+          )
 
 install_headers(SUBDIRS "details")
 install_fhicl(SUBDIRS "details")
-install_source(SUBDIRS "details")
 
 add_subdirectory(gdml)
