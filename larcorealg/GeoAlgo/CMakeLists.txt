@@ -16,8 +16,7 @@ cet_make_library(
            ROOT::Core
            ROOT::Physics
          )
-
-art_dictionary(DICTIONARY_LIBRARIES larcorealg_GeoAlgo)
+build_dictionary(DICTIONARY_LIBRARIES larcorealg_GeoAlgo)
 
 
 install_headers()

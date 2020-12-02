@@ -1,10 +1,14 @@
 cet_enable_asserts()
 
 cet_test( geo_vectors_utils_test
+  SOURCE
+    geo_vectors_utils_test.cc
   LIBRARIES
     ROOT::Core
     ROOT::Physics
     ROOT::GenVector
+    cetlib::cetlib 
+    larcoreobj::larcoreobj_SimpleTypesAndConstants
   USE_BOOST_UNIT
   )
 
@@ -19,7 +23,7 @@ cet_make_library( LIBRARY_NAME GeometryTestLib
                   LIBRARIES larcorealg_Geometry
                         larcorealg_TestUtils
                         canvas::canvas
-                        messagefacility::mf_messagelogger
+                        messagefacility::MF_MessageLogger
                         fhiclcpp::fhiclcpp
                         cetlib::cetlib 
                         cetlib_except::cetlib_except
@@ -32,10 +36,10 @@ cet_make_library( LIBRARY_NAME GeometryTestLib
 # unit test (use geometry configuration from config file, the rest is ignored)
 # this uses BOOST for the test
 cet_test(geometry_iterator_test
-  SOURCES geometry_iterator_test.cxx
+  SOURCE geometry_iterator_test.cxx
   LIBRARIES larcorealg_Geometry
             GeometryTestLib
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib
             cetlib_except::cetlib_except
@@ -47,10 +51,10 @@ cet_test(geometry_iterator_test
 # unit test (use geometry configuration from config file, the rest is ignored)
 # this uses BOOST for the test
 cet_test(geometry_geoid_test
-  SOURCES geometry_geoid_test.cxx
+  SOURCE geometry_geoid_test.cxx
   LIBRARIES larcorealg_Geometry
             GeometryTestLib
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib
             cetlib_except::cetlib_except
@@ -61,12 +65,12 @@ cet_test(geometry_geoid_test
 
 # unit test (use the hard-coded channel mapping for "standard" LArTPCdetector)
 cet_test(geometry_test
-  SOURCES geometry_test.cxx
+  SOURCE geometry_test.cxx
   DATAFILES test_geometry.fcl
   TEST_ARGS ./test_geometry.fcl
   LIBRARIES larcorealg_Geometry
             GeometryTestLib
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib
             cetlib_except::cetlib_except
@@ -74,12 +78,12 @@ cet_test(geometry_test
 
 # test of standalone geometry loading (use the hard-coded channel mapping for "standard" LArTPCdetector)
 cet_test(geometry_loader_test
-  SOURCES geometry_loader_test.cxx
+  SOURCE geometry_loader_test.cxx
   DATAFILES test_geometry.fcl
   TEST_ARGS ./test_geometry.fcl
   LIBRARIES larcorealg_Geometry
             GeometryTestLib
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib
             cetlib_except::cetlib_except
@@ -87,12 +91,12 @@ cet_test(geometry_loader_test
 
 # test to verify loops on geometry elements by geometry iterators (hard-coded channel mapping for "standard" LArTPCdetector)
 cet_test(geometry_iterator_loop_test
-  SOURCES geometry_iterator_loop_test.cxx
+  SOURCE geometry_iterator_loop_test.cxx
   DATAFILES test_geometry_iterator_loop.fcl
   TEST_ARGS ./test_geometry_iterator_loop.fcl
   LIBRARIES larcorealg_Geometry
             GeometryTestLib
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib
             cetlib_except::cetlib_except
@@ -101,10 +105,10 @@ cet_test(geometry_iterator_loop_test
 
 # test for standard channel mapping (BOOST unit test)
 cet_test(geometry_standardchannelmapping_test
-  SOURCES geometry_standardchannelmapping_test.cxx
+  SOURCE geometry_standardchannelmapping_test.cxx
   LIBRARIES larcorealg_Geometry
             GeometryTestLib
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib cetlib_except::cetlib_except
   USE_BOOST_UNIT
@@ -116,9 +120,9 @@ cet_test(geometry_standardchannelmapping_test
 # simple unit test
 # this uses BOOST for the test
 cet_test(geometry_thirdplaneslope_test
-  SOURCES geometry_thirdplaneslope_test.cxx
+  SOURCE geometry_thirdplaneslope_test.cxx
   LIBRARIES larcorealg_Geometry
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib
             cetlib_except::cetlib_except
@@ -130,26 +134,30 @@ cet_test(geometry_thirdplaneslope_test
 
 # decomposition engine tests
 cet_test(Decomposer_test
-  SOURCES Decomposer_test.cxx
+  SOURCE Decomposer_test.cxx
   LIBRARIES
     ROOT::Physics
     ROOT::GenVector
     ROOT::Core # TVersionCheck
+    cetlib::cetlib 
+    larcoreobj::larcoreobj_SimpleTypesAndConstants
   USE_BOOST_UNIT
   )
 
 cet_test(SimpleGeo_test
-  SOURCES SimpleGeo_test.cxx
+  SOURCE SimpleGeo_test.cxx
+  LIBRARIES
+    cetlib::cetlib 
   USE_BOOST_UNIT
 )
 
 
 cet_test(driftvolumes_test
-  SOURCES driftvolumes_test.cxx
+  SOURCE driftvolumes_test.cxx
   DATAFILES test_geometry.fcl
   TEST_ARGS ./test_geometry.fcl
   LIBRARIES larcorealg_Geometry
-            messagefacility::mf_messagelogger
+            messagefacility::MF_MessageLogger
             fhiclcpp::fhiclcpp
             cetlib::cetlib
             cetlib_except::cetlib_except
@@ -157,22 +165,31 @@ cet_test(driftvolumes_test
   )
 
 cet_test(geometrydatacontainers_test
-  SOURCES geometrydatacontainers_test.cxx
+  SOURCE geometrydatacontainers_test.cxx
+  LIBRARIES
+    larcoreobj::larcoreobj_SimpleTypesAndConstants
+    cetlib::cetlib 
   USE_BOOST_UNIT
   )
 
 cet_test(geoidmapper_test
-  SOURCES geoidmapper_test.cxx
+  SOURCE geoidmapper_test.cxx
+  LIBRARIES
+    larcoreobj::larcoreobj_SimpleTypesAndConstants
+    cetlib::cetlib 
   USE_BOOST_UNIT
   )
 
 cet_test(readoutdatacontainers_test
-  SOURCES readoutdatacontainers_test.cxx
+  SOURCE readoutdatacontainers_test.cxx
+  LIBRARIES
+    larcoreobj::larcoreobj_SimpleTypesAndConstants
+    cetlib::cetlib 
   USE_BOOST_UNIT
   )
 
 cet_test(topology_test
-  SOURCES topology_test.cxx
+  SOURCE topology_test.cxx
   LIBRARIES larcorealg_Geometry
   USE_BOOST_UNIT
   )

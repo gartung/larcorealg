@@ -30,6 +30,11 @@ cet_set_compiler_flags(DIAGS CAUTIOUS
 cet_report_compiler_flags(REPORT_THRESHOLD VERBOSE)
 
 # these are minimum required versions, not the actual product versions
+cet_find_package( hep_concurrency REQUIRED )
+cet_find_package( cetlib_except REQUIRED )
+cet_find_package( cetlib REQUIRED )
+cet_find_package( fhiclcpp REQUIRED )
+cet_find_package( messagefacility REQUIRED )
 cet_find_package( canvas REQUIRED) 
 cet_find_package( larcoreobj REQUIRED)
 find_package(ROOT REQUIRED)

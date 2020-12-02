@@ -25,7 +25,7 @@ cet_make_library(
     WireGeo.cxx
   LIBRARIES
           larcoreobj::larcoreobj_SimpleTypesAndConstants
-          messagefacility::mf_MessageLogger
+          messagefacility::MF_MessageLogger
           fhiclcpp::fhiclcpp
           cetlib::cetlib
           cetlib_except::cetlib_except
@@ -33,6 +33,7 @@ cet_make_library(
           ROOT::Physics
           ROOT::Geom
           ROOT::GenVector
+          CLHEP::CLHEP
         )
 
 install_headers(SUBDIRS "details")
