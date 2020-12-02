@@ -1,4 +1,17 @@
-cet_make(NO_DICTIONARY ### MIGRATE-ACTION-RECOMMENDED: use cet_make_library(), build_dictionary(), basic_plugin() with explicit source lists
+cet_make_library(
+         SOURCE
+           GeoAABox.cxx
+           GeoAlgo.cxx
+           GeoCone.cxx
+           GeoCylinder.cxx
+           GeoDirectedLine.cxx
+           GeoHalfLine.cxx
+           GeoLine.cxx
+           GeoLineSegment.cxx
+           GeoObjCollection.cxx
+           GeoSphere.cxx
+           GeoTrajectory.cxx
+           GeoVector.cxx
          LIBRARIES
            ROOT::Core
            ROOT::Physics

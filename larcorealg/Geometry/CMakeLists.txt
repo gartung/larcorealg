@@ -1,12 +1,34 @@
-cet_make( ### MIGRATE-ACTION-RECOMMENDED: use cet_make_library(), build_dictionary(), basic_plugin() with explicit source lists
-  SUBDIRS
-    "details"
+cet_make_library(
+  LIBRARY_NAME larcorealg_Geometry
+  SOURCE
+    AuxDetChannelMapAlg.cxx
+    AuxDetGeo.cxx
+    AuxDetGeometryCore.cxx
+    AuxDetSensitiveGeo.cxx
+    BoxBoundedGeo.cxx
+    ChannelMapAlg.cxx
+    ChannelMapStandardAlg.cxx
+    CryostatGeo.cxx
+    DriftPartitions.cxx
+    GeometryBuilderStandard.cxx
+    GeometryBuilderWireless.cxx
+    GeometryCore.cxx
+    GeoNodePath.cxx
+    GeoObjectSorter.cxx
+    GeoObjectSorterStandard.cxx
+    GeoVectorLocalTransformation.cxx
+    LocalTransformation.cxx
+    OpDetGeo.cxx
+    PlaneGeo.cxx
+    StandaloneGeometrySetup.cxx
+    TPCGeo.cxx
+    WireGeo.cxx
   LIBRARIES
-          larcoreobj_SimpleTypesAndConstants
-          ${MF_MESSAGELOGGER}
-          ${FHICLCPP}
-          cetlib
-          cetlib_except
+          larcoreobj::larcoreobj_SimpleTypesAndConstants
+          messagefacility::mf_MessageLogger
+          fhiclcpp::fhiclcpp
+          cetlib::cetlib
+          cetlib_except::cetlib_except
           ROOT::Core
           ROOT::Physics
           ROOT::Geom
